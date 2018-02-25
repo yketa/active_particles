@@ -29,4 +29,3 @@ out_file = open(varN_file, 'wb')
 size, varN = (lambda array: (array, list(map(lambda size: varNumber(size, Ncases), array))))(np.linspace(2*a, box_size, eval_points))
 pickle.dump([size, varN], out_file)
 out_file.close()
-
