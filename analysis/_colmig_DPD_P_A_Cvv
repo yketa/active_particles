@@ -6,7 +6,7 @@ import numpy as np
 
 import pickle
 
-time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else 0 # frame for which we calculate the velocity auto-correlation
+time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # frame for which we calculate the velocity auto-correlation
 
 vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else 'velocity.csv' # velocity file
 param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
@@ -15,25 +15,25 @@ file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
 
-data_vel = np.genfromtxt(fname=vel_file, delimiter=',')
+data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time if time >= 0 else N_steps//period_dump - 1, max_rows=1) # positions and velocity at time time (time = -1 if time < 0 in input)
 
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
-def velocity_grid(Ncases, L, time, data_vel):
+def velocity_grid(Ncases, L, data_vel):
 	# This function associates a Ncases x Ncases to the box and calculates the average
 	# velocity in every cases.
 
 	dL = L/Ncases
 
-	positions = lambda time, particle: data_vel[time, particle*3:particle*3 + 2] # positions of the particles
-	velocities = lambda time, particle: data_vel[time, N*3 + particle*3:N*3 + particle*3 + 2] # velocities of the particles
+	positions = lambda particle: data_vel[particle*3:particle*3 + 2] # positions of the particles
+	velocities = lambda particle: data_vel[N*3 + particle*3:N*3 + particle*3 + 2] # velocities of the particles
 
 	vgrid_dic = {}
 	for particle in range(N):
-		index = (positions(time, particle) + L/2)//dL
+		index = (positions(particle) + L/2)//dL
 		index = (int(index[0]), int(index[1]))
 
-		velocity = velocities(time, particle)
+		velocity = velocities(particle)
 		vgrid_dic[index] = vgrid_dic[index] + [velocity] if index in vgrid_dic else [velocity]
 
 	vgrid = np.zeros((Ncases, Ncases, 2))
@@ -42,7 +42,7 @@ def velocity_grid(Ncases, L, time, data_vel):
 
 	return vgrid
 
-vgrid = velocity_grid(Ncases, box_size, time, data_vel) # velocity grid
+vgrid = velocity_grid(Ncases, box_size, data_vel) # velocity grid
 
 FFTvgrid = np.fft.fft2(vgrid, axes=(-3, -2))
 FFTvxgrid = FFTvgrid[:, :, 0]
