@@ -64,7 +64,7 @@ def Cuu2D_time(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt):
 
 	return Cuu, Norm
 
-Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt), range(N_steps//period_dump - dis_time))), axis=0)) # 2D correlation plot of the displacement
+Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, box_size, time, dis_time, data_vel, data_pos, inc_dt), range(N_steps//period_dump - dis_time))), axis=0)) # 2D correlation plot of the displacement
 
 Cuu1D_dic = {}
 for i in range(Cuu2D.shape[0]):
