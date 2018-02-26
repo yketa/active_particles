@@ -5,7 +5,8 @@ fi
 
 export DATA_DIRECTORY=/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}
 
-output_file=${DATA_DIRECTORY}/msd.out
+mkdir -p ${DATA_DIRECTORY}/out
+output_file=${DATA_DIRECTORY}/out/msd.out
 > $output_file
 
 sbatch --job-name=msd_${DATA} <<EOF

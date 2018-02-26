@@ -5,7 +5,8 @@ fi
 
 export DATA_DIRECTORY=/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}
 
-output_file=${DATA_DIRECTORY}/varN.out
+mkdir -p ${DATA_DIRECTORY}/out
+output_file=${DATA_DIRECTORY}/out/varN.out
 > $output_file
 
 sbatch --job-name=varN_${DATA} <<EOF
