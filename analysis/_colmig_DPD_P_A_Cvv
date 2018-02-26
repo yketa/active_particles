@@ -15,7 +15,7 @@ file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
 
-data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time if time >= 0 else N_steps//period_dump - 1, max_rows=1) # positions and velocity at time time (time = -1 if time < 0 in input)
+data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time if time >= 0 else N_steps//period_dump + time, max_rows=1) # positions and velocity at time time
 
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
