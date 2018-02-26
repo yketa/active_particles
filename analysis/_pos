@@ -1,0 +1,37 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+
+import numpy as np
+
+import pickle
+
+vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else 'velocity.csv' # velocity file
+param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
+
+name_pos = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else 'position.csv' # position file
+
+file = open(param_file, 'rb')
+N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
+file.close()
+
+data_vel = np.genfromtxt(fname=vel_file, delimiter=',') # positions and velocities
+
+pos = lambda time, particle: data_vel[time, particle*3:particle*3 + 2] # function giving the positions
+inc = lambda time, particle: np.sign(pos(time - 1, particle))*(pos(time, particle)*pos(time - 1, particle) < 0)*(abs(pos(time - 1, particle)) > box_size/4)*box_size # increment in coordinates that has to be applied to particle particle between times time - 1 and time because of periodic boundary conditions
+
+pos_dump = open(name_pos, 'w')
+def dump_positions(positions, pos_dump):
+	# Writes positions to output file.
+	for value in positions.flatten():
+		pos_dump.write(str("%e," % value))
+	pos_dump.write("\n")
+
+increments = np.zeros((N, 2)) # increments to be applied
+positions = np.array([pos(0, particle) for particle in range(N)]) # array of the positions with the correct increments
+dump_positions(positions, pos_dump)
+for time in range(1, len(data_vel)):
+	increments += np.array([inc(time, particle) for particle in range(N)])
+	positions = np.array([pos(time, particle) for particle in range(N)]) + increments
+	dump_positions(positions, pos_dump)
+pos_dump.close()
