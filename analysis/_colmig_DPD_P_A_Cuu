@@ -9,6 +9,7 @@ import pickle
 dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
 
 vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else 'velocity.csv' # velocity file
+pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else 'position.csv' # position file
 param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
 
 file = open(param_file, 'rb')
@@ -19,29 +20,23 @@ dis_time = N_steps//period_dump - 1 if dis_time <= 0 else dis_time
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
 data_vel = np.genfromtxt(fname=vel_file, delimiter=',') # positions and velocities
+data_pos = np.genfromtxt(fname=pos_file, delimiter=',') # positions without periodic boundary conditions
 
-pos = lambda time, particle: data_vel[time, particle*3:particle*3 + 2] # function giving the positions
-inc = lambda time, particle: np.sign(pos(time - 1, particle))*(pos(time, particle)*pos(time - 1, particle) < 0)*(abs(pos(time - 1, particle)) > box_size/4)*box_size # increment in coordinates that has to be applied to particle particle between times time - 1 and time because of periodic boundary conditions
-
-increments = np.zeros((N, 2)) # increments to be applied
-positions = [[pos(0, particle) for particle in range(N)]] # array of the positions with the correct increments
-for time in range(1, len(data_vel)):
-	increments += np.array([inc(time, particle) for particle in range(N)])
-	positions += [np.array([pos(time, particle) for particle in range(N)]) + increments]
-positions = np.array(positions) # array of the positions
-
-def displacement_grid(Ncases, L, time, dis_time, positions):
+def displacement_grid(Ncases, L, time, dis_time, data_vel, data_pos):
 	# This function associates a Ncases x Ncases to the box and calculates the average
 	# displacement over time dis_time from time time in every cases.
 
 	dL = L/Ncases
 
+	pos_per = lambda time, particle: data_vel[time, particle*3:particle*3 + 2] # position with periodic boundary condition
+	pos = lambda time, particle: data_pos[time, particle*2:particle*2 + 2] # position without periodic boundary condition
+
 	ugrid_dic = {}
 	for particle in range(N):
-		index = (positions[time + dis_time, particle] + L/2)//dL
+		index = (pos_per(time + dis_time, particle) + L/2)//dL
 		index = (int(index[0]), int(index[1]))
 
-		displacement = positions[time + dis_time, particle] - positions[time, particle]
+		displacement = pos(time + dis_time, particle) - pos(time, particle)
 		ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
 
 	ugrid = np.zeros((Ncases, Ncases, 2))
@@ -50,11 +45,11 @@ def displacement_grid(Ncases, L, time, dis_time, positions):
 
 	return ugrid
 
-def Cuu2D_time(Ncases, L, time, dis_time, positions):
+def Cuu2D_time(Ncases, L, time, dis_time, data_vel, data_pos):
 	# This function returns the 2D correlation plot and renormalisation term of the
 	# displacement grid calculated by displacement_grid.
 
-	ugrid = displacement_grid(Ncases, L, time, dis_time, positions) # displacement grid
+	ugrid = displacement_grid(Ncases, L, time, dis_time, data_vel, data_pos) # displacement grid
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
@@ -64,7 +59,7 @@ def Cuu2D_time(Ncases, L, time, dis_time, positions):
 
 	return Cuu, Norm
 
-Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, L, time, dis_time, positions), range(N_steps//period_dump - dis_time))), axis=0)) # 2D correlation plot of the displacement
+Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, L, time, dis_time, data_vel, data_pos), range(N_steps//period_dump - dis_time))), axis=0)) # 2D correlation plot of the displacement
 
 Cuu1D_dic = {}
 for i in range(Cuu2D.shape[0]):
