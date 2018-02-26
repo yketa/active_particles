@@ -139,11 +139,9 @@ for runs in range(N_steps//period_dump):
 	snap2 = system.take_snapshot(all=True)
 	# calculation and saving of the velocities
 	velocities = (snap2.particles.position - snap1.particles.position)/time_step # manual calculation of the velocities
-	dump_str = ""
 	for value in list(snap1.particles.position.flatten()) + list(velocities.flatten()):
-		dump_str += str("%e," % value)
-	dump_str += "\n"
-	vel_dump.write(dump_str)
+		vel_dump.write(str("%e," % value))
+	vel_dump.write("\n")
 
 	hoomd.run(period_dump - 1)
 vel_dump.close()
