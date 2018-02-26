@@ -15,12 +15,13 @@ param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ el
 file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
-dis_time = N_steps//period_dump - 1 if dis_time <= 0 else dis_time
+dis_time = N_steps//period_dump + dis_time if dis_time <= 0 else dis_time
 
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
-data_vel = np.genfromtxt(fname=vel_file, delimiter=',') if dis_time < int((N_steps//period_dump)/2) + 1 else np.append(np.genfromtxt(fname=vel_file, delimiter=',', max_rows=N_steps//period_dump - dis_time), np.genfromtxt(fname=vel_file, delimiter=',', skip_header=dis_time)) # positions and velocities
-data_pos = np.genfromtxt(fname=pos_file, delimiter=',') if dis_time < int((N_steps//period_dump)/2) + 1 else np.append(np.genfromtxt(fname=pos_file, delimiter=',', max_rows=N_steps//period_dump - dis_time), np.genfromtxt(fname=pos_file, delimiter=',', skip_header=dis_time)) # positions without periodic boundary conditions
+data_vel = np.genfromtxt(fname=vel_file, delimiter=',') if dis_time < int((N_steps//period_dump)/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=vel_file, delimiter=',', max_rows=N_steps//period_dump - dis_time).flatten(), np.genfromtxt(fname=vel_file, delimiter=',', skip_header=dis_time).flatten()), (2*(N_steps//period_dump - dis_time), 6*N + 1)) # positions and velocities
+data_pos = np.genfromtxt(fname=pos_file, delimiter=',') if dis_time < int((N_steps//period_dump)/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=pos_file, delimiter=',', max_rows=N_steps//period_dump - dis_time).flatten(), np.genfromtxt(fname=pos_file, delimiter=',', skip_header=dis_time).flatten()), (2*(N_steps//period_dump - dis_time), 2*N + 1)) # positions without periodic boundary conditions
+
 if dis_time < int((N_steps//period_dump)/2) + 1:
 	inc_dt = lambda time: time + dis_time # increment in index corresponding to time difference dis_time in data_vel and data_pos
 else:
