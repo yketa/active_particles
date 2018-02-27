@@ -22,8 +22,8 @@ Nentries = N_steps//period_dump # number of time snapshots in velocity and posit
 Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
 dis_time = Ntimes + dis_time if dis_time <= 0 else dis_time
 
-data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2)) if dis_time < int(Ntimes/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2), max_rows=Ntimes - dis_time).flatten(), np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2) + dis_time).flatten()), (2*(Nentries - dis_time), 6*N + 1)) # positions and velocities
-data_pos = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2)) if dis_time < int(Ntimes/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2), max_rows=Ntimes - dis_time).flatten(), np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + dis_time).flatten()), (2*(Nentries - dis_time), 2*N + 1)) # positions without boundary conditions
+data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2)) if dis_time < int(Ntimes/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2), max_rows=Ntimes - dis_time).flatten(), np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2) + dis_time).flatten()), (2*(Ntimes - dis_time), 6*N + 1)) # positions and velocities
+data_pos = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2)) if dis_time < int(Ntimes/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2), max_rows=Ntimes - dis_time).flatten(), np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + dis_time).flatten()), (2*(Ntimes - dis_time), 2*N + 1)) # positions without boundary conditions
 
 if dis_time < int(Ntimes/2) + 1:
 	inc_dt = lambda time: time + dis_time # increment in index corresponding to time difference dis_time in data_vel and data_pos
