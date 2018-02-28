@@ -1,0 +1,71 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+import sys
+
+import numpy as np
+
+import pickle
+
+sys.path.append('/home/yketa')
+from exponents import float_to_letters
+
+dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
+
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
+
+file = open(param_file, 'rb')
+N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
+file.close()
+
+Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
+Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
+dis_time = Ntimes + dis_time if dis_time <= 0 else dis_time
+
+fname = data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(dis_time) # filename of the plot
+Cuu_file = os.environ['CUU_FILE'] if 'CUU_FILE' in os.environ else fname + '.pickle' # name of the Cuu pickle file
+
+file = open(Cuu_file, 'rb')
+Cuu2D, Cuu1D = pickle.load(file)
+file.close()
+
+# PLOT
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+cmap = plt.cm.jet
+
+Cuumin = 0
+Cuumax = np.max(Cuu2D)
+
+fig, axs = plt.subplots(1, 2)
+vNorm = colors.Normalize(vmin=Cuumin, vmax=Cuumax)
+scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap) 
+
+axs[0].imshow(np.roll(np.roll(Cuu2D, int(Cuu2D.shape[0]/2), axis=0), int(Cuu2D.shape[1]/2), axis=1), cmap=cmap, norm=vNorm)
+
+axs[0].set_xlabel('x')
+axs[0].set_ylabel('y')
+axs[0].set_title('2D C_uu')
+
+divider = make_axes_locatable(axs[0])
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+
+axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
+
+axs[1].set_xlabel('r')
+axs[1].set_ylabel('C_uu')
+axs[1].set_title('radial C_uu')
+
+fig.subplots_adjust(wspace=0.6)
+
+plt.savefig(data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(dis_time) + '.eps') # saving the figure
+
+if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+	plt.show()
