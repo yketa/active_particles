@@ -1,16 +1,22 @@
 #! /home/yketa/miniconda3/bin/python3.6
 
 import os
+import sys
 
 import numpy as np
 
 import pickle
 
+sys.path.append('/home/yketa')
+from exponents import float_to_letters
+
 dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
 
-vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else 'velocity.csv' # velocity file
-pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else 'position.csv' # position file
-param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+
+vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else data_dir + '/velocity.csv' # velocity file
+pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else data_dir + '/position.csv' # position file
+param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
 
 file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
@@ -77,39 +83,47 @@ for i in range(Cuu2D.shape[0]):
 			Cuu1D_dic[int(i**2 + j**2)] = Cuu1D_dic[int(i**2 + j**2)] + [Cuu2D[i, j]] if int(i**2 + j**2) in Cuu1D_dic else [Cuu2D[i, j]]
 Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cuu1D_dic[dist])], sorted(Cuu1D_dic))))
 
+# SAVING
+
+filename = data_dir + '/Cuu_T' + float_to_letters(dis_time) + '_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '.pickle' # Cuu file name
+file = open(filename, 'wb')
+pickle.dump([Cuu2D, Cuu1D], file)
+file.close()
+
 # PLOT
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.cm as cmx
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+	import matplotlib as mpl
+	import matplotlib.pyplot as plt
+	import matplotlib.colors as colors
+	import matplotlib.cm as cmx
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-cmap = plt.cm.jet
+	cmap = plt.cm.jet
 
-Cuumin = 0
-Cuumax = np.max(Cuu2D)
+	Cuumin = 0
+	Cuumax = np.max(Cuu2D)
 
-fig, axs = plt.subplots(1, 2)
-vNorm = colors.Normalize(vmin=Cuumin, vmax=Cuumax)
-scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap) 
+	fig, axs = plt.subplots(1, 2)
+	vNorm = colors.Normalize(vmin=Cuumin, vmax=Cuumax)
+	scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap) 
 
-axs[0].imshow(np.roll(np.roll(Cuu2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1), cmap=cmap, norm=vNorm)
+	axs[0].imshow(np.roll(np.roll(Cuu2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1), cmap=cmap, norm=vNorm)
 
-axs[0].set_xlabel('x')
-axs[0].set_ylabel('y')
-axs[0].set_title('2D C_uu')
+	axs[0].set_xlabel('x')
+	axs[0].set_ylabel('y')
+	axs[0].set_title('2D C_uu')
 
-divider = make_axes_locatable(axs[0])
-cax = divider.append_axes("right", size="5%", pad=0.05)
-cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+	divider = make_axes_locatable(axs[0])
+	cax = divider.append_axes("right", size="5%", pad=0.05)
+	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
 
-axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
+	axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
 
-axs[1].set_xlabel('r')
-axs[1].set_ylabel('C_uu')
-axs[1].set_title('radial C_uu')
+	axs[1].set_xlabel('r')
+	axs[1].set_ylabel('C_uu')
+	axs[1].set_title('radial C_uu')
 
-fig.subplots_adjust(wspace=0.6)
+	fig.subplots_adjust(wspace=0.6)
 
-plt.show()
+	plt.show()
