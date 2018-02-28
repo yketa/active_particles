@@ -57,7 +57,8 @@ divider = make_axes_locatable(axs[0])
 cax = divider.append_axes("right", size="5%", pad=0.05)
 cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
 
-axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
+axis = 'LINLIN' if 'AXIS' in os.environ and os.environ['AXIS'] == 'LINLIN' else 'LOGLOG' if 'AXIS' in os.environ and os.environ['AXIS'] == 'LOGLOG' else 'LINLOG' # type of axis for radial Cuu plot
+axs[1].plot(Cuu1D[:, 0], Cuu1D[:, 1]) if axis == 'LINLIN' else axs[1].loglog(Cuu1D[:, 0], Cuu1D[:, 1]) if axis == 'LOGLOG' else axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
 
 axs[1].set_xlabel('r')
 axs[1].set_ylabel('C_uu')
@@ -65,7 +66,7 @@ axs[1].set_title('radial C_uu')
 
 fig.subplots_adjust(wspace=0.6)
 
-plt.savefig(data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(dis_time) + '.eps') # saving the figure
+plt.savefig(fname + '_' + axis + '.eps') # saving the figure
 
 if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	plt.show()
