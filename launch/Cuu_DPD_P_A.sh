@@ -5,7 +5,7 @@ fi
 
 DATA_DIRECTORY="/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}"
 export DATA_DIRECTORY=$DATA_DIRECTORY
-export TIME=$TIME
+export TIME=${TIME-1}
 
 export SHOW='False'
 
