@@ -12,7 +12,7 @@ mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/pos.out
 > $output_file
 
-sbatch --job-name=pos_${DATA} <<EOF
+sbatch --job-name=pos_${DATA} -d afterok:${AFTEROK} <<EOF
 #!/bin/bash
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:k80:1
@@ -22,3 +22,4 @@ sbatch --job-name=pos_${DATA} <<EOF
 /home/yketa/bin/_pos >> $output_file
 EOF
 
+unset AFTEROK
