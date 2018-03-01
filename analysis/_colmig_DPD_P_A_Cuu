@@ -49,10 +49,11 @@ def displacement_grid(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt):
 	ugrid_dic = {}
 	for particle in range(N):
 		index = (pos_per(inc_dt(time), particle) + L/2)//dL
-		index = (int(index[0]), int(index[1]))
+		if (index < Ncases).all():
+			index = (int(index[0]), int(index[1]))
 
-		displacement = pos(inc_dt(time), particle) - pos(time, particle)
-		ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
+			displacement = pos(inc_dt(time), particle) - pos(time, particle)
+			ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
 
 	ugrid = np.zeros((Ncases, Ncases, 2))
 	for index in ugrid_dic:
