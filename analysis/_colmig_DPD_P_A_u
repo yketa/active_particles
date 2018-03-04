@@ -46,7 +46,8 @@ fig.set_size_inches(frame_hor, frame_ver)
 
 for particle in range(N): # for every particle
 
-	ax.arrow(positions[particle*3], positions[particle*3 + 1], displacements[particle*2], displacements[particle*2 + 1], width=width, head_width=head_width, head_length=head_length, head_starts_at_zero=True, color='blue')
+	disp_n = np.sqrt(np.sum(displacements[particle*2:particle*2 + 2]**2)) # distance of the displacement
+	ax.arrow(positions[particle*3], positions[particle*3 + 1], displacements[particle*2], displacements[particle*2 + 1], width=disp_n*width, head_width=disp_n*head_width, head_length=disp_n*head_length, head_starts_at_zero=True, color='blue')
 
 ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
 ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
