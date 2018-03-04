@@ -28,31 +28,24 @@ Nentries = N_steps//period_dump # number of time snapshots in velocity and posit
 Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
 dis_time = Ntimes + dis_time if dis_time <= 0 else dis_time
 
-data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2)) if dis_time < int(Ntimes/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2), max_rows=Ntimes - dis_time).flatten(), np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2) + dis_time).flatten()), (2*(Ntimes - dis_time), 6*N + 1)) # positions and velocities
-data_pos = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2)) if dis_time < int(Ntimes/2) + 1 else np.reshape(np.append(np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2), max_rows=Ntimes - dis_time).flatten(), np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + dis_time).flatten()), (2*(Ntimes - dis_time), 2*N + 1)) # positions without boundary conditions
-
-if dis_time < int(Ntimes/2) + 1:
-	inc_dt = lambda time: time + dis_time # increment in index corresponding to time difference dis_time in data_vel and data_pos
-else:
-	inc_dt = lambda time: time + Ntimes - dis_time
-
-
-def displacement_grid(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt):
+def displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
 	# This function associates a Ncases x Ncases to the box and calculates the average
 	# displacement over time dis_time from time time in every cases.
 
 	dL = L/Ncases
 
-	pos_per = lambda time, particle: data_vel[time, particle*3:particle*3 + 2] # position with periodic boundary condition
-	pos = lambda time, particle: data_pos[time, particle*2:particle*2 + 2] # position without periodic boundary condition
+	pos0 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time, max_rows=1)[:-1] # positions at time time (without periodic boundary conditions)
+	pos1 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time + dis_time, max_rows=1)[:-1] # position at time time + dis_time (without periodic boundary conditions)
+
+	pos = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2) + time + dis_time, max_rows=1)[:-1] # position at time time + dis_time (with boundary conditions)
 
 	ugrid_dic = {}
 	for particle in range(N):
-		index = (pos_per(inc_dt(time), particle) + L/2)//dL
+		index = (pos[particle*3:particle*3 + 2] + L/2)//dL
 		if (index < Ncases).all():
 			index = (int(index[0]), int(index[1]))
 
-			displacement = pos(inc_dt(time), particle) - pos(time, particle)
+			displacement = pos1[particle*2:particle*2 + 2] - pos0[particle*2:particle*2 + 2]
 			ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
 
 	ugrid = np.zeros((Ncases, Ncases, 2))
@@ -61,11 +54,11 @@ def displacement_grid(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt):
 
 	return ugrid
 
-def Cuu2D_time(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt):
+def Cuu2D_time(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
 	# This function returns the 2D correlation plot and renormalisation term of the
 	# displacement grid calculated by displacement_grid.
 
-	ugrid = displacement_grid(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt) # displacement grid
+	ugrid = displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries) # displacement grid
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
@@ -75,7 +68,7 @@ def Cuu2D_time(Ncases, L, time, dis_time, data_vel, data_pos, inc_dt):
 
 	return Cuu, Norm
 
-Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, box_size, time, dis_time, data_vel, data_pos, inc_dt), range(Ntimes - dis_time))), axis=0)) # 2D correlation plot of the displacement
+Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, L, time, dis_time, vel_file, pos_file, Nentries), range(Ntimes - dis_time))), axis=0)) # 2D correlation plot of the displacement
 
 Cuu1D_dic = {}
 for i in range(Cuu2D.shape[0]):
