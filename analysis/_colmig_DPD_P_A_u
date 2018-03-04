@@ -15,7 +15,7 @@ frame_hor = int(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) if 'FRAME_HORIZONTAL_
 frame_def = int(eval(os.environ['FRAME_DEFINITION'])) if 'FRAME_DEFINITION' in os.environ else 80 # definition of the frame (in dots per inches (dpi))
 
 width = float(eval(os.environ['ARROW_WIDTH'])) if 'ARROW_WIDTH' in os.environ else 1e-3 # width of the arrows
-head_width = float(eval(os.environ['HEAD_WIDTH']))*width if 'HEAD_WIDTH' in os.environ else 3*width # width of the arrows' head (input in ratio of the width of the arrows)
+head_width = float(eval(os.environ['HEAD_WIDTH']))*width if 'HEAD_WIDTH' in os.environ else 3e2*width # width of the arrows' head (input in ratio of the width of the arrows)
 head_length = float(eval(os.environ['HEAD_LENGTH']))*head_width if 'HEAD_LENGTH' in os.environ else 1.5*head_width # width of the arrows' head (input in ratio of the width of the arrows' head)
 
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
