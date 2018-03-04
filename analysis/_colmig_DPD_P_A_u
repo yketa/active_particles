@@ -56,6 +56,6 @@ ax.set_aspect('equal')
 ax.set_xlabel(r'$x$')
 ax.set_ylabel(r'$y$')
 
-ax.set_title(r'$\phi = $' + str(density) + r'$, \tilde{v} = $' + "%e" % (vzero/(a*mu*k)) + r'$, \tilde{\nu}_r = $' + "%e" % (dr/(mu*k)) + '\n' + r'$t_{init} = $' = str(time_step*period_dump*time) + r'$, \Delta t = $' + str(time_step*period_dump*dt))
+ax.set_title(r'$\phi = $' + str(density) + r'$, \tilde{v} = $' + "%e" % (vzero/(a*mu*k)) + r'$, \tilde{\nu}_r = $' + "%e" % (dr/(mu*k)) + '\n' + r'$t_{init} = $' + str(time_step*period_dump*time) + r'$, \Delta t = $' + str(time_step*period_dump*dt))
 
 plt.show()
