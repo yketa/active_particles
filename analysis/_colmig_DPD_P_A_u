@@ -3,6 +3,9 @@
 import os
 import sys
 
+sys.path.append('/home/yketa')
+from exponents import float_to_letters
+
 import numpy as np
 
 import pickle
@@ -37,8 +40,11 @@ dt = Ntimes + dt if dt <= 0 else dt
 positions = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time, max_rows=1)[:-1] # positions of the particles at time t
 displacements = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=time + dt, max_rows=1)[:-1] - np.genfromtxt(fname=pos_file, delimiter=',', skip_header=time, max_rows=1)[:-1] # displacements between times time and time + dt
 
-# PLOT
+# DRAWING
 
+import matplotlib as mpl
+if not('SHOW' in os.environ and eval(os.environ['SHOW'])):
+	mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
@@ -56,6 +62,14 @@ ax.set_aspect('equal')
 ax.set_xlabel(r'$x$')
 ax.set_ylabel(r'$y$')
 
-ax.set_title(r'$\phi = $' + str(density) + r'$, \tilde{v} = $' + "%e" % (vzero/(a*mu*k)) + r'$, \tilde{\nu}_r = $' + "%e" % (dr/(mu*k)) + '\n' + r'$t_{init} = $' + str(time_step*period_dump*time) + r'$, \Delta t = $' + str(time_step*period_dump*dt))
+ax.set_title(r'$\phi = $' + str(density) + r'$, \tilde{v} = $' + "%e" % vzero + r'$, \tilde{\nu}_r = $' + "%e" % dr + '\n' + r'$t_{init} = $' + str(time_step*period_dump*time) + r'$, \Delta t = $' + str(time_step*period_dump*dt))
 
-plt.show()
+# SAVING
+
+fname = 'u_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(time) + '_I' + float_to_letters(dt) + '.eps' # filename
+plt.savefig(data_dir + '/' + fname) # saving the figure
+
+# DISPLAYING
+
+if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+	plt.show()
