@@ -100,7 +100,7 @@ vmax = 3*vzero
 prep_frames = prep_steps//period_dump # number of preparation frames
 
 frame = 0 # number of the frame
-for time in range(int(math.ceil((N_steps//period_dump)/frame_period))): # for every frame
+for time in range(int(N_steps//period_dump)): # for every frame
 	if time%frame_period == 0 and frame < N_frames:
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % N_frames)
 
