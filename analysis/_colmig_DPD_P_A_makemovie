@@ -47,6 +47,8 @@ import pickle
 import os
 import sys
 
+import math
+
 movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
 parameters_file = os.environ['PARAMETERS_FILE'] # parameters pickle file
 trajectory_file = os.environ['TRAJECTORY_FILE'] # trajectory gsd file
@@ -68,7 +70,6 @@ f = gsd.pygsd.GSDFile(open(trajectory_file, 'rb'));
 t = gsd.hoomd.HOOMDTrajectory(f);
 
 data = np.genfromtxt(fname=logoutput_file, skip_header=True)
-data_vel = np.genfromtxt(fname=velocity_file, delimiter=',')
 
 out_param = open(movie_directory + "/param.txt", "w") # movie parameters output file
 bytes = out_param.write("PHYSICAL PARAMETERS\n")
@@ -91,7 +92,7 @@ bytes = out_param.write("dt=%e\n" % time_step) # integration time step
 bytes = out_param.write("steps=%d\n" % N_steps) # number of integration steps
 bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gsd file
 
-N_frames = min(frame_maximum, math.ceil(len(data_vel)/frame_period)) # number of frames to render
+N_frames = min(frame_maximum, math.ceil((N_steps//period_dump)/frame_period)) # number of frames to render
 
 vmin = 0
 vmax = 3*vzero
@@ -99,7 +100,7 @@ vmax = 3*vzero
 prep_frames = prep_steps//period_dump # number of preparation frames
 
 frame = 0 # number of the frame
-for time in range(len(data_vel)): # for every frame
+for time in range(int(math.ceil((N_steps//period_dump)/frame_period))): # for every frame
 	if time%frame_period == 0 and frame < N_frames:
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % N_frames)
 
@@ -117,15 +118,17 @@ for time in range(len(data_vel)): # for every frame
 		vNorm = colors.Normalize(vmin=vmin, vmax=vmax)
 		scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap)
 
+		data_vel = np.genfromtxt(fname=velocity_file, delimiter=',', skip_header=time, max_rows=1)
+
 		for particle in range(N): # for every particle in the frame
 
-			position = data_vel[time, particle*3:particle*3 + 2] # position of the particle
-			velocity = data_vel[time, N*3 + particle*3:N*3 + particle*3 + 2]/np.sqrt(np.sum(data_vel[time, N*3 + particle*3:N*3 + particle*3 + 2]**2)) if np.sqrt(np.sum(data_vel[time, N*3 + particle*3:N*3 + particle*3 + 2]**2)) != 0 else np.array([0, 0]) # normalised velocity of the particle
+			position = data_vel[particle*3:particle*3 + 2] # position of the particle
+			velocity = data_vel[N*3 + particle*3:N*3 + particle*3 + 2]/np.sqrt(np.sum(data_vel[N*3 + particle*3:N*3 + particle*3 + 2]**2)) if np.sqrt(np.sum(data_vel[N*3 + particle*3:N*3 + particle*3 + 2]**2)) != 0 else np.array([0, 0]) # normalised velocity of the particle
 
 			circle = plt.Circle(tuple((position + box_size/2)%box_size - box_size/2), t[0].particles.diameter[particle]/2, color='blue', fill=False)
 			ax.add_artist(circle)
 
-			ax.arrow(position[0], position[1], t[0].particles.diameter[particle]*velocity[0], t[0].particles.diameter[particle]*velocity[1], color=scalarMap.to_rgba(np.sqrt(np.sum(data_vel[time, N*3 + particle*3:N*3 + particle*3 + 2]**2))))
+			ax.arrow(position[0], position[1], t[0].particles.diameter[particle]*velocity[0], t[0].particles.diameter[particle]*velocity[1], color=scalarMap.to_rgba(np.sqrt(np.sum(data_vel[N*3 + particle*3:N*3 + particle*3 + 2]**2))))
 
 		divider = make_axes_locatable(ax)
 		cax = divider.append_axes("right", size="5%", pad=0.05)
