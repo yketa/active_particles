@@ -14,12 +14,17 @@ def mean_square_displacement(param_file='param.pickle', pos_file='position.csv')
 	data_pos = np.genfromtxt(fname=pos_file, delimiter=',')
 	positions = lambda time: np.array([data_pos[time, particle*2:particle*2 + 2] for particle in range(N)]) # function giving all the positions at a given time
 
+	Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
+	Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
+
 	time = [0] # array of increment of time
 	msdis = [0] # array of mean square displacements
 
-	for dt in range(1, len(data_vel)): # loop over all different increment of time
+	pos = lambda time: np.reshape(np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time, max_rows=1)[:-1], (N, 2))
+
+	for dt in range(1, Ntimes): # loop over all different increment of time
 		time += [time_step*period_dump*dt]
-		msdis += [np.mean([np.sum(((positions(time + dt) - np.mean(positions(time + dt), axis=0)) - (positions(time) - np.mean(positions(time), axis=0)))**2, axis=1) for time in range(len(data_vel) - dt)])]
+		msdis += [np.mean([np.sum(((lambda positions: positions - np.mean(positions, axis=0))(pos(time + dt)) - (lambda positions: positions - np.mean(positions, axis=0))(pos(time)))**2, axis=1) for time in range(Ntimes - dt)])]
 
 	return time, msdis
 
