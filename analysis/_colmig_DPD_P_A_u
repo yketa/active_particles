@@ -66,8 +66,9 @@ ax.set_title(r'$\phi = $' + str(density) + r'$, \tilde{v} = $' + "%e" % vzero + 
 
 # SAVING
 
-fname = 'u_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(time) + '_I' + float_to_letters(dt) + '.eps' # filename
-plt.savefig(data_dir + '/' + fname) # saving the figure
+if 'SAVE' in os.environ and eval(os.environ['SAVE']):
+	fname = 'u_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(time) + '_I' + float_to_letters(dt) + '.eps' # filename
+	plt.savefig(data_dir + '/' + fname) # saving the figure
 
 # DISPLAYING
 
