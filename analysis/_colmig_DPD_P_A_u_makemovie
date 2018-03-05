@@ -104,7 +104,7 @@ N_frames = min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/fram
 prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
 pos = t[prep_frames + frame_init].particles.position # position of the particles at initial time
-pos0 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=prep_frames + frame_init, max_rows=1)[:-1] # position of the particles at initial time (without periodic boundary conditions)
+pos0 = np.genfromtxt(fname=position_file, delimiter=',', skip_header=prep_frames + frame_init, max_rows=1)[:-1] # position of the particles at initial time (without periodic boundary conditions)
 
 frame = 0 # number of the frame
 for time in range(N_steps//period_dump - frame_init): # for every frame
@@ -122,7 +122,7 @@ for time in range(N_steps//period_dump - frame_init): # for every frame
 		fig, ax = plt.subplots()
 		fig.set_size_inches(frame_hor, frame_ver)
 
-		displacements = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=prep_frames + frame_init + time, max_rows=1)[:-1] - pos0 # displacement between initial and current frame
+		displacements = np.genfromtxt(fname=position_file, delimiter=',', skip_header=prep_frames + frame_init + time, max_rows=1)[:-1] - pos0 # displacement between initial and current frame
 		disp_n = lambda particle: np.sqrt(np.sum(displacements[particle*2:particle*2 + 2]**2))
 
 		for particle in range(N): # for every particle in the frame
