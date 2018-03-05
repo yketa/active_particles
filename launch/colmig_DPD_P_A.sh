@@ -14,7 +14,7 @@ export DATA_DIRECTORY=/home/yketa/hoomd/colmig_DPD_P_A/data/${sim_name}
 output_file=/home/yketa/hoomd/colmig_DPD_P_A/out/${sim_name}.out
 > $output_file
 
-sbatch --job-name=$sim_name <<EOF
+sbatch --job-name=$sim_name ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:k80:1

@@ -9,7 +9,7 @@ mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/varN.out
 > $output_file
 
-sbatch --job-name=varN_${DATA} <<EOF
+sbatch --job-name=varN_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:k80:1

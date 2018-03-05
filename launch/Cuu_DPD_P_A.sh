@@ -16,7 +16,7 @@ mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/${CUU_TIME}.out
 > $output_file
 
-sbatch --job-name=${CUU_TIME}_${DATA} <<EOF
+sbatch --job-name=${CUU_TIME}_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:k80:1

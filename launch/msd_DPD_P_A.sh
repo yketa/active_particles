@@ -9,7 +9,7 @@ mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/msd.out
 > $output_file
 
-sbatch --job-name=msd_${DATA} <<EOF
+sbatch --job-name=msd_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:k80:1
