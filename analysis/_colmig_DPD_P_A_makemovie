@@ -89,7 +89,7 @@ bytes = out_param.write("FIRE steps=%e\n" % prep_steps) # number of FIRE minimiz
 bytes = out_param.write("INTEGRATION PARAMETERS\n")
 bytes = out_param.write("dt=%e\n" % time_step) # integration time step
 bytes = out_param.write("steps=%d\n" % N_steps) # number of integration steps
-bytes = out_param.write("T_dump=%d\n" % period_dump) # period of dumping to gsd file
+bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gsd file
 
 N_frames = min(frame_maximum, math.ceil(len(data_vel)/frame_period)) # number of frames to render
 
@@ -103,7 +103,7 @@ for time in range(len(data_vel)): # for every frame
 	if time%frame_period == 0 and frame < N_frames:
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % N_frames)
 
-		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e" %(time*time_step*period_dump))
+		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(time*time_step*period_dump))
 		bytes = out_param.write("E_p=%e\n" % data[prep_frames + time, 1])
 		bytes = out_param.write("kT=%e\n" % data[prep_frames + time, 2])
 		bytes = out_param.write("pxx=%e\n" % data[prep_frames + time, 3])
