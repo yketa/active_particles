@@ -127,7 +127,7 @@ for time in range(N_steps//period_dump - frame_init): # for every frame
 
 		for particle in range(N): # for every particle in the frame
 
-			ax.arrow(pos[prep_frames + frame_init + time][particle, 0], pos[prep_frames + frame_init + time][particle, 1], displacements[particle*2], displacements[particle*2 + 1], width=disp_n(particle)*width, head_width=disp_n(particle)*head_width, head_length=disp_n(particle)*head_length, head_starts_at_zero=True, color='blue')
+			ax.arrow(pos[particle, 0], pos[particle, 1], displacements[particle*2], displacements[particle*2 + 1], width=disp_n(particle)*width, head_width=disp_n(particle)*head_width, head_length=disp_n(particle)*head_length, head_starts_at_zero=True, color='blue')
 
 		ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
 		ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
