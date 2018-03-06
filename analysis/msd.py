@@ -23,8 +23,8 @@ def mean_square_displacement(param_file='param.pickle', pos_file='position.csv')
 		time += [time_step*period_dump*dt]
 		msdis += [0]
 		for time_ in range(Ntimes - dt):
-			r_t_dt = (lambda positions: positions - np.mean(positions, axis=0))(pos(time + dt))
-			r_t = (lambda positions: positions - np.mean(positions, axis=0))(pos(time))
+			r_t_dt = (lambda positions: positions - np.mean(positions, axis=0))(pos(time_ + dt))
+			r_t = (lambda positions: positions - np.mean(positions, axis=0))(pos(time_))
 			dr2 = (r_t_dt - r_t)**2
 			msdis[-1] += np.mean(np.sum(dr2, axis=1))
 		msdis[-1] /= Ntimes - dt
