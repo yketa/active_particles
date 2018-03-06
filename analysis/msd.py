@@ -11,9 +11,6 @@ def mean_square_displacement(param_file='param.pickle', pos_file='position.csv')
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 	file.close()
 
-	data_pos = np.genfromtxt(fname=pos_file, delimiter=',')
-	positions = lambda time: np.array([data_pos[time, particle*2:particle*2 + 2] for particle in range(N)]) # function giving all the positions at a given time
-
 	Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
 	Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
 
@@ -24,7 +21,14 @@ def mean_square_displacement(param_file='param.pickle', pos_file='position.csv')
 
 	for dt in range(1, Ntimes): # loop over all different increment of time
 		time += [time_step*period_dump*dt]
-		msdis += [np.mean([np.sum(((lambda positions: positions - np.mean(positions, axis=0))(pos(time + dt)) - (lambda positions: positions - np.mean(positions, axis=0))(pos(time)))**2, axis=1) for time in range(Ntimes - dt)])]
+		msdis += [0]
+		for time_ in range(Ntimes - dt):
+			r_t_dt = (lambda positions: positions - np.mean(positions, axis=0))(pos(time + dt))
+			r_t = (lambda positions: positions - np.mean(positions, axis=0))(pos(time))
+			dr2 = (r_t_dt - r_t)**2
+			msdis[-1] += np.mean(np.sum(dr2, axis=1))
+		msdis[-1] /= Ntimes - dt
+		# msdis += [np.mean([np.sum(((lambda positions: positions - np.mean(positions, axis=0))(pos(time + dt)) - (lambda positions: positions - np.mean(positions, axis=0))(pos(time)))**2, axis=1) for time in range(Ntimes - dt)])]
 
 	return time, msdis
 
