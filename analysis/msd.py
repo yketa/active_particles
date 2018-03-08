@@ -41,7 +41,7 @@ param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ el
 pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else data_dir + '/position.csv' # positions file
 
 init_frame = int(eval(os.environ['INITIAL_FRAME'])) if 'INITIAL_FRAME' in os.environ else -1 # initial time for the calculation of the mean square displacement
-snap_max = int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ 10 # maximum number of time snapshots taken for the calculation of the mean square displacement at each time
-snap_period = int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.environ 1 # mean square displacement will be calculated for each snap_period dumps period of time
+snap_max = int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ else 10 # maximum number of time snapshots taken for the calculation of the mean square displacement at each time
+snap_period = int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.environ else 1 # mean square displacement will be calculated for each snap_period dumps period of time
 
 mean_square_displacement(data_dir=data_dir, param_file=param_file, pos_file=pos_file, init_frame=init_frame, snap_max=snap_max, snap_period=snap_period) # calculation of the mean square displacement
