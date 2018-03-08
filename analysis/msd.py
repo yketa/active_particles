@@ -1,3 +1,5 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
 import numpy as np
 
 import pickle
