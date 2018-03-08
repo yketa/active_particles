@@ -27,7 +27,7 @@ def mean_square_displacement(data_dir='/home/yketa/hoomd', param_file='param.pic
 
 	for dt in range(1, Ntimes): # loop over all different increment of time
 		# CALCULATION
-		time = [time_step*period_dump*dt*snap_period] # time at which is evaluated the mean square displacement
+		time = time_step*period_dump*dt*snap_period # time at which is evaluated the mean square displacement
 		msdis = np.mean([np.sum(((lambda positions: positions - np.mean(positions, axis=0))(pos(time + dt)) - (lambda positions: positions - np.mean(positions, axis=0))(pos(time)))**2, axis=1) for time in times(Ntimes, dt)])
 		# OUTPUT
 		msd_dump.write(str("%e,%e\n" % (time, msdis)))
