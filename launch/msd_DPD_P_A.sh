@@ -7,7 +7,10 @@ export DATA_DIRECTORY=/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}
 export PARAMETERS_FILE=${PARAMETERS_FILE-${DATA_DIRECTORY}/param.pickle}
 export POSITION_FILE=${POSITION_FILE-${DATA_DIRECTORY}/position.csv}
 
-export INITIAL_FRAME=${INITIAL_FRAME-0}
+export INITIAL_FRAME=${INITIAL_FRAME-`/home/yketa/miniconda3/bin/python3.6 <<EOF
+print(int(($(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N_steps)//$(/home/yketa/bin/_colmig_DPD_P_A_data $DATA period_dump))/2))
+EOF
+`}
 export SNAP_MAXIMUM=${SNAP_MAXIMUM-10}
 export SNAP_PERIOD=${SNAP_PERIOD-1}
 
