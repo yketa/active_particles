@@ -11,7 +11,7 @@ export INITIAL_FRAME=${INITIAL_FRAME-`/home/yketa/miniconda3/bin/python3.6 <<EOF
 print(int(($(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N_steps)//$(/home/yketa/bin/_colmig_DPD_P_A_data $DATA period_dump))/2))
 EOF
 `}
-export SNAP_MAXIMUM=${SNAP_MAXIMUM-10}
+export SNAP_MAXIMUM=${SNAP_MAXIMUM-1}
 export SNAP_PERIOD=${SNAP_PERIOD-1}
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
