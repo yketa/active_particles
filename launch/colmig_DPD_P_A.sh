@@ -7,7 +7,8 @@ export SELF_PROPULSION_SPEED=$SELF_PROPULSION_SPEED
 export ROTATION_DIFFUSION=$ROTATION_DIFFUSION
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-sim_name=D$(float_to_letters $DENSITY)_V$(float_to_letters $SELF_PROPULSION_SPEED)_R$(float_to_letters $ROTATION_DIFFUSION)_N$(float_to_letters $N)
+DATA=D$(float_to_letters $DENSITY)_V$(float_to_letters $SELF_PROPULSION_SPEED)_R$(float_to_letters $ROTATION_DIFFUSION)_N$(float_to_letters $N) # name of the data
+sim_name=${DATA}_L$(float_to_letters $(($(ls -d /home/yketa/hoomd/colmig_DPD_P_A/data/*/ | grep $DATA | wc -l)${OVERWRITE:+-1})))
 
 export DATA_DIRECTORY=/home/yketa/hoomd/colmig_DPD_P_A/data/${sim_name}
 
