@@ -84,7 +84,7 @@ nl = hoomd.md.nlist.cell(); # neighbour list
 
 hoomd.analyze.log(filename=name_log, quantities=['potential_energy', 'temperature', 'pressure_xx', 'pressure_xy', 'pressure_xz', 'pressure_yy', 'pressure_yz', 'pressure_zz','pressure','xy','lx','ly'], period=period_dump, overwrite=False if 'INITIALISATION_GSD' in os.environ else True)
 hoomd.dump.gsd(filename=name_trajectory + '.gsd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_GSD' in os.environ else True, dynamic=['momentum', 'attribute'])
-hoomd.dump.dcd(filename=name_trajectory + '.dcd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_GSD' in os.environ else True, unwrap_full=True)
+hoomd.dump.dcd(filename=name_trajectory + '.dcd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_DCD' in os.environ else True, unwrap_full=True)
 if 'NAME_XML' in os.environ: hoomd.deprecated.dump.xml(filename=name_xml, period=period_dump, group=all)
 
 # REPULSIVE FORCE
