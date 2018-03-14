@@ -12,6 +12,7 @@ import hoomd.md
 import numpy as np
 
 import pickle
+import struct
 
 hoomd.context.initialize(''); # initialise hoomd
 
@@ -23,7 +24,7 @@ call = subprocess.call(['mkdir', '-p', data_dir]) # creation of the simulation d
 name_par = data_dir + '/' + os.environ['NAME_PAR'] if 'NAME_PAR' in os.environ else data_dir + '/param.pickle' # name of the simulation parameters saving file
 
 name_log = data_dir + '/' + os.environ['NAME_LOG'] if 'NAME_LOG' in os.environ else data_dir + '/log-output.log' # name of the log output file
-name_trajectory = data_dir + '/' + os.environ['NAME_TRAJECTORY'] if 'NAME_TRAJECTORY' in os.environ else data_dir + '/trajectory' # name of the trajectory output gsd file
+name_trajectory = data_dir + '/' + os.environ['NAME_TRAJECTORY'] if 'NAME_TRAJECTORY' in os.environ else data_dir + '/trajectory' # name of the trajectory output files (.gsd and .data)
 name_vel = data_dir + '/' + os.environ['NAME_VELOCITY'] if 'NAME_VELOCITY' in os.environ else data_dir + '/velocity.csv' # name of the velocity output file
 name_xml = data_dir + '/' + os.environ['NAME_XML'] if 'NAME_XML' in os.environ else '' # name of the trajectory output xml file
 
@@ -82,10 +83,25 @@ nl = hoomd.md.nlist.cell(); # neighbour list
 
 # OUTPUT
 
-hoomd.analyze.log(filename=name_log, quantities=['potential_energy', 'temperature', 'pressure_xx', 'pressure_xy', 'pressure_xz', 'pressure_yy', 'pressure_yz', 'pressure_zz','pressure','xy','lx','ly'], period=period_dump, overwrite=False if 'INITIALISATION_GSD' in os.environ else True)
-hoomd.dump.gsd(filename=name_trajectory + '.gsd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_GSD' in os.environ else True, dynamic=['momentum', 'attribute'])
-hoomd.dump.dcd(filename=name_trajectory + '.dcd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_DCD' in os.environ else True, unwrap_full=True)
+hoomd.analyze.log(filename=name_log, quantities=['potential_energy', 'temperature', 'pressure_xx', 'pressure_xy', 'pressure_xz', 'pressure_yy', 'pressure_yz', 'pressure_zz','pressure','xy','lx','ly'], period=period_dump, overwrite=False if 'INITIALISATION_GSD' in os.environ else True) # log output file
+hoomd.dump.gsd(filename=name_trajectory + '.gsd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_GSD' in os.environ else True, dynamic=['momentum', 'attribute']) # trajectory gsd file
 if 'NAME_XML' in os.environ: hoomd.deprecated.dump.xml(filename=name_xml, period=period_dump, group=all)
+
+output_trajectory = open(name_trajectory + '.dat', 'wb') # trajectiry data file
+def dump_trajectory(dump_file, N, positions, velocities):
+	# writes data to binary trajectory file
+	for data in [positions, velocities]:
+		for particle in range(N):
+			for coord in range(2):
+					dump_file.write(struct.pack('d', data[particle, coord]))
+
+snaps = [[None, hoomd.data.make_snapshot(N=N, box=hoomd.data.boxdim(L=box_size))], None] # list of system snapshots ([[time, time + period_dump], time + period_dump + 1])
+
+increments = np.zeros((N, 3)) # increments of space to cancel wrapping due to periodic boundary conditions
+inc = lambda increments, snaps, L: increments + np.sign(snaps[0][0].particles.position[:])*(snaps[0][0].particles.position[:]*snaps[0][1].particles.position[:] < 0)*(abs(snaps[0][0].particles.position[0]) > L/4)*L # function to update increments array
+
+positions = lambda snaps, increments: snaps[0][1].particles.position[:] + increments # returns unwrapped positions array
+velocities = lambda snaps, dt: (snaps[1].particles.position[:] - snaps[0][1].particles.position[:])/dt # returns velocities array
 
 # REPULSIVE FORCE
 
@@ -132,16 +148,24 @@ propulsion = hoomd.md.force.active(group=all, seed=123, f_lst=activity, rotation
 
 # RUN
 
-vel_dump = open(name_vel, 'w')
-for runs in range(N_steps//period_dump):
-	snap1 = system.take_snapshot(all=True)
-	hoomd.run(1)
-	snap2 = system.take_snapshot(all=True)
-	# calculation and saving of the velocities
-	velocities = (snap2.particles.position - snap1.particles.position)/time_step # manual calculation of the velocities
-	for value in list(snap1.particles.position.flatten()) + list(velocities.flatten()):
-		vel_dump.write(str("%e," % value))
-	vel_dump.write("\n")
+def run(dump_file, snaps, increments, N, L, dt, period_dump):
+	# runs hoomd for period_dump iterations and saves corresponding data
 
+	snaps[0][0] = snaps[0][1] # reference time in snaps increases by period_dump
+	# for positions
+	snaps[0][1] = system.take_snapshot(all=True)
+	# for velocities
+	hoomd.run(1)
+	snaps[1] = system.take_snapshot(all=True)
+	# updating increments
+	increments = inc(increments, snaps, L)
+	# dump
+	dump_trajectory(dump_file, N, positions(snaps, increments), velocities(snaps, dt))
+	# additional run
 	hoomd.run(period_dump - 1)
-vel_dump.close()
+
+	return snaps, increments
+
+for runs in range(int(N_steps//period_dump)):
+	snaps, increments = run(output_trajectory, snaps, increments, N, box_size, time_step, period_dump)
+output_trajectory.close()
