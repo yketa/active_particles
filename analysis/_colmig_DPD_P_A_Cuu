@@ -51,18 +51,16 @@ def displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 	pos = w_traj[int(time + dis_time)].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
-	
+	index = np.array((pos + L/2)//dL, dtype=int) # 2D index of every particles
+
 	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
 	pos1 = getarray(unwrap_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
+	displacement = pos1 - pos0 # displacements of the particles between time and time + dis_time
 
 	ugrid_dic = {}
 	for particle in range(N):
-		index = (pos[particle] + L/2)//dL
-		if (index < Ncases).all():
-			index = (int(index[0]), int(index[1]))
-
-			displacement = pos1[particle] - pos0[particle]
-			ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
+		if (index[particle] < Ncases).all():
+			ugrid_dic[tuple(index[particle])] = ugrid_dic[tuple(index[particle])] + [displacement[particle]] if tuple(index[particle]) in ugrid_dic else [displacement[particle]]
 
 	ugrid = np.zeros((Ncases, Ncases, 2))
 	for index in ugrid_dic:
@@ -112,7 +110,7 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 
 	cmap = plt.cm.jet
 
-	Cuumin = 0
+	Cuumin = 0 if np.min(Cuu2D) > 0 else np.min(Cuu2D)
 	Cuumax = np.max(Cuu2D)
 
 	fig, axs = plt.subplots(1, 2)
