@@ -25,7 +25,6 @@ name_par = data_dir + '/' + os.environ['NAME_PAR'] if 'NAME_PAR' in os.environ e
 
 name_log = data_dir + '/' + os.environ['NAME_LOG'] if 'NAME_LOG' in os.environ else data_dir + '/log-output.log' # name of the log output file
 name_trajectory = data_dir + '/' + os.environ['NAME_TRAJECTORY'] if 'NAME_TRAJECTORY' in os.environ else data_dir + '/trajectory' # name of the trajectory output files (.gsd and .data)
-name_vel = data_dir + '/' + os.environ['NAME_VELOCITY'] if 'NAME_VELOCITY' in os.environ else data_dir + '/velocity.csv' # name of the velocity output file
 name_xml = data_dir + '/' + os.environ['NAME_XML'] if 'NAME_XML' in os.environ else '' # name of the trajectory output xml file
 
 N = int(eval(os.environ['N'])) if 'N' in os.environ else 2000 # number of particles
@@ -98,7 +97,7 @@ def dump_trajectory(dump_file, N, positions, velocities):
 snaps = [[None, hoomd.data.make_snapshot(N=N, box=hoomd.data.boxdim(L=box_size))], None] # list of system snapshots ([[time, time + period_dump], time + period_dump + 1])
 
 increments = np.zeros((N, 3)) # increments of space to cancel wrapping due to periodic boundary conditions
-inc = lambda increments, snaps, L: increments + np.sign(snaps[0][0].particles.position[:])*(snaps[0][0].particles.position[:]*snaps[0][1].particles.position[:] < 0)*(abs(snaps[0][0].particles.position[0]) > L/4)*L # function to update increments array
+inc = lambda increments, snaps, L: increments + np.sign(snaps[0][0].particles.position[:])*(snaps[0][0].particles.position[:]*snaps[0][1].particles.position[:] < 0)*(abs(snaps[0][0].particles.position[:]) > L/4)*L # function to update increments array
 
 positions = lambda snaps, increments: snaps[0][1].particles.position[:] + increments # returns unwrapped positions array
 velocities = lambda snaps, dt: (snaps[1].particles.position[:] - snaps[0][1].particles.position[:])/dt # returns velocities array
