@@ -3,6 +3,8 @@
 import os
 import sys
 
+import math
+
 import gsd
 import gsd.hoomd
 import gsd.pygsd
@@ -33,6 +35,8 @@ file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
 
+prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
+
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
 Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
@@ -43,14 +47,14 @@ dis_time = Nframes + dis_time if dis_time <= 0 else dis_time # length of the int
 
 times = np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.linspace(init_frame, Nentries - dis_time - 1, int_max))))) # frames at which to calculate the correlation displacement
 
-def displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
+def displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file):
 	# This function associates a Ncases x Ncases to the box and calculates the average
 	# displacement over time dis_time from time time in every cases.
 
 	dL = L/Ncases
 
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
-	pos = w_traj[int(time + dis_time)].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
+	pos = w_traj[int(prep_frames + time + dis_time)].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
 	index = np.array((pos + L/2)//dL, dtype=int) # 2D index of every particles
 
 	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
@@ -68,11 +72,11 @@ def displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 
 	return ugrid
 
-def Cuu2D_time(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
+def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file):
 	# This function returns the 2D correlation plot and renormalisation term of the
 	# displacement grid calculated by displacement_grid.
 
-	ugrid = displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file) # displacement grid
+	ugrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
@@ -83,7 +87,7 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 	return Cuu, Norm
 
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
-	Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
+	Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
 Cuu1D_dic = {}
 for i in range(Cuu2D.shape[0]):
