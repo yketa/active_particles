@@ -20,8 +20,8 @@ from collections import OrderedDict
 
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
-wrap_file = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
-unwrap_file = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # unwrapped trajectory file (binary)
+wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
+unwrap_file_name = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # unwrapped trajectory file (binary)
 param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
 
 dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
@@ -49,17 +49,11 @@ def displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 
 	dL = L/Ncases
 
-	w_file = gsd.pygsd.GSDFile(open(wrap_file, 'rb'));
-	w_traj = gsd.hoomd.HOOMDTrajectory(w_file);
-
-	pos = w_traj[time + dis_time].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
+	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+	pos = w_traj[int(time + dis_time)].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
 	
-	uw_file = open(unwrap_file, 'rb')
-	
-	pos0 = getarray(uw_file, N, time) # positions at time time (without periodic boundary conditions)
-	pos1 = getarray(uw_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
-
-	uw_file.close()
+	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
+	pos1 = getarray(unwrap_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
 
 	ugrid_dic = {}
 	for particle in range(N):
@@ -90,7 +84,8 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 
 	return Cuu, Norm
 
-Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
+with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
+	Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
 Cuu1D_dic = {}
 for i in range(Cuu2D.shape[0]):
