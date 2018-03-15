@@ -19,3 +19,4 @@ def getarray(data, N, time, variable='position', element_type='d', bytes_per_ele
 	"""
 
 	return np.reshape(list(map(lambda particle: list(map(lambda axis: getval(data, N, time, particle, axis, variable, element_type, bytes_per_element), range(2))), range(N))), (N, 2))
+
