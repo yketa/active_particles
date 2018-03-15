@@ -19,6 +19,6 @@ sbatch --job-name=pos_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/pos_${DATA}.%j.out
 #SBATCH --ntasks-per-node 1
 
-/home/yketa/bin/_pos >> $output_file
+/home/yketa/hoomd/colmig_DPD_P_A/data/pos.py >> $output_file
 EOF
 
