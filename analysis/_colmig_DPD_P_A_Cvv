@@ -1,40 +1,46 @@
 #! /home/yketa/miniconda3/bin/python3.6
 
 import os
+import sys
+
+import math
 
 import numpy as np
 
 import pickle
 
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
+
 time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # frame for which we calculate the velocity auto-correlation
 
-vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else 'velocity.csv' # velocity file
+wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
+unwrap_file_name = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # unwrapped trajectory file (binary)
 param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
 
 file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
 
-data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time if time >= 0 else N_steps//period_dump + time, max_rows=1) # positions and velocity at time time
+time = time if time >= 0 else N_steps//period_dump + time
 
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
-def velocity_grid(Ncases, L, data_vel):
+def velocity_grid(Ncases, N, L, time, prep_frames, wrap_file, unwrap_file):
 	# This function associates a Ncases x Ncases to the box and calculates the average
 	# velocity in every cases.
 
 	dL = L/Ncases
 
-	positions = lambda particle: data_vel[particle*3:particle*3 + 2] # positions of the particles
-	velocities = lambda particle: data_vel[N*3 + particle*3:N*3 + particle*3 + 2] # velocities of the particles
+	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+	positions = w_traj[int(prep_frames + time)].particles.position[:, :2] # positions of the particles at time time
+	velocities = getarray(unwrap_file, N, time, variable='velocity') # velocities of the particles at time time
+
+	index = np.array((pos + L/2)//dL, dtype=int) # 2D index of every particles
 
 	vgrid_dic = {}
 	for particle in range(N):
-		index = (positions(particle) + L/2)//dL
-		index = (int(index[0]), int(index[1]))
-
-		velocity = velocities(particle)
-		vgrid_dic[index] = vgrid_dic[index] + [velocity] if index in vgrid_dic else [velocity]
+		vgrid_dic[tuple(index[particle])] = vgrid_dic[tuple(index[particle])] + [velocities[particle]] if index in vgrid_dic else [velocities[particle]]
 
 	vgrid = np.zeros((Ncases, Ncases, 2))
 	for index in vgrid_dic:
@@ -42,7 +48,8 @@ def velocity_grid(Ncases, L, data_vel):
 
 	return vgrid
 
-vgrid = velocity_grid(Ncases, box_size, data_vel) # velocity grid
+with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
+	vgrid = velocity_grid(Ncases, N, box_size, prep_frames, wrap_file, unwrap_file) # velocity grid
 
 FFTvgrid = np.fft.fft2(vgrid, axes=(-3, -2))
 FFTvxgrid = FFTvgrid[:, :, 0]
