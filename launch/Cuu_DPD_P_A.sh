@@ -6,11 +6,16 @@ fi
 DATA_DIRECTORY="/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}"
 export DATA_DIRECTORY=$DATA_DIRECTORY
 export TIME=${TIME-1}
+export INITIAL_FRAME=${INITIAL_FRAME-`/home/yketa/miniconda3/bin/python3.6 <<EOF
+print(int(($(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N_steps)//$(/home/yketa/bin/_colmig_DPD_P_A_data $DATA period_dump))/2))
+EOF
+`}
+export INTERVAL_MAXIMUM=${INTERVAL_MAXIMUM-1}
 
 export SHOW='False'
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-CUU_TIME=Cuu_T$(float_to_letters $TIME)
+CUU_TIME=Cuu_I$(float_to_letters $INITIAL_FRAME)_T$(float_to_letters $TIME)_M$(float_to_letters $INTERVAL_MAXIMUM)
 
 mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/${CUU_TIME}.out

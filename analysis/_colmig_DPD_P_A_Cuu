@@ -3,20 +3,31 @@
 import os
 import sys
 
+import gsd
+import gsd.hoomd
+import gsd.pygsd
+
 import numpy as np
 
 import pickle
 
 sys.path.append('/home/yketa')
 from exponents import float_to_letters
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
 
-dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
+from collections import OrderedDict
 
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
-vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else data_dir + '/velocity.csv' # velocity file
-pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else data_dir + '/position.csv' # position file
+wrap_file = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
+unwrap_file = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # unwrapped trajectory file (binary)
 param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
+
+dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
+
+init_frame = int(eval(os.environ['INITIAL_FRAME'])) if 'INITIAL_FRAME' in os.environ else -1 # initial time for the calculation of the displacement correlation
+int_max = int(eval(os.environ['INTERVAL_MAXIMUM'])) if 'INTERVAL_MAXIMUM' in os.environ else 1 # maximum number of intervals taken for the calculation of the displacement correlation
 
 file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
@@ -25,27 +36,38 @@ file.close()
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
 
 Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
-Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
-dis_time = Ntimes + dis_time if dis_time <= 0 else dis_time
+init_frame = int(Nentries/2) if init_frame < 0 else init_frame # initial frame
+Nframes = Nentries - init_frame # number of frames available for the calculation
 
-def displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
+dis_time = Nframes + dis_time if dis_time <= 0 else dis_time # length of the interval of time for which the correlation displacement is calculated
+
+times = np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.linspace(init_frame, Nentries - dis_time - 1, int_max))))) # frames at which to calculate the correlation displacement
+
+def displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 	# This function associates a Ncases x Ncases to the box and calculates the average
 	# displacement over time dis_time from time time in every cases.
 
 	dL = L/Ncases
 
-	pos0 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time, max_rows=1)[:-1] # positions at time time (without periodic boundary conditions)
-	pos1 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time + dis_time, max_rows=1)[:-1] # position at time time + dis_time (without periodic boundary conditions)
+	w_file = gsd.pygsd.GSDFile(open(wrap_file, 'rb'));
+	w_traj = gsd.hoomd.HOOMDTrajectory(w_file);
 
-	pos = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2) + time + dis_time, max_rows=1)[:-1] # position at time time + dis_time (with boundary conditions)
+	pos = w_traj[time + dis_time].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
+	
+	uw_file = open(unwrap_file, 'rb')
+	
+	pos0 = getarray(uw_file, N, time) # positions at time time (without periodic boundary conditions)
+	pos1 = getarray(uw_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
+
+	uw_file.close()
 
 	ugrid_dic = {}
 	for particle in range(N):
-		index = (pos[particle*3:particle*3 + 2] + L/2)//dL
+		index = (pos[particle] + L/2)//dL
 		if (index < Ncases).all():
 			index = (int(index[0]), int(index[1]))
 
-			displacement = pos1[particle*2:particle*2 + 2] - pos0[particle*2:particle*2 + 2]
+			displacement = pos1[particle] - pos0[particle]
 			ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
 
 	ugrid = np.zeros((Ncases, Ncases, 2))
@@ -54,11 +76,11 @@ def displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
 
 	return ugrid
 
-def Cuu2D_time(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
+def Cuu2D_time(Ncases, N, L, time, dis_time, wrap_file, unwrap_file):
 	# This function returns the 2D correlation plot and renormalisation term of the
 	# displacement grid calculated by displacement_grid.
 
-	ugrid = displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries) # displacement grid
+	ugrid = displacement_grid(Ncases, N, L, time, dis_time, wrap_file, unwrap_file) # displacement grid
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
@@ -68,7 +90,7 @@ def Cuu2D_time(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
 
 	return Cuu, Norm
 
-Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, box_size, time, dis_time, vel_file, pos_file, Nentries), range(Ntimes - dis_time))), axis=0)) # 2D correlation plot of the displacement
+Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
 Cuu1D_dic = {}
 for i in range(Cuu2D.shape[0]):
@@ -79,7 +101,7 @@ Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean
 
 # SAVING
 
-filename = data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(dis_time) + '.pickle' # Cuu file name
+filename = data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_I' + float_to_letters(init_frame) + '_T' + float_to_letters(dis_time) + '_M' + float_to_letters(int_max) + '.pickle' # Cuu file name
 file = open(filename, 'wb')
 pickle.dump([Cuu2D, Cuu1D], file)
 file.close()
