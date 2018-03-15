@@ -1,5 +1,6 @@
 .DS_Store
 analysis/.DS_Store
+analysis/__pycache__
 analysis/deprecated/.DS_Store
 launch/.DS_Store
 simulation/.DS_Store
