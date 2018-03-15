@@ -1,5 +1,6 @@
 #! /home/yketa/miniconda3/bin/python3.6
 
+import numpy as np
 import struct
 
 def getval(data, N, time, particle, axis, variable='position', element_type='d', bytes_per_element=8):
