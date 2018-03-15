@@ -1,0 +1,94 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+
+import numpy as np
+
+import pickle
+
+time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # frame for which we calculate the velocity auto-correlation
+
+vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else 'velocity.csv' # velocity file
+param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
+
+file = open(param_file, 'rb')
+N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
+file.close()
+
+data_vel = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time if time >= 0 else N_steps//period_dump + time, max_rows=1) # positions and velocity at time time
+
+Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
+
+def velocity_grid(Ncases, L, data_vel):
+	# This function associates a Ncases x Ncases to the box and calculates the average
+	# velocity in every cases.
+
+	dL = L/Ncases
+
+	positions = lambda particle: data_vel[particle*3:particle*3 + 2] # positions of the particles
+	velocities = lambda particle: data_vel[N*3 + particle*3:N*3 + particle*3 + 2] # velocities of the particles
+
+	vgrid_dic = {}
+	for particle in range(N):
+		index = (positions(particle) + L/2)//dL
+		index = (int(index[0]), int(index[1]))
+
+		velocity = velocities(particle)
+		vgrid_dic[index] = vgrid_dic[index] + [velocity] if index in vgrid_dic else [velocity]
+
+	vgrid = np.zeros((Ncases, Ncases, 2))
+	for index in vgrid_dic:
+		vgrid[index] = np.mean(vgrid_dic[index], axis=0)
+
+	return vgrid
+
+vgrid = velocity_grid(Ncases, box_size, data_vel) # velocity grid
+
+FFTvgrid = np.fft.fft2(vgrid, axes=(-3, -2))
+FFTvxgrid = FFTvgrid[:, :, 0]
+FFTvygrid = FFTvgrid[:, :, 1]
+Cvv2D = (np.real(np.fft.ifft2(np.conj(FFTvxgrid)*FFTvxgrid)) + np.real(np.fft.ifft2(np.conj(FFTvygrid)*FFTvygrid)))/((Ncases**2) * np.sum(np.mean(vgrid**2, axis=(0,1)))) # velocity auto-correlation
+
+Cvv1D_dic = {}
+for i in range(Cvv2D.shape[0]):
+	for j in range(Cvv2D.shape[1]):
+		if (i**2 + j**2) <= (Ncases/2)**2:
+			Cvv1D_dic[int(i**2 + j**2)] = Cvv1D_dic[int(i**2 + j**2)] + [Cvv2D[i, j]] if int(i**2 + j**2) in Cvv1D_dic else [Cvv2D[i, j]]
+Cvv1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cvv1D_dic[dist])], sorted(Cvv1D_dic))))
+
+# PLOT
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+cmap = plt.cm.jet
+
+Cvvmin = 0
+Cvvmax = np.max(Cvv2D)
+
+fig, axs = plt.subplots(1, 2)
+vNorm = colors.Normalize(vmin=Cvvmin, vmax=Cvvmax)
+scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap) 
+
+axs[0].imshow(np.roll(np.roll(Cvv2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1), cmap=cmap, norm=vNorm)
+
+axs[0].set_xlabel('x')
+axs[0].set_ylabel('y')
+axs[0].set_title('2D C_vv')
+
+divider = make_axes_locatable(axs[0])
+cax = divider.append_axes("right", size="5%", pad=0.05)
+cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+
+axs[1].semilogy(Cvv1D[:, 0], Cvv1D[:, 1])
+
+axs[1].set_xlabel('r')
+axs[1].set_ylabel('C_vv')
+axs[1].set_title('radial C_vv')
+
+fig.subplots_adjust(wspace=0.6)
+
+plt.show()

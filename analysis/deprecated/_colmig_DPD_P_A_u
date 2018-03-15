@@ -1,0 +1,76 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+import sys
+
+sys.path.append('/home/yketa')
+from exponents import float_to_letters
+
+import numpy as np
+
+import pickle
+
+time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else 0 # time initial for the displacement
+dt = int(eval(os.environ['DT'])) if 'DT' in os.environ else -1 # time interval for the displacement
+
+frame_ver = int(eval(os.environ['FRAME_VERTICAL_SIZE'])) if 'FRAME_VERTICAL_SIZE' in os.environ else 12 # vertical size of the frame (in inches)
+frame_hor = int(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) if 'FRAME_HORIZONTAL_SIZE' in os.environ else 12 # vertical size of the frame (in inches)
+frame_def = int(eval(os.environ['FRAME_DEFINITION'])) if 'FRAME_DEFINITION' in os.environ else 80 # definition of the frame (in dots per inches (dpi))
+
+width = float(eval(os.environ['ARROW_WIDTH'])) if 'ARROW_WIDTH' in os.environ else 1e-3 # width of the arrows
+head_width = float(eval(os.environ['HEAD_WIDTH']))*width if 'HEAD_WIDTH' in os.environ else 3e2*width # width of the arrows' head (input in ratio of the width of the arrows)
+head_length = float(eval(os.environ['HEAD_LENGTH']))*head_width if 'HEAD_LENGTH' in os.environ else 1.5*head_width # width of the arrows' head (input in ratio of the width of the arrows' head)
+
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else data_dir + '/velocity.csv' # velocity file
+pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else data_dir + '/position.csv' # position file
+param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
+
+file = open(param_file, 'rb')
+N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
+file.close()
+
+Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
+Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
+time = time + int(Nentries/2) if time < int(Nentries/2) else time
+dt = Ntimes + dt if dt <= 0 else dt
+
+# POSITIONS AND DISPLACEMENTS
+
+positions = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time, max_rows=1)[:-1] # positions of the particles at time t
+displacements = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=time + dt, max_rows=1)[:-1] - np.genfromtxt(fname=pos_file, delimiter=',', skip_header=time, max_rows=1)[:-1] # displacements between times time and time + dt
+
+# DRAWING
+
+import matplotlib as mpl
+if not('SHOW' in os.environ and eval(os.environ['SHOW'])):
+	mpl.use('Agg')
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots()
+fig.set_size_inches(frame_hor, frame_ver)
+
+for particle in range(N): # for every particle
+
+	disp_n = np.sqrt(np.sum(displacements[particle*2:particle*2 + 2]**2)) # distance of the displacement
+	ax.arrow(positions[particle*3], positions[particle*3 + 1], displacements[particle*2], displacements[particle*2 + 1], width=disp_n*width, head_width=disp_n*head_width, head_length=disp_n*head_length, head_starts_at_zero=True, color='blue')
+
+ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
+ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
+ax.set_aspect('equal')
+
+ax.set_xlabel(r'$x$')
+ax.set_ylabel(r'$y$')
+
+ax.set_title(r'$\phi = $' + str(density) + r'$, \tilde{v} = $' + "%e" % vzero + r'$, \tilde{\nu}_r = $' + "%e" % dr + '\n' + r'$t_{init} = $' + str(time_step*period_dump*time) + r'$, \Delta t = $' + str(time_step*period_dump*dt))
+
+# SAVING
+
+if 'SAVE' in os.environ and eval(os.environ['SAVE']):
+	fname = 'u_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(time) + '_I' + float_to_letters(dt) + '.eps' # filename
+	plt.savefig(data_dir + '/' + fname) # saving the figure
+
+# DISPLAYING
+
+if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+	plt.show()

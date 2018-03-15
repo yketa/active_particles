@@ -1,0 +1,123 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+import sys
+
+import numpy as np
+
+import pickle
+
+sys.path.append('/home/yketa')
+from exponents import float_to_letters
+
+dis_time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # time interval for the displacement
+
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+
+vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else data_dir + '/velocity.csv' # velocity file
+pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else data_dir + '/position.csv' # position file
+param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
+
+file = open(param_file, 'rb')
+N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
+file.close()
+
+Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
+
+Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
+Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
+dis_time = Ntimes + dis_time if dis_time <= 0 else dis_time
+
+def displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
+	# This function associates a Ncases x Ncases to the box and calculates the average
+	# displacement over time dis_time from time time in every cases.
+
+	dL = L/Ncases
+
+	pos0 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time, max_rows=1)[:-1] # positions at time time (without periodic boundary conditions)
+	pos1 = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=int(Nentries/2) + time + dis_time, max_rows=1)[:-1] # position at time time + dis_time (without periodic boundary conditions)
+
+	pos = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=int(Nentries/2) + time + dis_time, max_rows=1)[:-1] # position at time time + dis_time (with boundary conditions)
+
+	ugrid_dic = {}
+	for particle in range(N):
+		index = (pos[particle*3:particle*3 + 2] + L/2)//dL
+		if (index < Ncases).all():
+			index = (int(index[0]), int(index[1]))
+
+			displacement = pos1[particle*2:particle*2 + 2] - pos0[particle*2:particle*2 + 2]
+			ugrid_dic[index] = ugrid_dic[index] + [displacement] if index in ugrid_dic else [displacement]
+
+	ugrid = np.zeros((Ncases, Ncases, 2))
+	for index in ugrid_dic:
+		ugrid[index] = np.mean(ugrid_dic[index], axis=0)
+
+	return ugrid
+
+def Cuu2D_time(Ncases, L, time, dis_time, vel_file, pos_file, Nentries):
+	# This function returns the 2D correlation plot and renormalisation term of the
+	# displacement grid calculated by displacement_grid.
+
+	ugrid = displacement_grid(Ncases, L, time, dis_time, vel_file, pos_file, Nentries) # displacement grid
+
+	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
+	FFTuxgrid = FFTugrid[:, :, 0]
+	FFTuygrid = FFTugrid[:, :, 1]
+	Cuu = np.real(np.fft.ifft2(np.conj(FFTuxgrid)*FFTuxgrid)) + np.real(np.fft.ifft2(np.conj(FFTuygrid)*FFTuygrid)) # velocity auto-correlation
+	Norm = (Ncases**2) * np.sum(np.mean(ugrid**2, axis=(0,1))) # normalisation term
+
+	return Cuu, Norm
+
+Cuu2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: Cuu2D_time(Ncases, box_size, time, dis_time, vel_file, pos_file, Nentries), range(Ntimes - dis_time))), axis=0)) # 2D correlation plot of the displacement
+
+Cuu1D_dic = {}
+for i in range(Cuu2D.shape[0]):
+	for j in range(Cuu2D.shape[1]):
+		if (i**2 + j**2) <= (Ncases/2)**2:
+			Cuu1D_dic[int(i**2 + j**2)] = Cuu1D_dic[int(i**2 + j**2)] + [Cuu2D[i, j]] if int(i**2 + j**2) in Cuu1D_dic else [Cuu2D[i, j]]
+Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cuu1D_dic[dist])], sorted(Cuu1D_dic))))
+
+# SAVING
+
+filename = data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_T' + float_to_letters(dis_time) + '.pickle' # Cuu file name
+file = open(filename, 'wb')
+pickle.dump([Cuu2D, Cuu1D], file)
+file.close()
+
+# PLOT
+
+if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+	import matplotlib as mpl
+	import matplotlib.pyplot as plt
+	import matplotlib.colors as colors
+	import matplotlib.cm as cmx
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+	cmap = plt.cm.jet
+
+	Cuumin = 0
+	Cuumax = np.max(Cuu2D)
+
+	fig, axs = plt.subplots(1, 2)
+	vNorm = colors.Normalize(vmin=Cuumin, vmax=Cuumax)
+	scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap) 
+
+	axs[0].imshow(np.roll(np.roll(Cuu2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1), cmap=cmap, norm=vNorm)
+
+	axs[0].set_xlabel('x')
+	axs[0].set_ylabel('y')
+	axs[0].set_title('2D C_uu')
+
+	divider = make_axes_locatable(axs[0])
+	cax = divider.append_axes("right", size="5%", pad=0.05)
+	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+
+	axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
+
+	axs[1].set_xlabel('r')
+	axs[1].set_ylabel('C_uu')
+	axs[1].set_title('radial C_uu')
+
+	fig.subplots_adjust(wspace=0.6)
+
+	plt.show()
