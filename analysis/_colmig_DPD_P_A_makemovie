@@ -70,9 +70,8 @@ frame_ver = float(eval(os.environ['FRAME_VERTICAL_SIZE'])) # vertical size of th
 frame_hor = float(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) # horizontal size of the frames (in inches)
 frame_def = float(eval(os.environ['FRAME_DEFINITION'])) # definition of images (in dots per inches (dpi))
 
-file = open(parameters_file, 'rb')
-N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
-file.close()
+with open(parameters_file, 'rb') as param_file:
+	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
 
 data = np.genfromtxt(fname=logoutput_file, skip_header=True)
 
