@@ -52,10 +52,11 @@ import sys
 import math
 
 movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
+
 parameters_file = os.environ['PARAMETERS_FILE'] # parameters pickle file
-trajectory_file = os.environ['TRAJECTORY_FILE'] # trajectory gsd file
+wrap_file_name = os.environ['WRAPPED_FILE'] # trajectory gsd file
+unwrap_file_name = os.environ['UNWRAPPED_FILE'] # trajectory binary file
 logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
-position_file = os.environ['POSITION_FILE'] # position output file (without periodic boundary conditions)
 
 frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame for the calculation of the displacement
 frame_period = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
