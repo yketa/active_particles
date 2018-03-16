@@ -5,12 +5,15 @@ import sys
 
 sys.path.append('/home/yketa')
 from exponents import float_to_letters
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
 
 import numpy as np
+import math
 
 import pickle
 
-time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else 0 # time initial for the displacement
+time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # inital time for the displacement
 dt = int(eval(os.environ['DT'])) if 'DT' in os.environ else -1 # time interval for the displacement
 
 frame_ver = int(eval(os.environ['FRAME_VERTICAL_SIZE'])) if 'FRAME_VERTICAL_SIZE' in os.environ else 12 # vertical size of the frame (in inches)
@@ -22,23 +25,27 @@ head_width = float(eval(os.environ['HEAD_WIDTH']))*width if 'HEAD_WIDTH' in os.e
 head_length = float(eval(os.environ['HEAD_LENGTH']))*head_width if 'HEAD_LENGTH' in os.environ else 1.5*head_width # width of the arrows' head (input in ratio of the width of the arrows' head)
 
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
-vel_file = os.environ['VELOCITY_FILE'] if 'VELOCITY_FILE' in os.environ else data_dir + '/velocity.csv' # velocity file
-pos_file = os.environ['POSITION_FILE'] if 'POSITION_FILE' in os.environ else data_dir + '/position.csv' # position file
+
+wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
+unwrap_file_name = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # unwrapped trajectory file (binary)
 param_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
 
 file = open(param_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
 
-Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
-Ntimes = Nentries - int(Nentries/2) # number of time snapshots considered in the calculation
-time = time + int(Nentries/2) if time < int(Nentries/2) else time
-dt = Ntimes + dt if dt <= 0 else dt
+Nentries = N_steps//period_dump # number of time snapshots in binary trajectory file
+time = int(Nentries/2) if time < 0 else time
+dt = Nentries - time + dt if dt < 0 else dt
+
+prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
 # POSITIONS AND DISPLACEMENTS
 
-positions = np.genfromtxt(fname=vel_file, delimiter=',', skip_header=time, max_rows=1)[:-1] # positions of the particles at time t
-displacements = np.genfromtxt(fname=pos_file, delimiter=',', skip_header=time + dt, max_rows=1)[:-1] - np.genfromtxt(fname=pos_file, delimiter=',', skip_header=time, max_rows=1)[:-1] # displacements between times time and time + dt
+with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
+	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+	positions = w_traj[int(prep_frames + time)].particles.position[:, :2] # positions at time time
+	displacements = getarray(unwrap_file, N, time + dt) - getarray(unwrap_file, N, time + dt) # displacements between times time and time + dt
 
 # DRAWING
 
@@ -52,8 +59,8 @@ fig.set_size_inches(frame_hor, frame_ver)
 
 for particle in range(N): # for every particle
 
-	disp_n = np.sqrt(np.sum(displacements[particle*2:particle*2 + 2]**2)) # distance of the displacement
-	ax.arrow(positions[particle*3], positions[particle*3 + 1], displacements[particle*2], displacements[particle*2 + 1], width=disp_n*width, head_width=disp_n*head_width, head_length=disp_n*head_length, head_starts_at_zero=True, color='blue')
+	disp_n = np.sqrt(np.sum(displacements[particle]**2)) # distance of the displacement
+	ax.arrow(positions[particle, 0], positions[particle, 1], displacements[particle, 0], displacements[particle, 1], width=disp_n*width, head_width=disp_n*head_width, head_length=disp_n*head_length, head_starts_at_zero=True, color='blue')
 
 ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
 ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
