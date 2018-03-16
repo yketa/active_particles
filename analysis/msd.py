@@ -30,7 +30,7 @@ def mean_square_displacement(data_dir='/home/yketa/hoomd', parameters_file='para
 	times = lambda Nframes, dt: np.linspace(0, Nframes - dt - 1, min(snap_max, Nframes - dt), dtype=int) # list of time snapshots at which to evaluate the mean square displacement at n*dumps for N time snapshots
 	intervals = lambda Nframes, Ntimes: np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.exp(np.linspace(np.log(1), np.log(Nframes - 1), Ntimes)))))) # intervals of times logarithmically spaced for the calculation
 
-	out_file = data_dir + '/msd_std_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_I' + float_to_letters(init_frame) + '_M' + float_to_letters(snap_max) + '_P' + float_to_letters(snap_period) + '.csv' # MSD file
+	out_file = data_dir + '/msd_sterr_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_I' + float_to_letters(init_frame) + '_M' + float_to_letters(snap_max) + '_P' + float_to_letters(snap_period) + '.csv' # MSD file
 
 	time = list(map(lambda dt: time_step*period_dump*dt, intervals(Nframes, Ntimes)))
 	with open(unwrapped_file, 'rb') as unwrap_file:
