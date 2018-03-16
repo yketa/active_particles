@@ -49,6 +49,9 @@ import pickle
 import os
 import sys
 
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
+
 import math
 
 movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
