@@ -62,7 +62,7 @@ wrap_file_name = os.environ['WRAPPED_FILE'] # trajectory gsd file
 unwrap_file_name = os.environ['UNWRAPPED_FILE'] # trajectory binary file
 logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
 
-initial_frame = int(eval(os.environ['INITIAL_FRAME'])) # initial frame of the movie
+frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame of the movie
 frame_period = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
 frame_maximum = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
 
@@ -97,7 +97,7 @@ bytes = out_param.write("dt=%e\n" % time_step) # integration time step
 bytes = out_param.write("steps=%d\n" % N_steps) # number of integration steps
 bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gsd file
 
-N_frames = min(frame_maximum, math.ceil((N_steps//period_dump - initial_frame)/frame_period)) # number of frames to render
+N_frames = min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/frame_period)) # number of frames to render
 
 vmin = 0
 vmax = 3*vzero
@@ -108,8 +108,8 @@ frame = 0 # number of the frame
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 
-	for time in range(initial_frame, int(N_steps//period_dump)): # for every frame
-		if (time - initial_frame)%frame_period == 0 and frame < N_frames:
+	for time in range(frame_init, int(N_steps//period_dump)): # for every frame
+		if (time - frame_init)%frame_period == 0 and frame < N_frames:
 			sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % N_frames)
 
 			bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(time*time_step*period_dump))
