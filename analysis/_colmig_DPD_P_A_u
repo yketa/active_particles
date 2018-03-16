@@ -50,6 +50,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 	positions = w_traj[int(prep_frames + time)].particles.position[:, :2] # positions at time time
 	displacements = getarray(unwrap_file, N, time + dt) - getarray(unwrap_file, N, time) # displacements between times time and time + dt
+	disp_n = np.sqrt(np.sum(displacements**2, axis=1)) # norms of the displacements
 
 # DRAWING
 
@@ -62,9 +63,7 @@ fig, ax = plt.subplots()
 fig.set_size_inches(frame_hor, frame_ver)
 
 for particle in range(N): # for every particle
-
-	disp_n = np.sqrt(np.sum(displacements[particle]**2)) # distance of the displacement
-	if disp_n > 0:
+	if disp_n[particle] > 0:
 		ax.arrow(positions[particle, 0], positions[particle, 1], displacements[particle, 0], displacements[particle, 1], width=disp_n*width, head_width=disp_n*head_width, head_length=disp_n*head_length, head_starts_at_zero=True, color='blue')
 
 ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
