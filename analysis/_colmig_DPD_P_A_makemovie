@@ -12,7 +12,7 @@ FRAME_PER="${FRAME_PERIOD-1}"
 FRAME_MAX="${FRAME_MAXIMUM-1000}"
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-MOV=${DATA}_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $FRAME_MAXIMUM)_P$(float_to_letters $FRAME_PERIOD)
+MOV=${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)
 
 MOV_DIR="${MOVIE_DIRECTORY-${SIM_DIR}/movie/${MOV}}"
 rm -r "$MOV_DIR" &> /dev/null; mkdir "$MOV_DIR"; mkdir "${MOV_DIR}/frames"
