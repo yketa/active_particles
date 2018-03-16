@@ -5,24 +5,24 @@ if [ "$DATA" == "" ]; then
 	exit 0
 fi
 
-. /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-
 SIM_DIR=${SIMULATION_DIRECTORY-/home/yketa/hoomd/colmig_DPD_P_A}
-
-DATA_DIR="${DATA_DIRECTORY-${SIM_DIR}/data/${DATA}}"
-PAR_FILE="${PARAMETERS_FILE-${DATA_DIR}/param.pickle}"
-TRAJ_FILE="${TRAJECTORY_FILE-${DATA_DIR}/trajectory.gsd}"
-LOG_FILE="${LOGOUTPUT_FILE-${DATA_DIR}/log-output.log}"
-POS_FILE="${VELOCITY_FILE-${DATA_DIR}/position.csv}"
 
 FRAME_INIT="${INITIAL_FRAME-0}"
 FRAME_PER="${FRAME_PERIOD-1}"
 FRAME_MAX="${FRAME_MAXIMUM-1000}"
 
-MOV_DIR="${MOVIE_DIRECTORY-${SIM_DIR}/movie/u_${DATA}_T$(float_to_letters $FRAME_INIT)}"
-rm -r "$MOV_DIR" &> /dev/null; mkdir "$MOV_DIR"; mkdir "${MOV_DIR}/frames"
+. /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
+MOV=u_${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)
 
-MOV_NAME="${MOVIE_NAME-u_${DATA}_T$(float_to_letters $FRAME_INIT).mp4}"
+MOV_DIR="${MOVIE_DIRECTORY-${SIM_DIR}/movie/${MOV}}"
+rm -r "$MOV_DIR" &> /dev/null; mkdir "$MOV_DIR"; mkdir "${MOV_DIR}/frames"
+MOV_NAME="${MOVIE_NAME-${MOV}.mp4}"
+
+DATA_DIR="${DATA_DIRECTORY-${SIM_DIR}/data/${DATA}}"
+PAR_FILE="${PARAMETERS_FILE-${DATA_DIR}/param.pickle}"
+WRAP_FILE="${WRAPPED_FILE-${DATA_DIR}/trajectory.gsd}"
+UNWRAP_FILE="${UNWRAPPED_FILE-${DATA_DIR}/trajectory.dat}"
+LOG_FILE="${LOGOUTPUT_FILE-${DATA_DIR}/log-output.log}"
 
 WIDTH="${ARROW_WIDTH-1e-3}"
 HEAD_W="${HEAD_WIDTH-3e2}*$WIDTH"
@@ -32,7 +32,7 @@ FRAME_VER="${FRAME_VERTICAL_SIZE-12}"
 FRAME_HOR="${FRAME_HORIZONTAL_SIZE-12}"
 FRAME_DEF="${FRAME_DEFINITION-80}"
 
-MOVIE_DIRECTORY="$MOV_DIR" PARAMETERS_FILE="$PAR_FILE" TRAJECTORY_FILE="$TRAJ_FILE" LOGOUTPUT_FILE="$LOG_FILE" POSITION_FILE="$POS_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+MOVIE_DIRECTORY="$MOV_DIR" PARAMETERS_FILE="$PAR_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -73,9 +73,6 @@ file = open(parameters_file, 'rb')
 N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(file)
 file.close()
 
-f = gsd.pygsd.GSDFile(open(trajectory_file, 'rb'));
-t = gsd.hoomd.HOOMDTrajectory(f);
-
 data = np.genfromtxt(fname=logoutput_file, skip_header=True)
 
 out_param = open(movie_directory + "/param.txt", "w") # movie parameters output file
@@ -107,41 +104,45 @@ pos = t[prep_frames + frame_init].particles.position # position of the particles
 pos0 = np.genfromtxt(fname=position_file, delimiter=',', skip_header=prep_frames + frame_init, max_rows=1)[:-1] # position of the particles at initial time (without periodic boundary conditions)
 
 frame = 0 # number of the frame
-for time in range(N_steps//period_dump - frame_init): # for every frame
-	if time%frame_period == 0 and frame < N_frames:
-		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % N_frames)
+with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
+	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+	pos = w_traj[int(prep_frames + frame_init)].particles.position[:, :2] # positions of the particles at the initial frame
+	pos0 = getarray(unwrap_file, N, frame_init) # positions at the initial frame
 
-		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %((frame_init + time)*time_step*period_dump))
-		bytes = out_param.write("E_p=%e\n" % data[prep_frames + frame_init + time, 1])
-		bytes = out_param.write("kT=%e\n" % data[prep_frames + frame_init + time, 2])
-		bytes = out_param.write("pxx=%e\n" % data[prep_frames + frame_init + time, 3])
-		bytes = out_param.write("pyy=%e\n" % data[prep_frames + frame_init + time, 6])
-		bytes = out_param.write("pxy=%e\n" % data[prep_frames + frame_init + time, 4])
-		bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + frame_init + time, 10])
+	for time in range(frame_init, int(N_steps//period_dump)): # for every frame
+		if (time - frame_init)%frame_period == 0 and frame < N_frames:
+			sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % N_frames)
 
-		fig, ax = plt.subplots()
-		fig.set_size_inches(frame_hor, frame_ver)
+			bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(time*time_step*period_dump))
+			bytes = out_param.write("E_p=%e\n" % data[prep_frames + time, 1])
+			bytes = out_param.write("kT=%e\n" % data[prep_frames + time, 2])
+			bytes = out_param.write("pxx=%e\n" % data[prep_frames + time, 3])
+			bytes = out_param.write("pyy=%e\n" % data[prep_frames + time, 6])
+			bytes = out_param.write("pxy=%e\n" % data[prep_frames + time, 4])
+			bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + time, 10])
 
-		displacements = np.genfromtxt(fname=position_file, delimiter=',', skip_header=prep_frames + frame_init + time, max_rows=1)[:-1] - pos0 # displacement between initial and current frame
-		disp_n = lambda particle: np.sqrt(np.sum(displacements[particle*2:particle*2 + 2]**2))
+			fig, ax = plt.subplots()
+			fig.set_size_inches(frame_hor, frame_ver)
 
-		for particle in range(N): # for every particle in the frame
+			displacements = getarray(unwrap_file, N, time) - pos0 # displacements between initial and current frame
+			disp_n = np.sqrt(np.sum(displacements**2, axis=1)) # norms of the displacements
 
-			if disp_n(particle) != 0: # draw arrow only if the particles moved
-				ax.arrow(pos[particle, 0], pos[particle, 1], displacements[particle*2], displacements[particle*2 + 1], width=disp_n(particle)*width, head_width=disp_n(particle)*head_width, head_length=disp_n(particle)*head_length, head_starts_at_zero=True, color='blue')
+			for particle in range(N): # for every particle in the frame
+				if disp_n[particle] > 0: # draw arrow only if the particles moved
+					ax.arrow(pos[particle, 0], pos[particle, 1], displacements[particle, 0], displacements[particle, 1], width=disp_n[particle]*width, head_width=disp_n[particle]*head_width, head_length=disp_n[particle]*head_length, head_starts_at_zero=True, color='blue')
 
-		ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
-		ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
-		ax.set_aspect('equal')
+			ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
+			ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
+			ax.set_aspect('equal')
 
-		ax.set_xlabel(r'$x$')
-		ax.set_ylabel(r'$y$')
+			ax.set_xlabel(r'$x$')
+			ax.set_ylabel(r'$y$')
 
-		ax.set_title(r'$t=$' + '%e' %(time*time_step*period_dump))
+			ax.set_title(r'$t=$' + '%e' %(time*time_step*period_dump))
 
-		fig.savefig(movie_directory + '/frames/' + '%010d' % frame, dpi=frame_def)
-		plt.close()
-		frame += 1
+			fig.savefig(movie_directory + '/frames/' + '%010d' % frame, dpi=frame_def)
+			plt.close()
+			frame += 1
 
 sys.stdout.write("\n")
 out_param.close()
