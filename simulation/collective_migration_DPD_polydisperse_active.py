@@ -57,9 +57,9 @@ init_gsd = os.environ['INITALISATION_GSD'] if 'INITALISATION_GSD' in os.environ 
 init_frame = int(eval(os.environ['INITIALISATION_FRAME'])) if 'INITIALISATION_FRAME' in os.environ else 0 # initialisation frame in the gsd file
 
 if 'INITIALISATION_GSD' in os.environ and init_frame == -1: # initialise from the last frame
-        init_gsd_file = gsd.pygsd.GSDFile(open(init_gsd, 'rb'));
-        init_gsd_trajectory = gsd.hoomd.HOOMDTrajectory(init_gsd_file);
-        init_frame = len(init_gsd_trajectory) - 1 # last frame
+	with gsd.pygsd.GSDFile(open(init_gsd, 'rb')) as init_gsd_file:
+		init_gsd_trajectory = gsd.hoomd.HOOMDTrajectory(init_gsd_file)
+		init_frame = len(init_gsd_trajectory) - 1 # last frame
 
 # BOX PARAMETRISATION
 
@@ -86,7 +86,6 @@ hoomd.analyze.log(filename=name_log, quantities=['potential_energy', 'temperatur
 hoomd.dump.gsd(filename=name_trajectory + '.gsd', period=period_dump, group=all, overwrite=False if 'INITIALISATION_GSD' in os.environ else True, dynamic=['momentum', 'attribute']) # trajectory gsd file
 if 'NAME_XML' in os.environ: hoomd.deprecated.dump.xml(filename=name_xml, period=period_dump, group=all)
 
-output_trajectory = open(name_trajectory + '.dat', 'wb') # trajectiry data file
 def dump_trajectory(dump_file, N, positions, velocities):
 	# writes data to binary trajectory file
 	for data in [positions, velocities]:
@@ -165,6 +164,7 @@ def run(dump_file, snaps, increments, N, L, dt, period_dump):
 
 	return snaps, increments
 
-for runs in range(int(N_steps//period_dump)):
-	snaps, increments = run(output_trajectory, snaps, increments, N, box_size, time_step, period_dump)
-output_trajectory.close()
+with open(name_trajectory + '.dat', 'wb') as output_trajectory: # trajectory data file
+	for runs in range(int(N_steps//period_dump)):
+		snaps, increments = run(output_trajectory, snaps, increments, N, box_size, time_step, period_dump)
+
