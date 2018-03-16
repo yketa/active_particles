@@ -11,6 +11,10 @@ from readdat import *
 import numpy as np
 import math
 
+import gsd
+import gsd.hoomd
+import gsd.pygsd
+
 import pickle
 
 time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # inital time for the displacement
