@@ -49,7 +49,7 @@ prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 	positions = w_traj[int(prep_frames + time)].particles.position[:, :2] # positions at time time
-	displacements = getarray(unwrap_file, N, time + dt) - getarray(unwrap_file, N, time + dt) # displacements between times time and time + dt
+	displacements = getarray(unwrap_file, N, time + dt) - getarray(unwrap_file, N, time) # displacements between times time and time + dt
 
 # DRAWING
 
