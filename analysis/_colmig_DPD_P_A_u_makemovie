@@ -101,9 +101,6 @@ N_frames = min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/fram
 
 prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
-pos = t[prep_frames + frame_init].particles.position # position of the particles at initial time
-pos0 = np.genfromtxt(fname=position_file, delimiter=',', skip_header=prep_frames + frame_init, max_rows=1)[:-1] # position of the particles at initial time (without periodic boundary conditions)
-
 frame = 0 # number of the frame
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
