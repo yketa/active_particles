@@ -41,7 +41,9 @@ def mean_square_displacement(data_dir='/home/yketa/hoomd', parameters_file='para
 			return np.sum((wo_drift(pos(time + dt)) - wo_drift(pos(time)))**2, axis=1)
 		def msd_sterr(dt): # mean square displacement and standard error for time intervals of size dt
 			sterr = lambda values: np.std(values)/np.sqrt(np.prod(values.shape)) # standard error of array values
-			return (lambda disp: (np.mean(disp), sterr(disp)))(np.array(list(map(lambda time: displacements(time, dt), times(Nframes, dt)))))
+			return (lambda disp: (np.mean(disp), sterr(disp)))(
+				np.array(list(map(lambda time: displacements(time, dt), times(Nframes, dt))))
+			)
 
 		msd, sterr = np.transpose(list(map(lambda dt: msd_sterr(dt), intervals(Nframes, Ntimes))))
 
