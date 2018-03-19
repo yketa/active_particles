@@ -11,9 +11,8 @@ if not('$2'  in param):
 	print("There is no parameter '$2'")
 	sys.exit()
 
-file = open('/home/yketa/hoomd/colmig_DPD_P_A/data/$1/param.pickle', 'rb')
-data = pickle.load(file)
-file.close()
+with open('/home/yketa/hoomd/colmig_DPD_P_A/data/$1/param.pickle', 'rb') as param_file:
+	data = pickle.load(param_file)
 
 print("%e" % data[param['$2']])
 
