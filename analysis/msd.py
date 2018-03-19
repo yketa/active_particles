@@ -25,8 +25,6 @@ def mean_square_displacement(data_dir='/home/yketa/hoomd', parameters_file='para
 	Nframes = Nentries - init_frame # number of frames available for the calculation
 	Ntimes = Nframes//snap_period # number of time intervals considered in the calculation
 
-	pos = lambda time: np.reshape(np.genfromtxt(fname=pos_file, delimiter=',', skip_header=init_frame + time, max_rows=1)[:-1], (N, 2)) # array of positions at time time
-
 	times = lambda Nframes, dt: np.linspace(0, Nframes - dt - 1, min(snap_max, Nframes - dt), dtype=int) # list of time snapshots at which to evaluate the mean square displacement at n*dumps for N time snapshots
 	intervals = lambda Nframes, Ntimes: np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.exp(np.linspace(np.log(1), np.log(Nframes - 1), Ntimes)))))) # intervals of times logarithmically spaced for the calculation
 
@@ -34,7 +32,7 @@ def mean_square_displacement(data_dir='/home/yketa/hoomd', parameters_file='para
 
 	time = list(map(lambda dt: time_step*period_dump*dt, intervals(Nframes, Ntimes)))
 	with open(unwrapped_file, 'rb') as unwrap_file:
-		pos = lambda time: getarray(unwrap_file, N, time) # positions of the particles at time time
+		pos = lambda time: getarray(unwrap_file, N, init_frame + time) # positions of the particles at time time
 
 		def displacements(time, dt): # square displacements of the particles between time and time + dt
 			wo_drift = lambda values: values - np.mean(values, axis=0) # deviation from the mean of array values
