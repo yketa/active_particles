@@ -97,7 +97,7 @@ Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean
 
 # SAVING
 
-filename = data_dir + '/Cuu_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_I' + float_to_letters(init_frame) + '_T' + float_to_letters(dis_time) + '_M' + float_to_letters(int_max) + '.pickle' # Cuu file name
+filename = data_dir + str('/Cuu_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
 file = open(filename, 'wb')
 pickle.dump([Cuu2D, Cuu1D], file)
 file.close()

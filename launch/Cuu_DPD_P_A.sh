@@ -11,11 +11,17 @@ print(int(($(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N_steps)//$(/home/yketa/
 EOF
 `}
 export INTERVAL_MAXIMUM=${INTERVAL_MAXIMUM-1}
+export N_CASES=${N_CASES-`/home/yketa/miniconda3/bin/python3.6 <<EOF
+from numpy import sqrt
+N = $(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N)
+print(int(np.sqrt(N)) + (1 - int(sqrt(N))%2))
+EOF
+`}
 
 export SHOW='False'
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-CUU_TIME=Cuu_I$(float_to_letters $INITIAL_FRAME)_T$(float_to_letters $TIME)_M$(float_to_letters $INTERVAL_MAXIMUM)
+CUU_TIME=Cuu_I$(float_to_letters $INITIAL_FRAME)_T$(float_to_letters $TIME)_M$(float_to_letters $INTERVAL_MAXIMUM)_C$(float_to_letters $N_CASES)
 
 mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/${CUU_TIME}.out
