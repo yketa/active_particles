@@ -47,7 +47,7 @@ dis_time = Nframes + dis_time if dis_time <= 0 else dis_time # length of the int
 times = np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.linspace(init_frame, Nentries - dis_time - 1, int_max))))) # frames at which to calculate the correlation displacement
 
 def displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file):
-	# This function associates a Ncases x Ncases to the box and calculates the average
+	# This function associates a Ncases x Ncases grid to the box and calculates the average
 	# displacement over time dis_time from time time in every cases.
 
 	dL = L/Ncases
