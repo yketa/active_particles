@@ -48,7 +48,7 @@ def number_grid(Ncases, N, L, time, prep_frames, wrap_file):
 	dL = L/Ncases
 
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
-	pos = w_traj[int(prep_frames + time)].particles.position[:, :2] # position at time time (with boundary conditions)
+	positions = w_traj[int(prep_frames + time)].particles.position[:, :2] # position at time time (with boundary conditions)
 
 	number = lambda point, size: np.sum((abs((positions - np.array(point) + box_size/2)%box_size - box_size/2) <= size/2).all(axis=1)) # returns the number of particles in a square of size size centred on the point point
 
