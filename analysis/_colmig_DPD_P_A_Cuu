@@ -98,9 +98,8 @@ Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean
 # SAVING
 
 filename = data_dir + str('/Cuu_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
-file = open(filename, 'wb')
-pickle.dump([Cuu2D, Cuu1D], file)
-file.close()
+with open(filename, 'wb') as dump_file:
+	pickle.dump([Cuu2D, Cuu1D], dump_file)
 
 # PLOT
 
