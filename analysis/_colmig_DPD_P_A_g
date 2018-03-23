@@ -1,0 +1,120 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+import sys
+
+import math
+
+import gsd
+import gsd.hoomd
+import gsd.pygsd
+
+import numpy as np
+
+import pickle
+
+sys.path.append('/home/yketa')
+from exponents import float_to_letters
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
+
+from collections import OrderedDict
+
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+
+wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
+parameters_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
+
+init_frame = int(eval(os.environ['INITIAL_FRAME'])) if 'INITIAL_FRAME' in os.environ else -1 # initial time for the calculation of the displacement correlation
+snap_max = int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ else 1 # maximum number of intervals taken for the calculation of the displacement correlation
+
+with open(parameters_file, 'rb') as param_file:
+	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
+
+prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
+
+Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the number grid
+
+Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
+init_frame = int(Nentries/2) if init_frame < 0 else init_frame # initial frame
+Nframes = Nentries - init_frame # number of frames available for the calculation
+
+times = np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.linspace(init_frame, Nentries - 1, snap_max))))) # frames at which to calculate the pair distribution function
+
+def number_grid(Ncases, N, L, time, prep_frames, wrap_file):
+	# This function associated a Ncases x Ncases grid to the box with the
+	# number of particles in each case.
+
+	dL = L/Ncases
+
+	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+	pos = w_traj[int(prep_frames + time)].particles.position[:, :2] # position at time time (with boundary conditions)
+
+	number = lambda point, size: np.sum((abs((positions - np.array(point) + box_size/2)%box_size - box_size/2) <= size/2).all(axis=1)) # returns the number of particles in a square of size size centred on the point point
+
+	return np.reshape(list(map(lambda point: number(point, L), np.reshape(np.array([[(i*dL, j*dL) for j in range(Ncases)] for i in range(Ncases)]) - L/2, (Ncases**2, 2)))), (Ncases, Ncases, 2))
+
+def g2D_time(Ncases, N, L, time, prep_frames, wrap_file):
+	# This function returns the 2D pair distribution function plot and renormalisation term.
+
+	ngrid = number_grid(Ncases, N, L, time, prep_frames, wrap_file)
+
+	FFTngrid = np.fft.fft2(ngrid, axes=(-2, -1))
+	g = np.real(np.fft.ifft2(np.conj(FFTngrid)*FFTngrid)) # pair distribution function grid
+	Norm = (Ncases**2) * np.sum(ngrid**2) # normalisation term
+
+	return g, Norm
+
+with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file:
+	g2D = (lambda list: list[0]/list[1])(np.sum(list(map(lambda time: g2D_time(Ncases, N, box_size, time, prep_frames, wrap_file), times)), axis=0)) # 2D plot of the pair correlation function
+
+g1D_dic = {}
+for i in range(g2D.shape[0]):
+	for j in range(g2D.shape[1]):
+		if (i**2 + j**2) <= (Ncases/2)**2:
+			g1D_dic[int(i**2 + j**2)] = g1D_dic[int(i**2 + j**2)] + [g2D[i, j]] if int(i**2 + j**2) in g1D_dic else [g2D[i, j]]
+g1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(g1D_dic[dist])], sorted(g1D_dic))))
+
+# SAVING
+
+# filename = data_dir + str('/g_D%s_V%s_R%s_N%s_I%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, snap_max, Ncases]))) # g file name
+# with open(filename, 'wb') as dump_file:
+# 	pickle.dump([g2D, g1D], file)
+
+# PLOT
+
+if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+	import matplotlib as mpl
+	import matplotlib.pyplot as plt
+	import matplotlib.colors as colors
+	import matplotlib.cm as cmx
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+	cmap = plt.cm.jet
+
+	gmin = 0 if np.min(g2D) > 0 else np.min(g2D)
+	gmax = np.max(g2D)
+
+	fig, axs = plt.subplots(1, 2)
+	vNorm = colors.Normalize(vmin=gmin, vmax=gmax)
+	scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap) 
+
+	axs[0].imshow(np.roll(np.roll(g2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1), cmap=cmap, norm=vNorm)
+
+	axs[0].set_xlabel('x')
+	axs[0].set_ylabel('y')
+	axs[0].set_title('2D g')
+
+	divider = make_axes_locatable(axs[0])
+	cax = divider.append_axes("right", size="5%", pad=0.05)
+	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+
+	axs[1].semilogy(Cuu1D[:, 0], Cuu1D[:, 1])
+
+	axs[1].set_xlabel('r')
+	axs[1].set_ylabel('g')
+	axs[1].set_title('radial g')
+
+	fig.subplots_adjust(wspace=0.6)
+
+	plt.show()
