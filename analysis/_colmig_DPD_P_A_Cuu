@@ -78,15 +78,16 @@ def displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwr
 	for index in ugrid_dic:
 		ugrid[index] = np.mean(ugrid_dic[index], axis=0)
 
-	return ugrid
+	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
+
+	return ugrid, ngrid
 
 def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file):
 	# This function returns the 2D correlation plot and renormalisation term of the
 	# displacement grid calculated by displacement_grid.
 
-	ugrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
+	ugrid, ngrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
 	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
-	rho = np.sum(ngrid)/(Ncases**2)
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
@@ -95,29 +96,32 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file
 	Cuu_Norm = (Ncases**2) * np.sum(np.mean(ugrid**2, axis=(0,1))) # normalisation term
 
 	FFTngrid = np.fft.fft2(ngrid)
-	G = np.real(np.fft.ifft2(np.conj(FFTngrid)*FFTngrid))/((np.sum(ngrid)/Ncases)**2) # density auto-correlation grid
+	Cnn = np.real(np.fft.ifft2(np.conj(FFTngrid)*FFTngrid)) # density auto-correlation grid
+	Cnn_Norm = (Ncases**2) * np.mean(ngrid**2) # normalisation term
 
-	return Cuu, Cuu_Norm, G, rho
+	return Cuu, Cuu_Norm, Cnn, Cnn_Norm
 
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
-	Cuu2D, G2D, rho = (lambda list: (list[0]/list[1], list[2]/len(times), list[3]/len(times)))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
+	Cuu2D, Cnn2D = (lambda list: (list[0]/list[1], list[2]/list[3]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
-Cuu1D_dic, g1D_dic = {}, {}
+Cuu1D_dic, Cnn1D_dic, Cuu1Dcor_dic = {}, {}, {}
 for i in range(Ncases):
 	for j in range(Ncases):
 		if (i**2 + j**2) <= (Ncases/2)**2:
 			Cuu1D_dic[int(i**2 + j**2)] = Cuu1D_dic[int(i**2 + j**2)] + [Cuu2D[i, j]] if int(i**2 + j**2) in Cuu1D_dic else [Cuu2D[i, j]]
-			g1D_dic[int(i**2 + j**2)] = [0] if int(i**2 + j**2) == 0 else g1D_dic[int(i**2 + j**2)] + [G2D[i, j]] if int(i**2 + j**2) in g1D_dic else [G2D[i, j]]
+			Cnn1D_dic[int(i**2 + j**2)] = Cnn1D_dic[int(i**2 + j**2)] + [Cnn2D[i, j]] if int(i**2 + j**2) in Cnn1D_dic else [Cnn2D[i, j]]
+			Cuu1Dcor_dic[int(i**2 + j**2)] = Cuu1Dcor_dic[int(i**2 + j**2)] + [Cuu2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cuu1Dcor_dic else [Cuu2D[i, j]/Cnn2D[i, j]]
 Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cuu1D_dic[dist])], sorted(Cuu1D_dic))))
-g1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(g1D_dic[dist])], sorted(g1D_dic))))
+Cnn1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cnn1D_dic[dist])], sorted(Cnn1D_dic))))
+Cuu1Dcor = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cuu1Dcor_dic[dist])], sorted(Cuu1Dcor_dic))))
 
 # SAVING
 
 Cuu_filename = data_dir + str('/Cuu_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
-g_filename = data_dir + str('/g_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
-with open(Cuu_filename, 'wb') as Cuu_dump_file, open(g_filename, 'wb') as g_dump_file:
-	pickle.dump([Cuu2D, Cuu1D], Cuu_dump_file)
-	pickle.dump([G2D, g1D, rho], g_dump_file)
+Cnn_filename = data_dir + str('/g_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
+with open(Cuu_filename, 'wb') as Cuu_dump_file, open(Cnn_filename, 'wb') as Cnn_dump_file:
+	pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor], Cuu_dump_file)
+	pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
 
 # PLOT
 
@@ -167,19 +171,19 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 
 	# g
 
-	axs[0, 1].plot(g1D[1:, 0], g1D[1:, 1])
+	axs[0, 1].plot(Cnn1D[1:, 0], Cnn1D[1:, 1])
 
 	axs[0, 1].set_xlabel(r'$r$')
-	axs[0, 1].set_ylabel(r'$g$')
-	axs[0, 1].set_title('radial ' + r'$g$')
+	axs[0, 1].set_ylabel(r'$C_{\rho\rho}$')
+	axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$')
 
 	axs[0, 1].set_xlim(r_min, r_max)
 
-	fplot(axs[1, 1])(Cuu1D[1:, 0], Cuu1D[1:, 1]/(rho*g1D[1:, 1]))
+	fplot(axs[1, 1])(Cuu1Dcor[1:, 0], Cuu1Dcor[1:, 1])
 
 	axs[1, 1].set_xlabel(r'$r$')
-	axs[1, 1].set_ylabel(r'$C_{uu}/\rho g$')
-	axs[1, 1].set_title('radial ' + r'$C_{uu}/\rho g$')
+	axs[1, 1].set_ylabel(r'$C_{uu}/C_{\rho\rho}$')
+	axs[1, 1].set_title('radial ' + r'$C_{uu}/C_{\rho\rho}$')
 
 	axs[1, 1].set_xlim(r_min, r_max)
 	axs[1, 1].set_ylim(Cuu_min, 1)
