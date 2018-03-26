@@ -85,7 +85,7 @@ fplot(axs[1, 0])(Cuu1D[1:, 0], Cuu1D[1:, 1]/Cnn1D[-1, 1])
 
 axs[1, 0].set_xlabel(r'$r$')
 axs[1, 0].set_ylabel(r'$C_{uu}/C_{\rho\rho}(r=r_{max})$')
-axs[1, 0].set_title('radial ' + r'$C_{uu}/C_{\rho\rho}(r=r_{max})$' + ' ' + r'$(C_{\rho\rho}(r=r_{max} = %.3e)$' % Cnn1D[-1, 1])
+axs[1, 0].set_title('radial ' + r'$C_{uu}/C_{\rho\rho}(r=r_{max})$' + ' ' + r'$(C_{\rho\rho}(r=r_{max}) = %.3e)$' % Cnn1D[-1, 1])
 
 axs[1, 0].set_xlim(r_min, r_max)
 axs[1, 0].set_ylim(Cuu_min, 1)
