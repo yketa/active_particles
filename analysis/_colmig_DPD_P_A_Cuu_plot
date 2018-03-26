@@ -111,6 +111,7 @@ axs[1, 1].set_ylim(Cuu_min, 1)
 
 if 'SAVE' in os.environ and eval(os.environ['SAVE']):
 	plt.savefig(fname('Cuu') + '_' + plot_axis + '.eps') # saving the figure
+	print('Figure saved as \'' + fname('Cuu') + '_' + plot_axis + '.eps\'')
 
 if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	plt.show() # showing the figure
