@@ -14,6 +14,8 @@ from readdat import *
 
 time = int(eval(os.environ['TIME'])) if 'TIME' in os.environ else -1 # frame for which we calculate the velocity auto-correlation
 
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+
 wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
 unwrap_file_name = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # unwrapped trajectory file (binary)
 parameters_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else 'param.pickle' # parameters file
