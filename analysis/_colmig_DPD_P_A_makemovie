@@ -28,7 +28,9 @@ FRAME_VER="${FRAME_VERTICAL_SIZE-12}"
 FRAME_HOR="${FRAME_HORIZONTAL_SIZE-16}"
 FRAME_DEF="${FRAME_DEFINITION-80}"
 
-MOVIE_DIRECTORY="$MOV_DIR" PARAMETERS_FILE="$PAR_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+L_MAX="${MAX_BOX_SIZE--1}"
+
+MOVIE_DIRECTORY="$MOV_DIR" PARAMETERS_FILE="$PAR_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -73,6 +75,8 @@ frame_def = float(eval(os.environ['FRAME_DEFINITION'])) # definition of images (
 with open(parameters_file, 'rb') as param_file:
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
 
+max_box_size = box_size if float(eval(os.environ['MAX_BOX_SIZE'])) < 0 else float(eval(os.environ['MAX_BOX_SIZE'])) # maximum size of the box rendered in the movie
+
 data = np.genfromtxt(fname=logoutput_file, skip_header=True)
 
 out_param = open(movie_directory + "/param.txt", "w") # movie parameters output file
@@ -100,6 +104,7 @@ N_frames = min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/fram
 
 vmin = np.log(vzero/100)
 vmax = np.log(2*vzero)
+np.seterr(divide=None)
 
 prep_frames = prep_steps//period_dump # number of preparation frames
 
@@ -130,21 +135,22 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 
 			for particle in range(N): # for every particle in the frame
 
-				n_vel = np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
-				u_vel = velocities[particle]/n_vel if n_vel > 0 else np.zeros(2) # unitary velocity direction
+				if (np.abs(positions[particle]) <= max_box_size/2).all():
+					n_vel = np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
+					u_vel = velocities[particle]/n_vel if n_vel > 0 else np.zeros(2) # unitary velocity direction
 
-				circle = plt.Circle(tuple((positions[particle] + box_size/2)%box_size - box_size/2), w_traj[0].particles.diameter[particle]/2, color=scalarMap.to_rgba(np.log(n_vel), fill=True)
-				ax.add_artist(circle)
+					circle = plt.Circle(tuple((positions[particle] + box_size/2)%box_size - box_size/2), w_traj[0].particles.diameter[particle]/2, color=scalarMap.to_rgba(np.log(n_vel)), fill=True)
+					ax.add_artist(circle)
 
-				ax.arrow(positions[particle, 0], positions[particle, 1], w_traj[0].particles.diameter[particle]*u_vel[0], w_traj[0].particles.diameter[particle]*u_vel[1], color='black')
+					ax.arrow(positions[particle, 0], positions[particle, 1], w_traj[0].particles.diameter[particle]*u_vel[0], w_traj[0].particles.diameter[particle]*u_vel[1], color='black')
 
 			divider = make_axes_locatable(ax)
 			cax = divider.append_axes("right", size="5%", pad=0.05)
 
 			cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
 
-			ax.set_xlim([-1.1*box_size/2, 1.1*box_size/2])
-			ax.set_ylim([-1.1*box_size/2, 1.1*box_size/2])
+			ax.set_xlim([-1.1*max_box_size/2, 1.1*max_box_size/2])
+			ax.set_ylim([-1.1*max_box_size/2, 1.1*max_box_size/2])
 			ax.set_aspect('equal')
 
 			ax.set_xlabel(r'$x$')
