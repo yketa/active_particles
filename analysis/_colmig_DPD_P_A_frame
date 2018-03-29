@@ -1,0 +1,108 @@
+#! /home/yketa/miniconda3/bin/python3.6
+
+import os
+
+import matplotlib as mpl
+if not('SHOW' in os.environ and eval(os.environ['SHOW'])):
+	mpl.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+cmap = plt.cm.jet
+
+import numpy as np
+
+import gsd
+import gsd.hoomd
+import gsd.pygsd
+
+import pickle
+
+import sys
+
+sys.path.append('/home/yketa')
+from exponents import *
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
+
+import math
+
+data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+
+parameters_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters pickle file
+wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # trajectory gsd file
+unwrap_file_name = os.environ['UNWRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # trajectory binary file
+
+frame = int(eval(os.environ['FRAME'])) if 'FRAME' in os.environ else -1 # frame to render
+dt = int(eval(os.environ['DT'])) if 'DT' in os.environ else -1 # interval of time to compute displacement (if dt < 0: display the velocity)
+
+max_box_size = float(eval(os.environ['MAX_BOX_SIZE'])) if 'MAX_BOX_SIZE' in os.environ else -1 # size of the square box to render (centred on 0)
+v_min = float(eval(os.environ['MINIMUM_VELOCITY'])) if 'MINIMUM_VELOCITY' in os.environ else -1 # minimum velocity for the colorbar
+v_max = float(eval(os.environ['MAXIMUM_VELOCITY'])) if 'MAXIMUM_VELOCITY' in os.environ else -1 # maximum velocity for the colorbar
+
+frame_ver = float(eval(os.environ['FRAME_VERTICAL_SIZE'])) if 'FRAME_VERTICAL_SIZE' in os.environ else 12 # vertical size of the frames (in inches)
+frame_hor = float(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) if 'FRAME_HORIZONTAL_SIZE' in os.environ else 16 # horizontal size of the frames (in inches)
+frame_def = float(eval(os.environ['FRAME_DEFINITION'])) if 'FRAME_DEFINITION' in os.environ else 80 # definition of images (in dots per inches (dpi))
+
+width = float(eval(os.environ['ARROW_WIDTH'])) if 'WIDTH' in os.environ else 1e-3 # width of the arrows
+head_width = width*(float(eval(os.environ['HEAD_WIDTH'])) if 'HEAD_WIDTH' in os.environ else 3e2) # width of the arrows' head (input in ratio of the width of the arrows)
+head_length = head_width*(float(eval(os.environ['HEAD_LENGTH'])) if 'HEAD_LENGTH' in os.environ else 1.5) # width of the arrows' head (input in ratio of the width of the arrows' head)
+
+with open(parameters_file, 'rb') as param_file:
+	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
+
+frame = int((N_steps//period_dump)/2) if frame < 0 else frame
+
+max_box_size = box_size if max_box_size < 0 else max_box_size
+v_min = 1e-2*vzero*(1 if dt < 0 else dt*period_dump*time_step) if v_min < 0 else v_min
+v_max = vzero*(1 if dt < 0 else dt*period_dump*time_step) if v_max < 0 else v_max
+np.seterr(divide='ignore')
+
+prep_frames = prep_steps//period_dump # number of preparation frames
+
+with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
+	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+
+	fig, ax = plt.subplots()
+	fig.set_size_inches(frame_hor, frame_ver)
+
+	vNorm = colors.Normalize(vmin=np.log(v_min), vmax=np.log(v_max))
+	scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap)
+
+	positions = w_traj[int(prep_frames + frame)].particles.position[:, :2] # positions of the particles (with periodic boundary conditions)
+	velocities = getarray(unwrap_file, N, frame, variable='velocity') if dt < 0 else getarray(unwrap_file, N, frame + dt) - getarray(unwrap_file, N, frame) # velocities (or displacement) of the particles
+
+	for particle in range(N): # for every particle in the frame
+		sys.stdout.write("Particle: %d" % (particle + 1) + "/%d \r" % N)
+
+		if (np.abs(positions[particle]) <= max_box_size/2).all():
+			n_vel = np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
+			u_vel = velocities[particle]/n_vel if n_vel > 0 else np.zeros(2) # unitary velocity direction
+
+			circle = plt.Circle(tuple((positions[particle] + box_size/2)%box_size - box_size/2), w_traj[0].particles.diameter[particle]/2, color=scalarMap.to_rgba(np.log(n_vel)), fill=True, zorder=0)
+			ax.add_artist(circle)
+
+			ax.arrow(positions[particle, 0], positions[particle, 1], 0.75*w_traj[0].particles.diameter[particle]*u_vel[0], 0.75*w_traj[0].particles.diameter[particle]*u_vel[1], color='black', width=w_traj[0].particles.diameter[particle]*width, head_width=w_traj[0].particles.diameter[particle]*head_width, head_length=w_traj[0].particles.diameter[particle]*head_length, zorder=1)
+	sys.stdout.write("\n")
+
+	divider = make_axes_locatable(ax)
+	cax = divider.append_axes("right", size="5%", pad=0.05)
+
+	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+
+	ax.set_xlim([-1.1*max_box_size/2, 1.1*max_box_size/2])
+	ax.set_ylim([-1.1*max_box_size/2, 1.1*max_box_size/2])
+	ax.set_aspect('equal')
+
+	ax.set_xlabel(r'$x$')
+	ax.set_ylabel(r'$y$')
+
+	ax.set_title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e, L=%.3e, r_{max}=%.3e$' % (N, density, vzero, dr, box_size, max_box_size) + '\n' + r'$t=%e, \Delta t$' % (frame*time_step*period_dump) + (r'$\rightarrow 0$' if dt < 0 else str(r'$=%e$' % (dt*time_step*period_dump))))
+
+	if 'SHOW' in os.environ and eval(os.environ['SHOW']):
+		plt.show()
+	if 'SAVE' in os.environ and eval(os.environ['SAVE']):
+		fig.savefig(data_dir + '/D%s_V%s_R%s_N%s_F%s_RMAX%s_VMIN_%s_VMAX%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, frame, max_box_size, v_min, v_max])), dpi=frame_def)
+	plt.close()
