@@ -98,8 +98,8 @@ bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gs
 
 N_frames = min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/frame_period)) # number of frames to render
 
-vmin = 0
-vmax = 3*vzero
+vmin = np.log(vzero/100)
+vmax = np.log(2*vzero)
 
 prep_frames = prep_steps//period_dump # number of preparation frames
 
@@ -133,10 +133,10 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 				n_vel = np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
 				u_vel = velocities[particle]/n_vel if n_vel > 0 else np.zeros(2) # unitary velocity direction
 
-				circle = plt.Circle(tuple((positions[particle] + box_size/2)%box_size - box_size/2), w_traj[0].particles.diameter[particle]/2, color='blue', fill=False)
+				circle = plt.Circle(tuple((positions[particle] + box_size/2)%box_size - box_size/2), w_traj[0].particles.diameter[particle]/2, color=scalarMap.to_rgba(np.log(n_vel), fill=True)
 				ax.add_artist(circle)
 
-				ax.arrow(positions[particle, 0], positions[particle, 1], w_traj[0].particles.diameter[particle]*u_vel[0], w_traj[0].particles.diameter[particle]*u_vel[1], color=scalarMap.to_rgba(n_vel))
+				ax.arrow(positions[particle, 0], positions[particle, 1], w_traj[0].particles.diameter[particle]*u_vel[0], w_traj[0].particles.diameter[particle]*u_vel[1], color='black')
 
 			divider = make_axes_locatable(ax)
 			cax = divider.append_axes("right", size="5%", pad=0.05)
