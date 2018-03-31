@@ -117,7 +117,7 @@ filename = lambda var: data_dir + str('/' + var + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_
 with open(filename('Cuu'), 'wb') as Cuu_dump_file, open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cdd'), 'wb') as Cdd_dump_file:
 	pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor], Cuu_dump_file)
 	pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
-	pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cuu_dump_file)
+	pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cdd_dump_file)
 
 # PLOT
 
