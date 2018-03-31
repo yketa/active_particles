@@ -143,7 +143,7 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 
 	fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, \Delta t=%.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, dis_time*period_dump*time_step, int_max, Ncases))
 
-	# Cuu
+	# Cuu2D
 
 	Cuumin = 0 if np.min(Cuu2D) > 0 else np.min(Cuu2D)
 	Cuumax = np.max(Cuu2D)
@@ -151,7 +151,10 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	CuuvNorm = colors.Normalize(vmin=Cuumin, vmax=Cuumax)
 	CuuscalarMap = cmx.ScalarMappable(norm=CuuvNorm, cmap=cmap) 
 
-	axs[0, 0].imshow(np.roll(np.roll(Cuu2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1), cmap=cmap, norm=CuuvNorm)
+	r_max_cases = int(r_max*(box_size/Ncases))
+	Cuu2D_display = np.roll(np.roll(Cuu2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1]
+
+	axs[0, 0].imshow(Cuu2D_display, cmap=cmap, norm=CuuvNorm, extent=[-r_max, r_max, -r_max, r_max])
 
 	axs[0, 0].set_xlabel(r'$x$')
 	axs[0, 0].set_ylabel(r'$y$')
@@ -160,6 +163,9 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	divider = make_axes_locatable(axs[0, 0])
 	cax = divider.append_axes("right", size="5%", pad=0.05)
 	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=CuuvNorm, orientation='vertical')
+	cb.set_label(r'$C_{uu}$', labelpad=20, rotation=270)
+
+	# Cuu1D shifted
 
 	fplot(axs[1, 0])(Cuu1D[1:, 0], Cuu1D[1:, 1]/Cnn1D[-1, 1])
 
@@ -170,15 +176,23 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	axs[1, 0].set_xlim(r_min, r_max)
 	axs[1, 0].set_ylim(Cuu_min, 1)
 
-	# Cnn
+	# Cnn1D and Cuu1D
 
-	axs[0, 1].plot(Cnn1D[1:, 0], Cnn1D[1:, 1])
-
+	axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$' + ' and ' + r'$C_{uu}$')
 	axs[0, 1].set_xlabel(r'$r$')
-	axs[0, 1].set_ylabel(r'$C_{\rho\rho}$')
-	axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$')
-
 	axs[0, 1].set_xlim(r_min, r_max)
+
+	axs[0, 1].plot(Cnn1D[1:, 0], Cnn1D[1:, 1], color='#1f77b4')
+	axs[0, 1].set_ylabel(r'$C_{\rho\rho}$', color='#1f77b4')
+	axs[0, 1].tick_params('y', colors='#1f77b4')
+
+	ax_right = axs[0, 1].twinx()
+	ax_right.semilogy(Cuu1D[1:, 0], Cuu1D[1:, 1], color='#ff7f0e')
+	ax_right.set_ylabel(r'$C_{uu}$', color='#ff7f0e', rotation=270, labelpad=10)
+	ax_right.tick_params('y', colors='#ff7f0e')
+	ax_right.set_ylim(Cuu_min*Cnn1D[-1, 1], Cnn1D[-1, 1])
+
+	# Cuu1D/Cnn
 
 	fplot(axs[1, 1])(Cuu1Dcor[1:, 0], Cuu1Dcor[1:, 1])
 
