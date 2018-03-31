@@ -20,8 +20,6 @@ MOV_NAME="${MOVIE_NAME-${MOV}.mp4}"
 
 DATA_DIR="${DATA_DIRECTORY-${SIM_DIR}/data/${DATA}}"
 PAR_FILE="${PARAMETERS_FILE-${DATA_DIR}/param.pickle}"
-WRAP_FILE="${WRAPPED_FILE-${DATA_DIR}/trajectory.gsd}"
-UNWRAP_FILE="${UNWRAPPED_FILE-${DATA_DIR}/trajectory.dat}"
 LOG_FILE="${LOGOUTPUT_FILE-${DATA_DIR}/log-output.log}"
 
 WIDTH="${ARROW_WIDTH-1e-3}"
@@ -34,7 +32,7 @@ FRAME_DEF="${FRAME_DEFINITION-80}"
 
 L_MAX="${MAX_BOX_SIZE--1}"
 
-MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -66,8 +64,6 @@ movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
 data_directory = os.environ['DATA_DIRECTORY'] # data directory
 
 parameters_file = os.environ['PARAMETERS_FILE'] # parameters pickle file
-wrap_file_name = os.environ['WRAPPED_FILE'] # trajectory gsd file
-unwrap_file_name = os.environ['UNWRAPPED_FILE'] # trajectory binary file
 logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
 
 frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame of the movie
@@ -88,27 +84,6 @@ with open(parameters_file, 'rb') as param_file:
 max_box_size = box_size if float(eval(os.environ['MAX_BOX_SIZE'])) < 0 else float(eval(os.environ['MAX_BOX_SIZE'])) # maximum size of the box rendered in the movie
 
 data = np.genfromtxt(fname=logoutput_file, skip_header=True)
-
-out_param = open(movie_directory + "/param.txt", "w") # movie parameters output file
-bytes = out_param.write("PHYSICAL PARAMETERS\n")
-bytes = out_param.write("N=%d\n" % N) # number of particles
-bytes = out_param.write("mean radius=%e\n" % a) # mean radius of the particles
-bytes = out_param.write("PDI=%e\n" % pdi) # polydispersity index
-bytes = out_param.write("density=%e\n" % density) # number density of the particles
-bytes = out_param.write("L=%e\n" % box_size) # size of the box
-bytes = out_param.write("dotgamma=%e\n" % shear_rate) # shear rate
-bytes = out_param.write("kT=%e\n" % kT) # temperature
-bytes = out_param.write("mu=%e\n" % mu) # mobility of the particles
-bytes = out_param.write("k=%e\n" % k) # spring constant of the harmonic contact repulsion of the particles
-bytes = out_param.write("v_0=%e\n" % vzero) # amplitude of the self-propelling force
-bytes = out_param.write("D_r=%e\n" % dr) # rotation diffusion constant of the self-propelling force
-bytes = out_param.write("damping=%e\n" % damp_bro) # damping for the Brownian dynamics
-bytes = out_param.write("PREPARATION PARAMETERS\n")
-bytes = out_param.write("FIRE steps=%e\n" % prep_steps) # number of FIRE minimization steps
-bytes = out_param.write("INTEGRATION PARAMETERS\n")
-bytes = out_param.write("dt=%e\n" % time_step) # integration time step
-bytes = out_param.write("steps=%d\n" % N_steps) # number of integration steps
-bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gsd file
 
 frames = list(range(frame_init, int(N_steps//period_dump)))[::frame_period][:min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/frame_period))] # frames to render
 
@@ -143,8 +118,27 @@ def render_frame(frame):
 
 	return sb.call(['_colmig_DPD_P_A_frame'], env=env)
 
-with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
-	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters output file
+
+	bytes = out_param.write("PHYSICAL PARAMETERS\n")
+	bytes = out_param.write("N=%d\n" % N) # number of particles
+	bytes = out_param.write("mean radius=%e\n" % a) # mean radius of the particles
+	bytes = out_param.write("PDI=%e\n" % pdi) # polydispersity index
+	bytes = out_param.write("density=%e\n" % density) # number density of the particles
+	bytes = out_param.write("L=%e\n" % box_size) # size of the box
+	bytes = out_param.write("dotgamma=%e\n" % shear_rate) # shear rate
+	bytes = out_param.write("kT=%e\n" % kT) # temperature
+	bytes = out_param.write("mu=%e\n" % mu) # mobility of the particles
+	bytes = out_param.write("k=%e\n" % k) # spring constant of the harmonic contact repulsion of the particles
+	bytes = out_param.write("v_0=%e\n" % vzero) # amplitude of the self-propelling force
+	bytes = out_param.write("D_r=%e\n" % dr) # rotation diffusion constant of the self-propelling force
+	bytes = out_param.write("damping=%e\n" % damp_bro) # damping for the Brownian dynamics
+	bytes = out_param.write("PREPARATION PARAMETERS\n")
+	bytes = out_param.write("FIRE steps=%e\n" % prep_steps) # number of FIRE minimization steps
+	bytes = out_param.write("INTEGRATION PARAMETERS\n")
+	bytes = out_param.write("dt=%e\n" % time_step) # integration time step
+	bytes = out_param.write("steps=%d\n" % N_steps) # number of integration steps
+	bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gsd file
 
 	for frame in range(len(frames)):
 
@@ -159,8 +153,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % len(frames))
 		out = render_frame(frame)
 
-sys.stdout.write("\n")
-out_param.close()
+	sys.stdout.write("\n")
 
 EOF
 
