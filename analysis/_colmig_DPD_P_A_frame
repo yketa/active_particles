@@ -62,6 +62,19 @@ np.seterr(divide='ignore')
 
 prep_frames = prep_steps//period_dump # number of preparation frames
 
+def draw_circle(ax, position, radius, color):
+
+	circle = plt.Circle(tuple((position + box_size/2)%box_size - box_size/2), radius, color=color, fill=True, zorder=0)
+	ax.add_artist(circle)
+
+	return 0
+
+def draw_arrow(ax, position, direction, length):
+
+	ax.arrow(position[0], position[1], length*direction[0], length*direction[1], color='black', width=length*width, head_width=length*head_width, head_length=length*head_length, zorder=1)
+
+	return 0
+
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 
@@ -74,18 +87,13 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	positions = w_traj[int(prep_frames + frame)].particles.position[:, :2] # positions of the particles (with periodic boundary conditions)
 	velocities = getarray(unwrap_file, N, frame, variable='velocity') if dt < 0 else getarray(unwrap_file, N, frame + dt) - getarray(unwrap_file, N, frame) # velocities (or displacement) of the particles
 
-	for particle in range(N): # for every particle in the frame
-		sys.stdout.write("Particle: %d" % (particle + 1) + "/%d \r" % N)
+	n_vel = lambda particle: np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
+	u_vel = lambda particle: velocities[particle]/n_vel(particle) if n_vel(particle) > 0 else np.zeros(2) # unitary velocity direction
 
-		if (np.abs(positions[particle]) <= max_box_size/2).all():
-			n_vel = np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
-			u_vel = velocities[particle]/n_vel if n_vel > 0 else np.zeros(2) # unitary velocity direction
+	particles_to_draw = [particle for particle in range(N) if (np.abs(positions[particle]) <= max_box_size/2).all()]
 
-			circle = plt.Circle(tuple((positions[particle] + box_size/2)%box_size - box_size/2), w_traj[0].particles.diameter[particle]/2, color=scalarMap.to_rgba(np.log(n_vel)), fill=True, zorder=0)
-			ax.add_artist(circle)
-
-			ax.arrow(positions[particle, 0], positions[particle, 1], 0.75*w_traj[0].particles.diameter[particle]*u_vel[0], 0.75*w_traj[0].particles.diameter[particle]*u_vel[1], color='black', width=w_traj[0].particles.diameter[particle]*width, head_width=w_traj[0].particles.diameter[particle]*head_width, head_length=w_traj[0].particles.diameter[particle]*head_length, zorder=1)
-	sys.stdout.write("\n")
+	cirlces = list(map(lambda particle: draw_circle(ax, positions[particle], w_traj[0].particles.diameter[particle]/2, scalarMap.to_rgba(np.log(n_vel(particle)))), particles_to_draw)) # drawing circles representing particles and lengths of displacements
+	arrows = list(map(lambda particle: draw_arrow(ax, positions[particle], u_vel(particle), 0.75*w_traj[0].particles.diameter[particle]), particles_to_draw)) # drawing arrows representing directions of displacements
 
 	divider = make_axes_locatable(ax)
 	cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -102,7 +110,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	ax.set_title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e, L=%.3e, r_{max}=%.3e$' % (N, density, vzero, dr, box_size, max_box_size) + '\n' + r'$t=%e, \Delta t$' % (frame*time_step*period_dump) + (r'$\rightarrow 0$' if dt < 0 else str(r'$=%e$' % (dt*time_step*period_dump))))
 
 	if 'SAVE' in os.environ and eval(os.environ['SAVE']):
-		fig.savefig(data_dir + '/D%s_V%s_R%s_N%s_F%s_RMAX%s_VMIN_%s_VMAX%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, frame, max_box_size, v_min, v_max])), dpi=frame_def)
+		fig.savefig(os.environ['PICTURE_NAME'] if 'PICTURE_NAME' in os.environ else data_dir + '/D%s_V%s_R%s_N%s_F%s_T%s_RMAX%s_VMIN_%s_VMAX%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, frame, np.min(0, dt), max_box_size, v_min, v_max])), dpi=frame_def)
 	if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 		plt.show()
 		
