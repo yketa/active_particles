@@ -86,7 +86,7 @@ axs[0, 0].set_title('2D ' + r'$C_{uu}$')
 divider = make_axes_locatable(axs[0, 0])
 cax = divider.append_axes("right", size="5%", pad=0.05)
 cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=CuuvNorm, orientation='vertical')
-cb.set_label(r'$\log C_{uu}$', labelpad=20, rotation=270)
+cb.set_label(r'$C_{uu}$', labelpad=20, rotation=270)
 
 # Cuu1D shifted
 
