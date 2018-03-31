@@ -79,6 +79,7 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file
 
 	ugrid, ngrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
 	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
+	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1)) # displacement norm grid
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
@@ -90,42 +91,37 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file
 	Cnn = np.real(np.fft.ifft2(np.conj(FFTngrid)*FFTngrid)) # density auto-correlation grid
 	Cnn_Norm = (Ncases**2) * np.mean(ngrid**2) # normalisation term
 
-	return Cuu, Cuu_Norm, Cnn, Cnn_Norm
+	FFTdgrid = np.fft.fft2(dgrid)
+	Cdd = np.real(np.fft.ifft2(np.conj(FFTdgrid)*FFTdgrid)) # displacement norm auto-correlation grid
+	Cdd_Norm = (Ncases**2) * np.mean(dgrid**2) # normalisation term
+
+	return Cuu, Cuu_Norm, Cnn, Cnn_Norm, Cdd, Cdd_Norm
 
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
-	Cuu2D, Cnn2D = (lambda list: (list[0]/list[1], list[2]/list[3]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
+	Cuu2D, Cnn2D, Cdd2D = (lambda list: (list[0]/list[1], list[2]/list[3], list[4]/list[5]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
-Cuu1D_dic, Cnn1D_dic, Cuu1Dcor_dic = {}, {}, {}
+Cuu1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cdd1Dcor_dic = {}, {}, {}, {}, {}
 for i in range(Ncases):
 	for j in range(Ncases):
 		if (i**2 + j**2) <= (Ncases/2)**2:
 			Cuu1D_dic[int(i**2 + j**2)] = Cuu1D_dic[int(i**2 + j**2)] + [Cuu2D[i, j]] if int(i**2 + j**2) in Cuu1D_dic else [Cuu2D[i, j]]
 			Cnn1D_dic[int(i**2 + j**2)] = Cnn1D_dic[int(i**2 + j**2)] + [Cnn2D[i, j]] if int(i**2 + j**2) in Cnn1D_dic else [Cnn2D[i, j]]
+			Cdd1D_dic[int(i**2 + j**2)] = Cdd1D_dic[int(i**2 + j**2)] + [Cdd2D[i, j]] if int(i**2 + j**2) in Cdd1D_dic else [Cdd2D[i, j]]
 			Cuu1Dcor_dic[int(i**2 + j**2)] = Cuu1Dcor_dic[int(i**2 + j**2)] + [Cuu2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cuu1Dcor_dic else [Cuu2D[i, j]/Cnn2D[i, j]]
-Cuu1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cuu1D_dic[dist])], sorted(Cuu1D_dic))))
-Cnn1D = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cnn1D_dic[dist])], sorted(Cnn1D_dic))))
-Cuu1Dcor = np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(Cuu1Dcor_dic[dist])], sorted(Cuu1Dcor_dic))))
+			Cdd1Dcor_dic[int(i**2 + j**2)] = Cdd1Dcor_dic[int(i**2 + j**2)] + [Cdd2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cdd1Dcor_dic else [Cdd2D[i, j]/Cnn2D[i, j]]
+Cuu1D, Cnn1D, Cdd1D, Cuu1Dcor, Cdd1Dcor = tuple(list(map(lambda dic: np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(dic[dist])], sorted(dic)))), [Cuu1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cdd1Dcor_dic])))
 
 # SAVING
 
-Cuu_filename = data_dir + str('/Cuu_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
-Cnn_filename = data_dir + str('/Cnn_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # Cuu file name
-with open(Cuu_filename, 'wb') as Cuu_dump_file, open(Cnn_filename, 'wb') as Cnn_dump_file:
+filename = lambda var: data_dir + str('/' + var + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # filename
+with open(filename('Cuu'), 'wb') as Cuu_dump_file, open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cdd'), 'wb') as Cdd_dump_file:
 	pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor], Cuu_dump_file)
 	pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
+	pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cuu_dump_file)
 
 # PLOT
 
 if 'SHOW' in os.environ and eval(os.environ['SHOW']):
-
-	# plot parameters
-
-	Cuu_min = float(eval(os.environ['CUU_MIN'])) if 'CUU_MIN' in os.environ else 1e-3
-	r_min = float(eval(os.environ['R_MIN'])) if 'R_MIN' in os.environ else 1
-	r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20
-
-	plot_axis = os.environ['AXIS'] if 'AXIS' in os.environ else 'LOGLOG'
-	fplot = lambda ax: ax.loglog if plot_axis == 'LOGLOG' else ax.semilogy if plot_axis == 'LINLOG' else ax.semilogx if plot_axis == 'LOGLIN' else ax.plot
 
 	import matplotlib as mpl
 	import matplotlib.pyplot as plt
@@ -133,74 +129,95 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	import matplotlib.cm as cmx
 	from mpl_toolkits.axes_grid1 import make_axes_locatable
 	from matplotlib.gridspec import GridSpec
-
 	cmap = plt.cm.jet
-	fig, axs = plt.subplots(2, 2)
 
-	fig.set_size_inches(16, 16)
-	fig.subplots_adjust(wspace=0.3)
-	fig.subplots_adjust(hspace=0.3)
+	# plot parameters
 
-	fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, \Delta t=%.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, dis_time*period_dump*time_step, int_max, Ncases))
+	Cuu_min = float(eval(os.environ['CUU_MIN'])) if 'CUU_MIN' in os.environ else 1e-3
+	Cuu_max = float(eval(os.environ['CUU_MAX'])) if 'CUU_MAX' in os.environ else 1
 
-	# Cuu2D
+	Cdd_min = float(eval(os.environ['CDD_MIN'])) if 'CDD_MIN' in os.environ else 1e-1
+	Cdd_max = float(eval(os.environ['CDD_MAX'])) if 'CDD_MAX' in os.environ else 2
 
-	Cuumin = 0 if np.min(Cuu2D) > 0 else np.min(Cuu2D)
-	Cuumax = np.max(Cuu2D)
+	r_min = float(eval(os.environ['R_MIN'])) if 'R_MIN' in os.environ else 1
+	r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20
 
-	CuuvNorm = colors.Normalize(vmin=Cuumin, vmax=Cuumax)
-	CuuscalarMap = cmx.ScalarMappable(norm=CuuvNorm, cmap=cmap) 
+	plot_axis = os.environ['AXIS'] if 'AXIS' in os.environ else 'LOGLOG'
+	fplot = lambda ax: ax.loglog if plot_axis == 'LOGLOG' else ax.semilogy if plot_axis == 'LINLOG' else ax.semilogx if plot_axis == 'LOGLIN' else ax.plot
 
-	r_max_cases = int(r_max*(box_size/Ncases))
-	Cuu2D_display = np.roll(np.roll(Cuu2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1]
+	def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max):
 
-	axs[0, 0].imshow(Cuu2D_display, cmap=cmap, norm=CuuvNorm, extent=[-r_max, r_max, -r_max, r_max])
+		fig, axs = plt.subplots(2, 2)
 
-	axs[0, 0].set_xlabel(r'$x$')
-	axs[0, 0].set_ylabel(r'$y$')
-	axs[0, 0].set_title('2D ' + r'$C_{uu}$')
+		fig.set_size_inches(16, 16)
+		fig.subplots_adjust(wspace=0.3)
+		fig.subplots_adjust(hspace=0.3)
 
-	divider = make_axes_locatable(axs[0, 0])
-	cax = divider.append_axes("right", size="5%", pad=0.05)
-	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=CuuvNorm, orientation='vertical')
-	cb.set_label(r'$C_{uu}$', labelpad=20, rotation=270)
+		fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, \Delta t=%.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, dis_time*period_dump*time_step, int_max, Ncases))
 
-	# Cuu1D shifted
+		# Cuu2D
 
-	fplot(axs[1, 0])(Cuu1D[1:, 0], Cuu1D[1:, 1]/Cnn1D[-1, 1])
+		Cmin = np.min(C2D)
+		Cmax = np.max(C2D)
 
-	axs[1, 0].set_xlabel(r'$r$')
-	axs[1, 0].set_ylabel(r'$C_{uu}/C_{\rho\rho}(r=r_{max})$')
-	axs[1, 0].set_title('radial ' + r'$C_{uu}/C_{\rho\rho}(r=r_{max})$' + ' ' + r'$(C_{\rho\rho}(r=r_{max}) = %.3e)$' % Cnn1D[-1, 1])
+		CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
+		CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap) 
 
-	axs[1, 0].set_xlim(r_min, r_max)
-	axs[1, 0].set_ylim(Cuu_min, 1)
+		r_max_cases = int(r_max*(box_size/Ncases))
+		C2D_display = np.roll(np.roll(C2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1]
 
-	# Cnn1D and Cuu1D
+		axs[0, 0].imshow(C2D_display, cmap=cmap, norm=CvNorm, extent=[-r_max, r_max, -r_max, r_max])
 
-	axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$' + ' and ' + r'$C_{uu}$')
-	axs[0, 1].set_xlabel(r'$r$')
-	axs[0, 1].set_xlim(r_min, r_max)
+		axs[0, 0].set_xlabel(r'$x$')
+		axs[0, 0].set_ylabel(r'$y$')
+		axs[0, 0].set_title('2D ' + C)
 
-	axs[0, 1].plot(Cnn1D[1:, 0], Cnn1D[1:, 1], color='#1f77b4')
-	axs[0, 1].set_ylabel(r'$C_{\rho\rho}$', color='#1f77b4')
-	axs[0, 1].tick_params('y', colors='#1f77b4')
+		divider = make_axes_locatable(axs[0, 0])
+		cax = divider.append_axes("right", size="5%", pad=0.05)
+		cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=CvNorm, orientation='vertical')
+		cb.set_label(C, labelpad=20, rotation=270)
 
-	ax_right = axs[0, 1].twinx()
-	ax_right.semilogy(Cuu1D[1:, 0], Cuu1D[1:, 1], color='#ff7f0e')
-	ax_right.set_ylabel(r'$C_{uu}$', color='#ff7f0e', rotation=270, labelpad=10)
-	ax_right.tick_params('y', colors='#ff7f0e')
-	ax_right.set_ylim(Cuu_min*Cnn1D[-1, 1], Cnn1D[-1, 1])
+		# Cuu1D shifted
 
-	# Cuu1D/Cnn
+		fplot(axs[1, 0])(C1D[1:, 0], C1D[1:, 1]/Cnn1D[-1, 1])
 
-	fplot(axs[1, 1])(Cuu1Dcor[1:, 0], Cuu1Dcor[1:, 1])
+		axs[1, 0].set_xlabel(r'$r$')
+		axs[1, 0].set_ylabel(C + r'$/C_{\rho\rho}(r=r_{max})$')
+		axs[1, 0].set_title('radial ' + C + r'$/C_{\rho\rho}(r=r_{max})$' + ' ' + r'$(C_{\rho\rho}(r=r_{max}) = %.3e)$' % Cnn1D[-1, 1])
 
-	axs[1, 1].set_xlabel(r'$r$')
-	axs[1, 1].set_ylabel(r'$C_{uu}/C_{\rho\rho}$')
-	axs[1, 1].set_title('radial ' + r'$C_{uu}/C_{\rho\rho}$')
+		axs[1, 0].set_xlim(r_min, r_max)
+		axs[1, 0].set_ylim(C_min, C_max)
 
-	axs[1, 1].set_xlim(r_min, r_max)
-	axs[1, 1].set_ylim(Cuu_min, 1)
+		# Cnn1D and Cuu1D
+
+		axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$' + ' and ' + C)
+		axs[0, 1].set_xlabel(r'$r$')
+		axs[0, 1].set_xlim(r_min, r_max)
+
+		axs[0, 1].plot(Cnn1D[1:, 0], Cnn1D[1:, 1], color='#1f77b4')
+		axs[0, 1].set_ylabel(r'$C_{\rho\rho}$', color='#1f77b4')
+		axs[0, 1].tick_params('y', colors='#1f77b4')
+
+		ax_right = axs[0, 1].twinx()
+		ax_right.semilogy(C1D[1:, 0], C1D[1:, 1], color='#ff7f0e')
+		ax_right.set_ylabel(C, color='#ff7f0e', rotation=270, labelpad=10)
+		ax_right.tick_params('y', colors='#ff7f0e')
+		ax_right.set_ylim(C_min*Cnn1D[-1, 1], C_max*Cnn1D[-1, 1])
+
+		# Cuu1D/Cnn
+
+		fplot(axs[1, 1])(C1Dcor[1:, 0], C1Dcor[1:, 1])
+
+		axs[1, 1].set_xlabel(r'$r$')
+		axs[1, 1].set_ylabel(C + r'$/C_{\rho\rho}$')
+		axs[1, 1].set_title('radial ' + C + r'$/C_{\rho\rho}$')
+
+		axs[1, 1].set_xlim(r_min, r_max)
+		axs[1, 1].set_ylim(C_min, C_max)
+
+		return fig
+
+	fig1 = plot_correlation(r'$C_{uu}$', Cuu2D, Cuu1D, Cuu1Dcor, Cuu_min, Cuu_max)
+	fig2 = plot_correlation(r'$C_{dd}$', Cdd2D, Cdd1D, Cdd1Dcor, Cdd_min, Cdd_max)
 
 	plt.show()
