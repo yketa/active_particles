@@ -99,6 +99,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	cax = divider.append_axes("right", size="5%", pad=0.05)
 
 	cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=vNorm, orientation='vertical')
+	cb.set_label(r'$\log||\vec{v}(t)||$' if dt < 0 else r'$\log||\vec{u}(t, t + \Delta t)||$', labelpad=30, rotation=270)
 
 	ax.set_xlim([-1.1*max_box_size/2, 1.1*max_box_size/2])
 	ax.set_ylim([-1.1*max_box_size/2, 1.1*max_box_size/2])
