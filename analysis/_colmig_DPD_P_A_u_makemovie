@@ -143,7 +143,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 
 	for frame in range(len(frames)):
 
-		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(frame*time_step*period_dump))
+		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(frames[frame]*time_step*period_dump))
 		bytes = out_param.write("E_p=%e\n" % data[prep_frames + frame, 1])
 		bytes = out_param.write("kT=%e\n" % data[prep_frames + frame, 2])
 		bytes = out_param.write("pxx=%e\n" % data[prep_frames + frame, 3])
