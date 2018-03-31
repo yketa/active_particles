@@ -24,13 +24,17 @@ WRAP_FILE="${WRAPPED_FILE-${DATA_DIR}/trajectory.gsd}"
 UNWRAP_FILE="${UNWRAPPED_FILE-${DATA_DIR}/trajectory.dat}"
 LOG_FILE="${LOGOUTPUT_FILE-${DATA_DIR}/log-output.log}"
 
+WIDTH="${ARROW_WIDTH-1e-3}"
+HEAD_W="${HEAD_WIDTH-3e2}"
+HEAD_L="${HEAD_LENGH-1.5}"
+
 FRAME_VER="${FRAME_VERTICAL_SIZE-12}"
 FRAME_HOR="${FRAME_HORIZONTAL_SIZE-16}"
 FRAME_DEF="${FRAME_DEFINITION-80}"
 
 L_MAX="${MAX_BOX_SIZE--1}"
 
-MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -69,6 +73,10 @@ logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
 frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame of the movie
 frame_period = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
 frame_maximum = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
+
+width = float(eval(os.environ['ARROW_WIDTH'])) # width of the arrows
+head_width = float(eval(os.environ['HEAD_WIDTH'])) # width of the arrows' head (input in ratio of the width of the arrows)
+head_length = float(eval(os.environ['HEAD_LENGTH'])) # width of the arrows' head (input in ratio of the width of the arrows' head)
 
 frame_ver = float(eval(os.environ['FRAME_VERTICAL_SIZE'])) # vertical size of the frames (in inches)
 frame_hor = float(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) # horizontal size of the frames (in inches)
@@ -121,6 +129,10 @@ def render_frame(frame):
 
 	env['MAX_BOX_SIZE'] = str("%e" % max_box_size)
 
+	env['ARROW_WIDTH'] = str("%e" % width)
+	env['HEAD_WIDTH'] = str("%e" % head_width)
+	env['HEAD_LENGTH'] = str("%e" % head_length)
+
 	env['FRAME_VERTICAL_SIZE'] = str("%e" % frame_ver)
 	env['FRAME_HORIZONTAL_SIZE'] = str("%e" % frame_hor)
 	env['FRAME_DEFINITION'] = str("%e" % frame_def)
@@ -135,6 +147,14 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 
 	for frame in range(len(frames)):
+
+		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(frame*time_step*period_dump))
+		bytes = out_param.write("E_p=%e\n" % data[prep_frames + frame, 1])
+		bytes = out_param.write("kT=%e\n" % data[prep_frames + frame, 2])
+		bytes = out_param.write("pxx=%e\n" % data[prep_frames + frame, 3])
+		bytes = out_param.write("pyy=%e\n" % data[prep_frames + frame, 6])
+		bytes = out_param.write("pxy=%e\n" % data[prep_frames + frame, 4])
+		bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + frame, 10])
 		
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % len(frames))
 		out = render_frame(frame)
