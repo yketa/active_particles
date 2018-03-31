@@ -121,6 +121,10 @@ def render_frame(frame):
 
 	env['MAX_BOX_SIZE'] = str("%e" % max_box_size)
 
+	env['FRAME_VERTICAL_SIZE'] = str("%e" % frame_ver)
+	env['FRAME_HORIZONTAL_SIZE'] = str("%e" % frame_hor)
+	env['FRAME_DEFINITION'] = str("%e" % frame_def)
+
 	env['PICTURE_NAME'] = movie_directory + '/frames/' + '%010d' % frame
 
 	# calling _colmig_DPD_P_A_frame
