@@ -14,7 +14,7 @@ export INTERVAL_MAXIMUM=${INTERVAL_MAXIMUM-1}
 export N_CASES=${N_CASES-`/home/yketa/miniconda3/bin/python3.6 <<EOF
 from numpy import sqrt
 N = $(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N)
-print(int(np.sqrt(N)) + (1 - int(sqrt(N))%2))
+print(int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2))
 EOF
 `}
 
