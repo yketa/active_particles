@@ -81,7 +81,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	fig, ax = plt.subplots()
 	fig.set_size_inches(frame_hor, frame_ver)
 
-	vNorm = colors.Normalize(vmin=np.log(v_min), vmax=np.log(v_max))
+	vNorm = colors.Normalize(vmin=np.log10(v_min), vmax=np.log10(v_max))
 	scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap)
 
 	positions = w_traj[int(prep_frames + frame)].particles.position[:, :2] # positions of the particles (with periodic boundary conditions)
@@ -92,7 +92,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 
 	particles_to_draw = [particle for particle in range(N) if (np.abs(positions[particle]) <= max_box_size/2).all()]
 
-	cirlces = list(map(lambda particle: draw_circle(ax, positions[particle], w_traj[0].particles.diameter[particle]/2, scalarMap.to_rgba(np.log(n_vel(particle)))), particles_to_draw)) # drawing circles representing particles and lengths of displacements
+	cirlces = list(map(lambda particle: draw_circle(ax, positions[particle], w_traj[0].particles.diameter[particle]/2, scalarMap.to_rgba(np.log10(n_vel(particle)))), particles_to_draw)) # drawing circles representing particles and lengths of displacements
 	arrows = list(map(lambda particle: draw_arrow(ax, positions[particle], u_vel(particle), 0.75*w_traj[0].particles.diameter[particle]), particles_to_draw)) # drawing arrows representing directions of displacements
 
 	divider = make_axes_locatable(ax)
