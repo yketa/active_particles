@@ -109,7 +109,7 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 	Cuu2D, Cww2D, Cnn2D, Cdd2D = (lambda list: (list[0]/list[1], list[2]/list[3], list[4]/list[5], list[6]/list[7]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
-Cuu1D_dic, Cww1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cww1Dcor_dic, Cdd1Dcor_dic = {}, {}, {}, {}, {}, {}, {}
+Cuu1D_dic, Cww1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cww1Dcor_dic, Cdd1Dcor_dic = {}, {}, {}, {}, {}, {}, {}
 for i in range(Ncases):
 	for j in range(Ncases):
 		if (i**2 + j**2) <= (Ncases/2)**2:
