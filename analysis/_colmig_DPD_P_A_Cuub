@@ -59,33 +59,42 @@ def displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwr
 	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
 	pos1 = getarray(unwrap_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
 	displacement = pos1 - pos0 # displacements of the particles between time and time + dis_time
+	displacement_wd = (pos1 - np.mean(pos1, axis=0)) - (pos0 - np.mean(pos0, axis=0))  # displacements of the particles between time and time + dis_time without centre of mass drift
 
-	ugrid_dic = {}
+	ugrid_dic, wgrid_dic = {}, {}
 	for particle in range(N):
 		if (index[particle] < Ncases).all():
 			ugrid_dic[tuple(index[particle])] = ugrid_dic[tuple(index[particle])] + [displacement[particle]] if tuple(index[particle]) in ugrid_dic else [displacement[particle]]
+			wgrid_dic[tuple(index[particle])] = wgrid_dic[tuple(index[particle])] + [displacement_wd[particle]] if tuple(index[particle]) in wgrid_dic else [displacement_wd[particle]]
 
-	ugrid = np.zeros((Ncases, Ncases, 2))
+	ugrid, wgrid = np.zeros((Ncases, Ncases, 2)), np.zeros((Ncases, Ncases, 2))
 	for index in ugrid_dic:
 		ugrid[index] = np.mean(ugrid_dic[index], axis=0)
+		wgrid[index] = np.mean(wgrid_dic[index], axis=0)
 
 	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
 
-	return ugrid, ngrid
+	return ugrid, wgrid, ngrid
 
 def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file):
 	# This function returns the 2D correlation plot and renormalisation term of the
 	# displacement grid calculated by displacement_grid.
 
-	ugrid, ngrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
+	ugrid, wgrid, ngrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
 	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
 	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1)) # displacement norm grid
 
 	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
 	FFTuxgrid = FFTugrid[:, :, 0]
 	FFTuygrid = FFTugrid[:, :, 1]
-	Cuu = np.real(np.fft.ifft2(np.conj(FFTuxgrid)*FFTuxgrid)) + np.real(np.fft.ifft2(np.conj(FFTuygrid)*FFTuygrid)) # velocity auto-correlation
+	Cuu = np.real(np.fft.ifft2(np.conj(FFTuxgrid)*FFTuxgrid)) + np.real(np.fft.ifft2(np.conj(FFTuygrid)*FFTuygrid)) # displacement auto-correlation
 	Cuu_Norm = (Ncases**2) * np.sum(np.mean(ugrid**2, axis=(0,1))) # normalisation term
+
+	FFTwgrid = np.fft.fft2(wgrid, axes=(-3, -2))
+	FFTwxgrid = FFTwgrid[:, :, 0]
+	FFTwygrid = FFTwgrid[:, :, 1]
+	Cww = np.real(np.fft.ifft2(np.conj(FFTwxgrid)*FFTwxgrid)) + np.real(np.fft.ifft2(np.conj(FFTwygrid)*FFTwygrid)) # displacement in the centre of mass frame auto-correlation
+	Cww_Norm = (Ncases**2) * np.sum(np.mean(wgrid**2, axis=(0,1))) # normalisation term
 
 	FFTngrid = np.fft.fft2(ngrid)
 	Cnn = np.real(np.fft.ifft2(np.conj(FFTngrid)*FFTngrid)) # density auto-correlation grid
@@ -95,27 +104,30 @@ def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file
 	Cdd = np.real(np.fft.ifft2(np.conj(FFTdgrid)*FFTdgrid)) # displacement norm auto-correlation grid
 	Cdd_Norm = (Ncases**2) * np.mean(dgrid**2) # normalisation term
 
-	return Cuu, Cuu_Norm, Cnn, Cnn_Norm, Cdd, Cdd_Norm
+	return Cuu, Cuu_Norm, Cww, Cww_Norm, Cnn, Cnn_Norm, Cdd, Cdd_Norm
 
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
-	Cuu2D, Cnn2D, Cdd2D = (lambda list: (list[0]/list[1], list[2]/list[3], list[4]/list[5]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
+	Cuu2D, Cww2D, Cnn2D, Cdd2D = (lambda list: (list[0]/list[1], list[2]/list[3], list[4]/list[5], list[6]/list[7]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
 
-Cuu1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cdd1Dcor_dic = {}, {}, {}, {}, {}
+Cuu1D_dic, Cww1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cww1Dcor_dic, Cdd1Dcor_dic = {}, {}, {}, {}, {}, {}, {}
 for i in range(Ncases):
 	for j in range(Ncases):
 		if (i**2 + j**2) <= (Ncases/2)**2:
 			Cuu1D_dic[int(i**2 + j**2)] = Cuu1D_dic[int(i**2 + j**2)] + [Cuu2D[i, j]] if int(i**2 + j**2) in Cuu1D_dic else [Cuu2D[i, j]]
+			Cww1D_dic[int(i**2 + j**2)] = Cww1D_dic[int(i**2 + j**2)] + [Cww2D[i, j]] if int(i**2 + j**2) in Cww1D_dic else [Cww2D[i, j]]
 			Cnn1D_dic[int(i**2 + j**2)] = Cnn1D_dic[int(i**2 + j**2)] + [Cnn2D[i, j]] if int(i**2 + j**2) in Cnn1D_dic else [Cnn2D[i, j]]
 			Cdd1D_dic[int(i**2 + j**2)] = Cdd1D_dic[int(i**2 + j**2)] + [Cdd2D[i, j]] if int(i**2 + j**2) in Cdd1D_dic else [Cdd2D[i, j]]
 			Cuu1Dcor_dic[int(i**2 + j**2)] = Cuu1Dcor_dic[int(i**2 + j**2)] + [Cuu2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cuu1Dcor_dic else [Cuu2D[i, j]/Cnn2D[i, j]]
+			Cww1Dcor_dic[int(i**2 + j**2)] = Cww1Dcor_dic[int(i**2 + j**2)] + [Cww2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cww1Dcor_dic else [Cww2D[i, j]/Cnn2D[i, j]]
 			Cdd1Dcor_dic[int(i**2 + j**2)] = Cdd1Dcor_dic[int(i**2 + j**2)] + [Cdd2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cdd1Dcor_dic else [Cdd2D[i, j]/Cnn2D[i, j]]
-Cuu1D, Cnn1D, Cdd1D, Cuu1Dcor, Cdd1Dcor = tuple(list(map(lambda dic: np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(dic[dist])], sorted(dic)))), [Cuu1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cdd1Dcor_dic])))
+Cuu1D, Cww1D, Cnn1D, Cdd1D, Cuu1Dcor, Cww1Dcor, Cdd1Dcor = tuple(list(map(lambda dic: np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(dic[dist])], sorted(dic)))), [Cuu1D_dic, Cww1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cww1Dcor_dic, Cdd1Dcor_dic])))
 
 # SAVING
 
 filename = lambda var: data_dir + str('/' + var + 'b_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # filename
-with open(filename('Cuu'), 'wb') as Cuu_dump_file, open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cdd'), 'wb') as Cdd_dump_file:
+with open(filename('Cuu'), 'wb') as Cuu_dump_file, open(filename('Cww'), 'wb') as Cww_dump_file, open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cdd'), 'wb') as Cdd_dump_file:
 	pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor], Cuu_dump_file)
+	pickle.dump([Cww2D, Cww1D, Cww1Dcor], Cww_dump_file)
 	pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
 	pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cdd_dump_file)
 
