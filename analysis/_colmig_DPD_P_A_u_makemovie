@@ -8,8 +8,10 @@ fi
 SIM_DIR=${SIMULATION_DIRECTORY-/home/yketa/hoomd/colmig_DPD_P_A}
 
 FRAME_INIT="${INITIAL_FRAME-0}"
+FRAME_FIN="${FINAL_FRAME-10000}"
 FRAME_PER="${FRAME_PERIOD-1}"
 FRAME_MAX="${FRAME_MAXIMUM-1000}"
+TIME_SCA="${TIME_SCALE-LOG}"
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
 MOV=u_${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)
@@ -32,7 +34,7 @@ FRAME_DEF="${FRAME_DEFINITION-80}"
 
 L_MAX="${MAX_BOX_SIZE--1}"
 
-MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FINAL_FRAME="$FRAME_FIN" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" TIME_SCALE="$TIME_SCA" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -54,6 +56,7 @@ sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
 from readdat import *
 
 import math
+from collections import OrderedDict
 
 movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
 data_directory = os.environ['DATA_DIRECTORY'] # data directory
@@ -62,8 +65,10 @@ parameters_file = os.environ['PARAMETERS_FILE'] # parameters pickle file
 logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
 
 frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame for the calculation of the displacement
+frame_fin = int(eval(os.environ['FINAL_FRAME'])) # final frame for the calculation of the displacement
 frame_period = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
 frame_maximum = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
+time_sca = os.environ['TIME_SCALE'] # time scale for the selection of frames
 
 width = float(eval(os.environ['ARROW_WIDTH'])) # width of the arrows
 head_width = float(eval(os.environ['HEAD_WIDTH'])) # width of the arrows' head (input in ratio of the width of the arrows)
@@ -78,9 +83,12 @@ with open(parameters_file, 'rb') as param_file:
 
 max_box_size = box_size if float(eval(os.environ['MAX_BOX_SIZE'])) < 0 else float(eval(os.environ['MAX_BOX_SIZE'])) # maximum size of the box rendered in the movie
 
-data = np.genfromtxt(fname=logoutput_file, skip_header=True)
+Nentries = N_steps//period_dump # number of time snapshots in trajectory file
+Nframes = np.min([Nentries, frame_fin]) - frame_init # number of frames available for the movie
+Ntimes = np.min([Nframes//frame_period, frame_max]) # number of rendered frames
+frames = frame_init + np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), (np.exp(np.linspace(np.log(1), np.log(Nframes - 1), Ntimes)) if time_sca == 'LOG' else np.linspace(1, Nframes - 1, Ntimes)))))) # rendered frames
 
-frames = list(range(frame_init, int(N_steps//period_dump)))[::frame_period][:min(frame_maximum, math.ceil((N_steps//period_dump - frame_init)/frame_period))] # frames to render
+data = np.genfromtxt(fname=logoutput_file, skip_header=True)
 
 prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
