@@ -13,6 +13,11 @@ export FRAME_PERIOD=${FRAME_PERIOD-1}
 export FRAME_MAXIMUM=${FRAME_MAXIMUM-1000}
 export TIME_SCALE=${TIME_SCALE-LOG}
 
+export V_MIN=${V_MIN--1}
+export V_MAX=${V_MAX--1}
+
+export MAX_BOX_SIZE=${MAX_BOX_SIZE--1}
+
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
 MOV_PAR=u_mov_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $FRAME_MAXIMUM)_P$(float_to_letters $FRAME_PERIOD)
 

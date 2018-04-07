@@ -13,6 +13,9 @@ FRAME_PER="${FRAME_PERIOD-1}"
 FRAME_MAX="${FRAME_MAXIMUM-1000}"
 TIME_SCA="${TIME_SCALE-LOG}"
 
+V_MIN="${V_MIN--1}"
+V_MAX="${V_MAX--1}"
+
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
 MOV=u_${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)
 
@@ -34,7 +37,7 @@ FRAME_DEF="${FRAME_DEFINITION-80}"
 
 L_MAX="${MAX_BOX_SIZE--1}"
 
-MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FINAL_FRAME="$FRAME_FIN" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" TIME_SCALE="$TIME_SCA" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FINAL_FRAME="$FRAME_FIN" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" TIME_SCALE="$TIME_SCA" V_MIN="$V_MIN" V_MAX="$V_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -69,6 +72,9 @@ frame_fin = int(eval(os.environ['FINAL_FRAME'])) # final frame for the calculati
 frame_per = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
 frame_max = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
 time_sca = os.environ['TIME_SCALE'] # time scale for the selection of frames
+
+v_min = float(eval(os.environ['V_MIN'])) # minimum velocity for the colorbar
+v_max = float(eval(os.environ['V_MAX'])) # maximum velocity for the colorbar
 
 width = float(eval(os.environ['ARROW_WIDTH'])) # width of the arrows
 head_width = float(eval(os.environ['HEAD_WIDTH'])) # width of the arrows' head (input in ratio of the width of the arrows)
@@ -106,6 +112,9 @@ def render_frame(frame):
 	env['DT'] = str("%i" % (frames[frame] - frame_init))
 
 	env['MAX_BOX_SIZE'] = str("%e" % max_box_size)
+
+	env['V_MIN'] = str("%e" % v_min)
+	env['V_MAX'] = str("%e" % v_max)
 
 	env['ARROW_WIDTH'] = str("%e" % width)
 	env['HEAD_WIDTH'] = str("%e" % head_width)
