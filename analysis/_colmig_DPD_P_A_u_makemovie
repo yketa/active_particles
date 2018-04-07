@@ -66,8 +66,8 @@ logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
 
 frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame for the calculation of the displacement
 frame_fin = int(eval(os.environ['FINAL_FRAME'])) # final frame for the calculation of the displacement
-frame_period = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
-frame_maximum = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
+frame_per = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
+frame_max = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
 time_sca = os.environ['TIME_SCALE'] # time scale for the selection of frames
 
 width = float(eval(os.environ['ARROW_WIDTH'])) # width of the arrows
@@ -85,7 +85,7 @@ max_box_size = box_size if float(eval(os.environ['MAX_BOX_SIZE'])) < 0 else floa
 
 Nentries = N_steps//period_dump # number of time snapshots in trajectory file
 Nframes = np.min([Nentries, frame_fin]) - frame_init # number of frames available for the movie
-Ntimes = np.min([Nframes//frame_period, frame_max]) # number of rendered frames
+Ntimes = np.min([Nframes//frame_per, frame_max]) # number of rendered frames
 frames = frame_init + np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), (np.exp(np.linspace(np.log(1), np.log(Nframes - 1), Ntimes)) if time_sca == 'LOG' else np.linspace(1, Nframes - 1, Ntimes)))))) # rendered frames
 
 data = np.genfromtxt(fname=logoutput_file, skip_header=True)
