@@ -31,7 +31,7 @@ dirs = [dir for dir in os.listdir() if 'Dk8000_Vj1000' in dir and 'Nq1000_Ll' in
 # dirs = ['Dk8000_Vj1000_Rg3000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg2000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rj1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rf5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rj5000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rj5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll3000', 'Dk8000_Vj1000_Rg5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg4000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll2000', 'Dk8000_Vj1000_Ri5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rh1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rh1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Ri1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rh5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rh5000_Nq1000_Ll1000', 'Dk8000_Vj1000_Ri1000_Nq1000_Ll0000']
 dt_list = ['l1000', 'l2000', 'l4000', 'l5000', 'm1000', 'm2000', 'm4000', 'm5000', 'n1000', 'n2000', 'n4000', 'n5000', 'o1000', 'o2000', 'o4000']
 # dt_list = list(map(float_to_letters, [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 16, 19, 20, 22, 27, 32, 38, 40, 45, 50, 54, 64, 77, 91, 100, 109, 129, 154, 183, 200, 218, 260, 309, 368, 400, 438, 500, 521, 620, 738, 879, 1000, 1045, 1244, 1480, 1761, 2000, 2096, 2494, 2967, 3531, 4000, 4201, 4999]))
-init_list = [500, 1000, 2000, 5000] # initial frames in MSD calculation
+init_list = [int(eval(os.environ['SINGLE_MSD']))] if 'SINGLE_MSD' in os.environ else [500, 1000, 2000, 5000] # initial frames in MSD calculation
 # init_list = [5000]
 
 # default_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
@@ -42,8 +42,11 @@ linestyles = {init_list[i]:default_linestyles[i] for i in range(len(init_list))}
 
 init_frame = float_to_letters(int(eval(os.environ['INITIAL_FRAME'])) if 'INITIAL_FRAME' in os.environ else 5000)
 N_cases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else 500
-int_max = float_to_letters(int(eval(os.environ['INTERVAL_MAXIMUM'])) if 'INTERVAL_MAXIMUM' in os.environ else 100)
+int_max = float_to_letters(int(eval(os.environ['INTERVAL_MAXIMUM'])) if 'INTERVAL_MAXIMUM' in os.environ else 100) # maximum number of intervals for Cuu calculation
 fname = lambda var, dir, t: str('%s/%s_%s_I%s_T%s_M%s_C%s.pickle' % (dir, var, dir[:-7], init_frame, t, int_max, float_to_letters(N_cases)))
+
+snap_max = float_to_letters(int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ else 1) # maximum number of intervals for MSD calculation
+snap_per = float_to_letters(int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.environ else 50) # period of intervals to take to calculate MSD
 
 def cut(arr, r_min, r_max=-1):
 	r_max = arr[-1, 0] if r_max < 0 else r_max
@@ -99,7 +102,7 @@ ax1.set_ylabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.e
 ax1.set_xscale('log')
 ax1.set_yscale('log')
 
-ax2.set_xlabel(r'$\tilde{\nu}_r^{-1}$')
+ax2.set_xlabel(r'$\tau_r \equiv \tilde{\nu}_r^{-1}$')
 ax2.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t^*)$')
 ax2.set_xscale('log')
 ax2.set_yscale('log')
@@ -136,9 +139,10 @@ if 'FIT' in os.environ and eval(os.environ['FIT']):
 lines = list(map(lambda d: Line2D([0], [0], color=colors[d], lw=2, label=r'$\tilde{\nu}_r = %.0e$' % d), dr_list))
 lines0 = list(map(lambda d: Line2D([0], [0], color=colors[d], lw=2, label=r'$\tilde{\nu}_r = %.0e$' % d), sorted(np.append(dr_list, dr0_list))))
 lines += [Line2D([0], [0], lw=0, label='')]
-lines0 += [Line2D([0], [0], lw=0, label='')]
+# lines0 += [Line2D([0], [0], lw=0, label='')]
 lines += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
-lines0 += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
+linesdt = list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
+# lines0 += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
 ax3.legend(handles=lines, loc='center')
 
 fig.subplots_adjust(wspace=0.4)
@@ -165,7 +169,7 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 	ax11.set_xscale('log')
 	ax11.set_yscale('log')
 
-	ax12.set_xlabel(r'$\tilde{\nu}_r^{-1}$')
+	ax12.set_xlabel(r'$\tau_r \equiv \tilde{\nu}_r^{-1}$')
 	ax12.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t^*)$')
 	ax12.set_xscale('log')
 	ax12.set_yscale('log')
@@ -218,13 +222,13 @@ ax00.set_title(r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$
 ax00.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
 ax00.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
 
-ax01.set_title(r'$S_{max}=1$')
+ax01.set_title((r'$S_{init}=%.1e, $' % int(eval(os.environ['SINGLE_MSD'])) if 'SINGLE_MSD' in os.environ else '') + r'$S_{max}=%1.e$' % float(eval(letters_to_float(snap_max))))
 ax01.set_xscale('log')
 ax01.set_yscale('log')
 ax01.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
 ax01.set_ylabel(r'$<|\Delta r(\Delta t)|^2>/\Delta t$')
 
-msd_fname = lambda dir, init: str('%s/msd_sterr_%s_I%s_Ml1000_Pm5000.csv' % (dir, dir[:-7], float_to_letters(init)))
+msd_fname = lambda dir, init: str('%s/msd_sterr_%s_I%s_M%s_P%s.csv' % (dir, dir[:-7], float_to_letters(init), snap_max, snap_per))
 
 msd = {}
 for dir in dirs:
@@ -233,9 +237,11 @@ for dir in dirs:
 		msd[(dir, init)] = np.genfromtxt(fname=msd_fname(dir, init), delimiter=',', skip_header=True)
 		ax01.errorbar(msd[(dir, init)][:, 0]*(dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1), msd[(dir, init)][:, 1]/msd[(dir, init)][:, 0], yerr=msd[(dir, init)][:, 2]/msd[(dir, init)][:, 0], color=colors[dr[dir]], linestyle=linestyles[init], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
 
-lines1 = list(map(lambda init: Line2D([0], [0], color='black', lw=2, linestyle=linestyles[init], label=r'$S_{init} = %.0e$' % init), init_list))
-ax01.legend(handles=lines1)
+if not('SINGLE_MSD' in os.environ):
+	lines1 = list(map(lambda init: Line2D([0], [0], color='black', lw=2, linestyle=linestyles[init], label=r'$S_{init} = %.0e$' % init), init_list))
+	ax01.legend(handles=lines1)
 ax02.legend(handles=lines0, loc='center')
+ax00.legend(handles=linesdt)
 
 fig0.subplots_adjust(wspace=0.4)
 fig0.subplots_adjust(hspace=0.05)
