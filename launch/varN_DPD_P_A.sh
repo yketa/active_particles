@@ -17,12 +17,14 @@ N = $(/home/yketa/bin/_colmig_DPD_P_A_data $DATA N)
 print(int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2))
 EOF
 `}
+export MAX_BOX_SIZE=${MAX_BOX_SIZE-10}
 
+export SAVEFIG=${SAVEFIG-False}
 export SHOW='False'
 export SAVE='True'
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-VARN_TIME=varN_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $INTERVAL_MAXIMUM)_C$(float_to_letters $N_CASES)
+VARN_TIME=varN_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $INTERVAL_MAXIMUM)_C$(float_to_letters $N_CASES)_B$(float_to_letters $MAX_BOX_SIZE)
 
 mkdir -p ${DATA_DIRECTORY}/out
 output_file=${DATA_DIRECTORY}/out/${VARN_TIME}.out

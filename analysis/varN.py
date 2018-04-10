@@ -62,9 +62,9 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file:
 
 histogram = list(map(lambda bin: (np.sum(densities >= bin/Nbins) - np.sum(densities > (bin + 1)/Nbins))/len(densities), range(Nbins)))
 
+filename = lambda ext: str(data_dir + '/varN_D%s_V%s_R%s_N%s_I%s_M%s_C%s_B%s.' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, int_max, Ncases, max_box_size])) + ext) # filename
 if 'SAVE' in os.environ and eval(os.environ['SAVE']):
-	filename = data_dir + str('/varN_D%s_V%s_R%s_N%s_I%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, int_max, Ncases]))) # filename
-	with open(filename, 'wb') as dump_file:
+	with open(filename('pickle'), 'wb') as dump_file:
 		pickle.dump(histogram, dump_file)
 
 # PLOT
@@ -74,9 +74,8 @@ plt.title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, dens
 plt.xlabel(r'$\phi_{loc}$')
 plt.ylabel(r'$P(\phi_{loc})$')
 if 'SAVEFIG' in os.environ and eval(os.environ['SAVEFIG']):
-	figname = data_dir + str('/varN_D%s_V%s_R%s_N%s_I%s_M%s_C%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, int_max, Ncases]))) # figure anme
-	plt.savefig(figname)
-	print('Figure saved to %s.' % figname)
+	plt.savefig(filename('eps'))
+	print('Figure saved to %s.' % filename('eps'))
 if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	plt.show()
 
