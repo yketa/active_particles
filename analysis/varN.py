@@ -6,11 +6,6 @@ import matplotlib as mpl
 if not('SHOW' in os.environ and eval(os.environ['SHOW'])):
 	mpl.use('Agg')
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.cm as cmx
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-cmap = plt.cm.jet
 
 import numpy as np
 
