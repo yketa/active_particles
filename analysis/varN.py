@@ -60,15 +60,14 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file:
 	surface = lambda frame, point: np.sum((np.pi/4)*(w_traj[int(prep_frames + frame)].particles.diameter**2)*(abs((w_traj[int(prep_frames + frame)].particles.position[:, :2] - np.array(point) + box_size/2)%box_size - box_size/2) <= max_box_size/2).all(axis=1)) # get the numbers of particle in the square of centre point and length max_box_size at time frame
 	densities = np.array(list(map(lambda frame: list(map(lambda point: surface(frame, point), points)), frames))).flatten()/(max_box_size**2) # densities
 
-histogram = list(map(lambda bin: (np.sum(densities >= bin/Nbins) - np.sum(densities > (bin + 1)/Nbins))/len(densities), range(Nbins)))
-
 filename = lambda ext: str(data_dir + '/varN_D%s_V%s_R%s_N%s_I%s_M%s_C%s_B%s.' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, int_max, Ncases, max_box_size])) + ext) # filename
 if 'SAVE' in os.environ and eval(os.environ['SAVE']):
 	with open(filename('pickle'), 'wb') as dump_file:
-		pickle.dump(histogram, dump_file)
+		pickle.dump(densities, dump_file)
 
 # PLOT
 
+histogram = list(map(lambda bin: (np.sum(densities >= bin/Nbins) - np.sum(densities > (bin + 1)/Nbins))/len(densities), range(Nbins)))
 plt.semilogy(np.linspace(0, 1, len(histogram)), histogram, '.')
 plt.title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, S_{max}=%.2e, N_{cases}=%.2e, r_{max}=%.2e$' % (init_frame, int_max, Ncases, max_box_size))
 plt.xlabel(r'$\phi_{loc}$')
