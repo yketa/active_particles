@@ -15,6 +15,10 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from scipy import stats as st
 
+density = float(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8
+number = int(eval(os.environ['NUMBER'])) if 'NUMBER' in os.environ else int(1e5)
+vzero = float(eval(os.environ['VZERO'])) if 'VZERO' in os.environ else 1e-2
+
 r_min = float(eval(os.environ['R_MIN'])) if 'R_MIN' in os.environ else 1
 r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20
 
@@ -25,9 +29,16 @@ dr_c = float(eval(os.environ['DR_C'])) if 'DR_C' in os.environ else 3e-4
 axis = os.environ['AXIS'] if 'AXIS' in os.environ else 'LOGLOG'
 fplot = lambda ax: ax.plot if axis == 'LINLIN' else ax.semilogx if axis == 'LOGLIN' else ax.semilogy if axis == 'LINLOG' else ax.loglog
 
+drdtmax_xs = os.environ['DRDTMAX_XSCALE'] if 'DRDTMAX_XSCALE' in os.environ else 'log'
+drdtmax_ys = os.environ['DRDTMAX_YSCALE'] if 'DRDTMAX_YSCALE' in os.environ else 'log'
+chimax_xs = os.environ['CHIMAX_XSCALE'] if 'CHIMAX_XSCALE' in os.environ else 'log'
+chimax_ys = os.environ['CHIMAX_YSCALE'] if 'CHIMAX_YSCALE' in os.environ else 'log'
+msd_xs = os.environ['MSD_XSCALE'] if 'MSD_XSCALE' in os.environ else 'log'
+msd_ys = os.environ['MSD_YSCALE'] if 'MSD_YSCALE' in os.environ else 'log'
+
 colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet'
 
-dirs = [dir for dir in os.listdir() if 'Dk8000_Vj1000' in dir and 'Nq1000_Ll' in dir]
+dirs = [dir for dir in os.listdir() if str('D%s_V%s' % tuple(map(float_to_letters, [density, vzero]))) in dir and str('N%s_Ll' % float_to_letters(number)) in dir]
 # dirs = ['Dk8000_Vj1000_Rg3000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg2000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rj1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rf5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rj5000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rj5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll3000', 'Dk8000_Vj1000_Rg5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg4000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll2000', 'Dk8000_Vj1000_Ri5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rh1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rh1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Ri1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rh5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rh5000_Nq1000_Ll1000', 'Dk8000_Vj1000_Ri1000_Nq1000_Ll0000']
 dt_list = ['l1000', 'l2000', 'l4000', 'l5000', 'm1000', 'm2000', 'm4000', 'm5000', 'n1000', 'n2000', 'n4000', 'n5000', 'o1000', 'o2000', 'o4000']
 # dt_list = list(map(float_to_letters, [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 16, 19, 20, 22, 27, 32, 38, 40, 45, 50, 54, 64, 77, 91, 100, 109, 129, 154, 183, 200, 218, 260, 309, 368, 400, 438, 500, 521, 620, 738, 879, 1000, 1045, 1244, 1480, 1761, 2000, 2096, 2494, 2967, 3531, 4000, 4201, 4999]))
@@ -99,13 +110,13 @@ ax0.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.e
 ax0.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
 
 ax1.set_ylabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t^*$')
-ax1.set_xscale('log')
-ax1.set_yscale('log')
+ax1.set_xscale(drdtmax_xs)
+ax1.set_yscale(drdtmax_ys)
 
 ax2.set_xlabel(r'$\tau_r \equiv \tilde{\nu}_r^{-1}$')
 ax2.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t^*)$')
-ax2.set_xscale('log')
-ax2.set_yscale('log')
+ax2.set_xscale(chimax_xs)
+ax2.set_yscale(chimax_ys)
 
 exploitables = [[], []]
 intCuu, drdtmax, intCuumax = {}, {}, {}
@@ -116,6 +127,8 @@ for dir in dirs:
 		exploitables[dr[dir] < dr_c] = np.append(exploitables[dr[dir] < dr_c], dir)
 	drdtmax[dir] = (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1)*period_dump[dir]*time_step[dir]*float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])])))
 	intCuumax[dir] = np.max(intCuu[dir])
+	with open(str('%s/intCuu_%s.pickle' % (dir, dir[:-7])), 'wb') as dump_file:
+		pickle.dump([np.transpose([list(map(lambda t: dr[dir] * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu[dir]]), float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])]))), dr[dir]*period_dump[dir]*time_step[dir]*float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])]))), np.max(intCuu[dir])], dump_file)
 	
 	if dr[dir] <= dr_max and dr[dir] >= dr_min:
 		fplot(ax0)(list(map(lambda t: (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1) * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu[dir], marker=markers[time_step[dir]], linestyle='-', color=colors[dr[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
@@ -136,18 +149,21 @@ if 'FIT' in os.environ and eval(os.environ['FIT']):
 	ax1.legend()
 	ax2.legend()
 
+# for dir in list(map(lambda d: 'Dk8000_Vj1000_R%s_Nq1000_Ll0000' % d, ['g2000', 'g7000', 'h2000', 'h7000', 'i2000', 'i7000'])):
+# 	print(dir, drdtmax[dir]/(dr[dir]*period_dump[dir]*time_step[dir]))
+
 lines = list(map(lambda d: Line2D([0], [0], color=colors[d], lw=2, label=r'$\tilde{\nu}_r = %.0e$' % d), dr_list))
 lines0 = list(map(lambda d: Line2D([0], [0], color=colors[d], lw=2, label=r'$\tilde{\nu}_r = %.0e$' % d), sorted(np.append(dr_list, dr0_list))))
 lines += [Line2D([0], [0], lw=0, label='')]
 # lines0 += [Line2D([0], [0], lw=0, label='')]
-lines += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
+lines += list(map(lambda dt: Line2D([0], [0], lw=0, marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
 linesdt = list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
 # lines0 += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
 ax3.legend(handles=lines, loc='center')
 
 fig.subplots_adjust(wspace=0.4)
 fig.subplots_adjust(hspace=0.05)
-fig.suptitle(r'$N=1\cdot10^5, \phi=0.80, \tilde{v}=1\cdot10^{-2}$' + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else '') + '\n' + r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
+fig.suptitle(r'$N=%.1e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else '') + '\n' + r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
 
 # CHI, CHIMAX, DRDTMAX (integrated from 2D)
 
@@ -166,13 +182,13 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 	ax10.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
 
 	ax11.set_ylabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t^*$')
-	ax11.set_xscale('log')
-	ax11.set_yscale('log')
+	ax11.set_xscale(drdtmax_xs)
+	ax11.set_yscale(drdtmax_ys)
 
 	ax12.set_xlabel(r'$\tau_r \equiv \tilde{\nu}_r^{-1}$')
 	ax12.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t^*)$')
-	ax12.set_xscale('log')
-	ax12.set_yscale('log')
+	ax12.set_xscale(chimax_xs)
+	ax12.set_yscale(chimax_ys)
 
 	exploitables1 = [[], []]
 	intCuu1, drdtmax1, intCuumax1 = {}, {}, {}
@@ -207,7 +223,7 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 
 	fig1.subplots_adjust(wspace=0.4)
 	fig1.subplots_adjust(hspace=0.05)
-	fig1.suptitle(r'$N=1\cdot10^5, \phi=0.80, \tilde{v}=1\cdot10^{-2}$' + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else '') + '\n' + r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
+	fig1.suptitle(r'$N=%1.e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else '') + '\n' + r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
 
 # CHI, MSD
 
@@ -223,8 +239,8 @@ ax00.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.
 ax00.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
 
 ax01.set_title((r'$S_{init}=%.1e, $' % int(eval(os.environ['SINGLE_MSD'])) if 'SINGLE_MSD' in os.environ else '') + r'$S_{max}=%1.e$' % float(eval(letters_to_float(snap_max))))
-ax01.set_xscale('log')
-ax01.set_yscale('log')
+ax01.set_xscale(msd_xs)
+ax01.set_yscale(msd_ys)
 ax01.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
 ax01.set_ylabel(r'$<|\Delta r(\Delta t)|^2>/\Delta t$')
 
@@ -245,7 +261,7 @@ ax00.legend(handles=linesdt)
 
 fig0.subplots_adjust(wspace=0.4)
 fig0.subplots_adjust(hspace=0.05)
-fig0.suptitle(r'$N=1\cdot10^5, \phi=0.80, \tilde{v}=1\cdot10^{-2}$' + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else ''))
+fig0.suptitle(r'$N=%.1e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else ''))
 
 plt.show()
 
