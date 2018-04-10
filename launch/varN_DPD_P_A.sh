@@ -19,7 +19,9 @@ EOF
 `}
 export MAX_BOX_SIZE=${MAX_BOX_SIZE-10}
 
+export N_BINS=${N_BINS-100}
 export SAVEFIG=${SAVEFIG-False}
+
 export SHOW='False'
 export SAVE='True'
 
