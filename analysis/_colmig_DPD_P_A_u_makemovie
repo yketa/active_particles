@@ -155,12 +155,12 @@ with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters 
 	for frame in range(len(frames)):
 
 		bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(frames[frame]*time_step*period_dump))
-		bytes = out_param.write("E_p=%e\n" % data[prep_frames + frame, 1])
-		bytes = out_param.write("kT=%e\n" % data[prep_frames + frame, 2])
-		bytes = out_param.write("pxx=%e\n" % data[prep_frames + frame, 3])
-		bytes = out_param.write("pyy=%e\n" % data[prep_frames + frame, 6])
-		bytes = out_param.write("pxy=%e\n" % data[prep_frames + frame, 4])
-		bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + frame, 10])
+		bytes = out_param.write("E_p=%e\n" % data[prep_frames + frames[frame], 1])
+		bytes = out_param.write("kT=%e\n" % data[prep_frames + frames[frame], 2])
+		bytes = out_param.write("pxx=%e\n" % data[prep_frames + frames[frame], 3])
+		bytes = out_param.write("pyy=%e\n" % data[prep_frames + frames[frame], 6])
+		bytes = out_param.write("pxy=%e\n" % data[prep_frames + frames[frame], 4])
+		bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + frames[frame], 10])
 		
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % len(frames))
 		out = render_frame(frame)
