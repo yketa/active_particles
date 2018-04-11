@@ -14,11 +14,13 @@ EOF
 export DT=${DT--1}
 export MAX_BOX_SIZE=${MAX_BOX_SIZE-$(/home/yketa/bin/_colmig_DPD_P_A_data $DATA box_size)}
 
+export MOVE=${MOVE-False}
+
 export SHOW=False
 export SAVE=True
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-FRA_PAR=frame_F$(float_to_letters $FRAME)_T$(float_to_letters $(($DT>0?$DT:0)))_RMAX$(float_to_letters $MAX_BOX_SIZE)
+FRA_PAR=frame_F$(float_to_letters $FRAME)_T$(float_to_letters $(($DT>0?$DT:0)))_RMAX$(float_to_letters $MAX_BOX_SIZE)_MOVE$(float_to_letters $MOVE)
 
 mkdir -p /home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}/out
 output_file=/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}/out/${FRA_PAR}.out

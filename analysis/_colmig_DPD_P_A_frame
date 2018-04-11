@@ -84,7 +84,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	vNorm = colors.Normalize(vmin=np.log10(v_min), vmax=np.log10(v_max))
 	scalarMap = cmx.ScalarMappable(norm=vNorm, cmap=cmap)
 
-	positions = w_traj[int(prep_frames + frame)].particles.position[:, :2] # positions of the particles (with periodic boundary conditions)
+	positions = w_traj[int(prep_frames + frame + (dt if 'MOVE' in os.environ and eval(os.environ['MOVE']) else 0))].particles.position[:, :2] # positions of the particles (with periodic boundary conditions)
 	velocities = getarray(unwrap_file, N, frame, variable='velocity') if dt < 0 else getarray(unwrap_file, N, frame + dt) - getarray(unwrap_file, N, frame) # velocities (or displacement) of the particles
 
 	n_vel = lambda particle: np.sqrt(np.sum(velocities[particle]**2)) # norm of the velocity of particle particle
@@ -111,7 +111,7 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 	ax.set_title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e, L=%.3e, r_{max}=%.3e$' % (N, density, vzero, dr, box_size, max_box_size) + '\n' + r'$t=%e, \Delta t$' % (frame*time_step*period_dump) + (r'$\rightarrow 0$' if dt < 0 else str(r'$=%e$' % (dt*time_step*period_dump))))
 
 	if 'SAVE' in os.environ and eval(os.environ['SAVE']):
-		fig.savefig(os.environ['PICTURE_NAME'] if 'PICTURE_NAME' in os.environ else data_dir + '/D%s_V%s_R%s_N%s_F%s_T%s_RMAX%s_VMIN_%s_VMAX%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, frame, np.max([0, dt]), max_box_size, v_min, v_max])), dpi=frame_def)
+		fig.savefig(os.environ['PICTURE_NAME'] if 'PICTURE_NAME' in os.environ else data_dir + '/D%s_V%s_R%s_N%s_F%s_T%s_RMAX%s_VMIN_%s_VMAX%s_MOVE%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, frame, np.max([0, dt]), max_box_size, v_min, v_max, eval(os.environ['MOVE']) if 'MOVE' in os.environ else False])), dpi=frame_def)
 	if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 		plt.show()
 		

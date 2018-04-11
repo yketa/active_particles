@@ -18,10 +18,12 @@ export V_MAX=${V_MAX--1}
 
 export MAX_BOX_SIZE=${MAX_BOX_SIZE--1}
 
-. /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-MOV_PAR=u_mov_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $FRAME_MAXIMUM)_P$(float_to_letters $FRAME_PERIOD)
+export MOVE=${MOVE-False}
 
-MOV=u_${DATA}_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $FRAME_MAXIMUM)_P$(float_to_letters $FRAME_PERIOD)
+. /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
+MOV_PAR=u_mov_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $FRAME_MAXIMUM)_P$(float_to_letters $FRAME_PERIOD)_MOVE$(float_to_letters $MOVE)
+
+MOV=u_${DATA}_I$(float_to_letters $INITIAL_FRAME)_M$(float_to_letters $FRAME_MAXIMUM)_P$(float_to_letters $FRAME_PERIOD)_MOVE$(float_to_letters $MOVE)
 export MOVIE_DIRECTORY=${MOVIE_DIRECTORY-/home/yketa/hoomd/colmig_DPD_P_A/movie/${MOV}}
 
 mkdir -p /home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}/out

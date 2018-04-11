@@ -16,8 +16,10 @@ TIME_SCA="${TIME_SCALE-LOG}"
 V_MIN="${V_MIN--1}"
 V_MAX="${V_MAX--1}"
 
+MOVE="${MOVE-False}"
+
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-MOV=u_${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)
+MOV=u_${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)_MOVE$(float_to_letters $MOVE)
 
 MOV_DIR="${MOVIE_DIRECTORY-${SIM_DIR}/movie/${MOV}}"
 rm -r "$MOV_DIR" &> /dev/null; mkdir "$MOV_DIR"; mkdir "${MOV_DIR}/frames"
@@ -37,7 +39,7 @@ FRAME_DEF="${FRAME_DEFINITION-80}"
 
 L_MAX="${MAX_BOX_SIZE--1}"
 
-MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FINAL_FRAME="$FRAME_FIN" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" TIME_SCALE="$TIME_SCA" V_MIN="$V_MIN" V_MAX="$V_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" INITIAL_FRAME="$FRAME_INIT" FINAL_FRAME="$FRAME_FIN" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" TIME_SCALE="$TIME_SCA" V_MIN="$V_MIN" V_MAX="$V_MAX" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" MOVE="$MOVE" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -84,6 +86,8 @@ frame_ver = float(eval(os.environ['FRAME_VERTICAL_SIZE'])) # vertical size of th
 frame_hor = float(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) # horizontal size of the frames (in inches)
 frame_def = float(eval(os.environ['FRAME_DEFINITION'])) # definition of images (in dots per inches (dpi))
 
+move = eval(os.environ['MOVE']) # movie of static particles at t = frame_init if False else movie of particles at t = frame_init + dt
+
 with open(parameters_file, 'rb') as param_file:
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
 
@@ -123,6 +127,8 @@ def render_frame(frame):
 	env['FRAME_VERTICAL_SIZE'] = str("%e" % frame_ver)
 	env['FRAME_HORIZONTAL_SIZE'] = str("%e" % frame_hor)
 	env['FRAME_DEFINITION'] = str("%e" % frame_def)
+
+	env['MOV'] = str(move)
 
 	env['PICTURE_NAME'] = movie_directory + '/frames/' + '%010d' % frame
 
