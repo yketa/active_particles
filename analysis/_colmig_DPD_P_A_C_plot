@@ -30,7 +30,7 @@ Nframes = Nentries - init_frame # number of frames available for the calculation
 dis_time = Nframes + dis_time if dis_time <= 0 else dis_time # length of the interval of time for which the correlation displacement is calculated
 
 correlation = os.environ['CORRELATION'] if 'CORRELATION' in os.environ else 'Cuu'
-C = {'Cuu':'C_{uu}', 'Cww':'C_{\delta u \delta u}', 'Cdd':'C_{|u||u|}', 'Cee':'C_{\hat{u}\hat{u}}'}
+C = {'Cuu':'C_{uu}', 'Cww':'C_{\delta u \delta u}', 'Cdd':'C_{|u||u|}', 'Cee':'C_{\hat{u}\hat{u}}'}[correlation]
 
 filename = lambda var: data_dir + '/' + var + ('b' if not('ENDPOINT' in os.environ and eval(os.environ['ENDPOINT'])) else '') + str('_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # filename
 C_file_name = os.environ['C_FILE'] if 'C_FILE' in os.environ else filename(correlation) + '.pickle' # C file name
