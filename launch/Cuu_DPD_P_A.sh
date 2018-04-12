@@ -19,6 +19,8 @@ print(int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2))
 EOF
 `}
 
+export ENDPOINT=${ENDPOINT-False}
+
 export SHOW='False'
 
 TIME_LIST=( $TIME )

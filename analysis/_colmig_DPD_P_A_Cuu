@@ -53,71 +53,103 @@ def displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwr
 	dL = L/Ncases
 
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
-	pos = w_traj[int(prep_frames + time + dis_time)].particles.position[:, :2] # position at time time + dis_time (with boundary conditions)
+	pos = w_traj[int(prep_frames + time + (dis_time if 'ENDPOINT' in os.environ and eval(os.environ['ENDPOINT']) else 0))].particles.position[:, :2] # position at time time (with boundary conditions)
 	index = np.array((pos + L/2)//dL, dtype=int) # 2D index of every particles
 
 	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
 	pos1 = getarray(unwrap_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
 	displacement = pos1 - pos0 # displacements of the particles between time and time + dis_time
+	displacement_wd = (pos1 - np.mean(pos1, axis=0)) - (pos0 - np.mean(pos0, axis=0))  # displacements of the particles between time and time + dis_time without centre of mass drift
 
-	ugrid_dic = {}
+	ugrid_dic, wgrid_dic = {}, {}
 	for particle in range(N):
 		if (index[particle] < Ncases).all():
 			ugrid_dic[tuple(index[particle])] = ugrid_dic[tuple(index[particle])] + [displacement[particle]] if tuple(index[particle]) in ugrid_dic else [displacement[particle]]
+			wgrid_dic[tuple(index[particle])] = wgrid_dic[tuple(index[particle])] + [displacement_wd[particle]] if tuple(index[particle]) in wgrid_dic else [displacement_wd[particle]]
 
-	ugrid = np.zeros((Ncases, Ncases, 2))
+	ugrid, wgrid = np.zeros((Ncases, Ncases, 2)), np.zeros((Ncases, Ncases, 2))
 	for index in ugrid_dic:
 		ugrid[index] = np.mean(ugrid_dic[index], axis=0)
+		wgrid[index] = np.mean(wgrid_dic[index], axis=0)
 
 	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
-
-	return ugrid, ngrid
-
-def Cuu2D_time(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file):
-	# This function returns the 2D correlation plot and renormalisation term of the
-	# displacement grid calculated by displacement_grid.
-
-	ugrid, ngrid = displacement_grid(Ncases, N, L, time, dis_time, prep_frames, wrap_file, unwrap_file) # displacement grid
-	ngrid = (ugrid != 0).any(axis=-1)*1 # density grid
+	ngridr = np.reshape(ngrid, ngrid.shape + (1,))
 	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1)) # displacement norm grid
+	dgridr = np.reshape(dgrid, dgrid.shape + (1,))
 
-	FFTugrid = np.fft.fft2(ugrid, axes=(-3, -2))
-	FFTuxgrid = FFTugrid[:, :, 0]
-	FFTuygrid = FFTugrid[:, :, 1]
-	Cuu = np.real(np.fft.ifft2(np.conj(FFTuxgrid)*FFTuxgrid)) + np.real(np.fft.ifft2(np.conj(FFTuygrid)*FFTuygrid)) # velocity auto-correlation
-	Cuu_Norm = (Ncases**2) * np.sum(np.mean(ugrid**2, axis=(0,1))) # normalisation term
+	egrid = np.divide(ugrid, dgridr, out=np.zeros(ugrid.shape), where=dgridr!=0) # displacement direction
 
-	FFTngrid = np.fft.fft2(ngrid)
-	Cnn = np.real(np.fft.ifft2(np.conj(FFTngrid)*FFTngrid)) # density auto-correlation grid
-	Cnn_Norm = (Ncases**2) * np.mean(ngrid**2) # normalisation term
+	return np.concatenate((ngridr, dgridr), axis=-1), ugrid, wgrid, egrid # for reasons of dimensions, ngrid and dgrid have to be passed together
 
-	FFTdgrid = np.fft.fft2(dgrid)
-	Cdd = np.real(np.fft.ifft2(np.conj(FFTdgrid)*FFTdgrid)) # displacement norm auto-correlation grid
-	Cdd_Norm = (Ncases**2) * np.mean(dgrid**2) # normalisation term
+def corField(field):
+	# Return 2D correlation of a scalar field.
 
-	return Cuu, Cuu_Norm, Cnn, Cnn_Norm, Cdd, Cdd_Norm
+	FFT = np.fft.fft2(field)
+	C = np.real(np.fft.ifft2(np.conj(FFT)*FFT))
+	Norm = np.sum(field**2)
+
+	return C, Norm
+
+def cor2DField(field):
+	# Returns 2D correlation of a vector field.
+
+	xfield = field[:, :, 0]
+	xC, xNorm = corField(xfield)
+
+	yfield = field[:, :, 1]
+	yC, yNorm = corField(yfield)
+
+	C = xC + yC # correlation
+	xCL, yCL = xC[0, 1], yC[1, 0] # longitudinal correlation
+	xCT, yCT = xC[1, 0], yC[0, 1] # tranversal correlation
+	Norm = xNorm + yNorm
+
+	return C, xCL, yCL, xCT, yCT, Norm
 
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
-	Cuu2D, Cnn2D, Cdd2D = (lambda list: (list[0]/list[1], list[2]/list[3], list[4]/list[5]))(np.sum(list(map(lambda time: Cuu2D_time(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), axis=0)) # 2D correlation plot of the displacement
+	NDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(lambda time: displacement_grid(Ncases, N, box_size, time, dis_time, prep_frames, wrap_file, unwrap_file), times)), (1, 0, 2, 3, 4)))
+Ngrid = NDgrid[:, :, :, 0]
+Dgrid = NDgrid[:, :, :, 1]
 
-Cuu1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cdd1Dcor_dic = {}, {}, {}, {}, {}
-for i in range(Ncases):
-	for j in range(Ncases):
-		if (i**2 + j**2) <= (Ncases/2)**2:
-			Cuu1D_dic[int(i**2 + j**2)] = Cuu1D_dic[int(i**2 + j**2)] + [Cuu2D[i, j]] if int(i**2 + j**2) in Cuu1D_dic else [Cuu2D[i, j]]
-			Cnn1D_dic[int(i**2 + j**2)] = Cnn1D_dic[int(i**2 + j**2)] + [Cnn2D[i, j]] if int(i**2 + j**2) in Cnn1D_dic else [Cnn2D[i, j]]
-			Cdd1D_dic[int(i**2 + j**2)] = Cdd1D_dic[int(i**2 + j**2)] + [Cdd2D[i, j]] if int(i**2 + j**2) in Cdd1D_dic else [Cdd2D[i, j]]
-			Cuu1Dcor_dic[int(i**2 + j**2)] = Cuu1Dcor_dic[int(i**2 + j**2)] + [Cuu2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cuu1Dcor_dic else [Cuu2D[i, j]/Cnn2D[i, j]]
-			Cdd1Dcor_dic[int(i**2 + j**2)] = Cdd1Dcor_dic[int(i**2 + j**2)] + [Cdd2D[i, j]/Cnn2D[i, j]] if int(i**2 + j**2) in Cdd1Dcor_dic else [Cdd2D[i, j]/Cnn2D[i, j]]
-Cuu1D, Cnn1D, Cdd1D, Cuu1Dcor, Cdd1Dcor = tuple(list(map(lambda dic: np.array(list(map(lambda dist: [np.sqrt(dist)*(box_size/Ncases), np.mean(dic[dist])], sorted(dic)))), [Cuu1D_dic, Cnn1D_dic, Cdd1D_dic, Cuu1Dcor_dic, Cdd1Dcor_dic])))
+Cnn2D, Cdd2D = tuple(list(map(lambda Grid: (lambda C, Norm: C/Norm)(*tuple(np.sum(list(map(corField, Grid)), axis=0))), [Ngrid, Dgrid]))) # scalar field correlations
+
+(Cuu2D, CuuL, CuuT), (Cww2D, CwwL, CwwT), (Cee2D, CeeL, CeeT) = list(map(lambda Grid: (lambda C, xCL, yCL, xCT, yCT, Norm: (C/Norm, (xCL/Cnn2D[0, 1] + yCL/Cnn2D[1, 0])/(2*Norm), (xCT/Cnn2D[1, 0] + yCT/Cnn2D[0, 1])/(2*Norm)))(*tuple(np.sum(list(map(cor2DField, Grid)), axis=0))), [Ugrid, Wgrid, Egrid])) # vector field correlations
+
+def dicto1D(C1D_dic, Ncases, L):
+	return np.array(list(map(lambda dist: [np.sqrt(dist)*(L/Ncases), np.mean(C1D_dic[dist])], sorted(C1D_dic))))
+
+def C2Dto1D(C2D, Ncases, L, Cnn, cor=True):
+	# Returns 1D correlation from 2D.
+
+	C1D_dic, C1Dcor_dic = {}, {}
+	for i in range(Ncases):
+		for j in range(Ncases):
+			if (i**2 + j**2) <= (Ncases/2)**2:
+				C1D_dic[int(i**2 + j**2)] = C1D_dic[int(i**2 + j**2)] + [C2D[i, j]] if int(i**2 + j**2) in C1D_dic else [C2D[i, j]]
+				if cor:
+					C1Dcor_dic[int(i**2 + j**2)] = C1Dcor_dic[int(i**2 + j**2)] + [C2D[i, j]/Cnn[i, j]] if int(i**2 + j**2) in C1Dcor_dic else [C2D[i, j]/Cnn[i, j]]
+
+	if cor:
+		C1D, C1Dcor = tuple(list(map(lambda dic: dicto1D(dic, Ncases, L), [C1D_dic, C1Dcor_dic])))
+		return C1D, C1Dcor
+	else:
+		C1D = dicto1D(C1D_dic, Ncases, L)
+		return C1D
+
+Cnn1D = C2Dto1D(Cnn2D, Ncases, box_size, Cnn2D, cor=False)
+
+(Cuu1D, Cuu1Dcor), (Cww1D, Cww1Dcor), (Cdd1D, Cdd1Dcor), (Cee1D, Cee1Dcor) = list(map(lambda C2D: C2Dto1D(C2D, Ncases, box_size, Cnn2D), [Cuu2D, Cww2D, Cdd2D, Cee2D]))
 
 # SAVING
 
-filename = lambda var: data_dir + str('/' + var + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # filename
-with open(filename('Cuu'), 'wb') as Cuu_dump_file, open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cdd'), 'wb') as Cdd_dump_file:
-	pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor], Cuu_dump_file)
+filename = lambda var: data_dir + str('/' + var + ('b' if not('ENDPOINT' in os.environ and eval(os.environ['ENDPOINT'])) else '') + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases]))) # filename
+
+with open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cuu'), 'wb') as Cuu_dump_file, open(filename('Cww'), 'wb') as Cww_dump_file, open(filename('Cdd'), 'wb') as Cdd_dump_file, open(filename('Cee'), 'wb') as Cee_dump_file:
 	pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
+	pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor, CuuL, CuuT], Cuu_dump_file)
+	pickle.dump([Cww2D, Cww1D, Cww1Dcor, CwwL, CwwT], Cww_dump_file)
 	pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cdd_dump_file)
+	pickle.dump([Cee2D, Cee1D, Cee1Dcor, CeeL, CeeT], Cee_dump_file)
 
 # PLOT
 
@@ -136,8 +168,14 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	Cuu_min = float(eval(os.environ['CUU_MIN'])) if 'CUU_MIN' in os.environ else 1e-3
 	Cuu_max = float(eval(os.environ['CUU_MAX'])) if 'CUU_MAX' in os.environ else 1
 
+	Cww_min = float(eval(os.environ['CWW_MIN'])) if 'CWW_MIN' in os.environ else 1e-3
+	Cww_max = float(eval(os.environ['CWW_MAX'])) if 'CWW_MAX' in os.environ else 1	
+
 	Cdd_min = float(eval(os.environ['CDD_MIN'])) if 'CDD_MIN' in os.environ else 1e-1
 	Cdd_max = float(eval(os.environ['CDD_MAX'])) if 'CDD_MAX' in os.environ else 2
+
+	Cee_min = float(eval(os.environ['CEE_MIN'])) if 'CEE_MIN' in os.environ else 1e-3
+	Cee_max = float(eval(os.environ['CEE_MAX'])) if 'CEE_MAX' in os.environ else 1
 
 	r_min = float(eval(os.environ['R_MIN'])) if 'R_MIN' in os.environ else 1
 	r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20
@@ -145,7 +183,7 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	plot_axis = os.environ['AXIS'] if 'AXIS' in os.environ else 'LOGLOG'
 	fplot = lambda ax: ax.loglog if plot_axis == 'LOGLOG' else ax.semilogy if plot_axis == 'LINLOG' else ax.semilogx if plot_axis == 'LOGLIN' else ax.plot
 
-	def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max):
+	def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, **directional_correlations):
 
 		fig, axs = plt.subplots(2, 2)
 
@@ -170,27 +208,27 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 
 		axs[0, 0].set_xlabel(r'$x$')
 		axs[0, 0].set_ylabel(r'$y$')
-		axs[0, 0].set_title('2D ' + C)
+		axs[0, 0].set_title('2D ' + r'$%s$' % C + ' ' + (r'$(%s^T/%s^L(\frac{r}{a} = %.3e) = %.3e)$' % (C, C, (box_size/Ncases)/a, directional_correlations['CT']/directional_correlations['CL']) if 'CL' in directional_correlations and 'CT' in directional_correlations else ''))
 
 		divider = make_axes_locatable(axs[0, 0])
 		cax = divider.append_axes("right", size="5%", pad=0.05)
 		cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=CvNorm, orientation='vertical')
-		cb.set_label(C, labelpad=20, rotation=270)
+		cb.set_label(r'$%s$' % C, labelpad=20, rotation=270)
 
 		# Cuu1D shifted
 
 		fplot(axs[1, 0])(C1D[1:, 0], C1D[1:, 1]/Cnn1D[-1, 1])
 
 		axs[1, 0].set_xlabel(r'$r$')
-		axs[1, 0].set_ylabel(C + r'$/C_{\rho\rho}(r=r_{max})$')
-		axs[1, 0].set_title('radial ' + C + r'$/C_{\rho\rho}(r=r_{max})$' + ' ' + r'$(C_{\rho\rho}(r=r_{max}) = %.3e)$' % Cnn1D[-1, 1])
+		axs[1, 0].set_ylabel(r'$%s$' % C + r'$/C_{\rho\rho}(r=r_{max})$')
+		axs[1, 0].set_title('radial ' + r'$%s$' % C + r'$/C_{\rho\rho}(r=r_{max})$' + ' ' + r'$(C_{\rho\rho}(r=r_{max}) = %.3e)$' % Cnn1D[-1, 1])
 
 		axs[1, 0].set_xlim(r_min, r_max)
 		axs[1, 0].set_ylim(C_min, C_max)
 
 		# Cnn1D and Cuu1D
 
-		axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$' + ' and ' + C)
+		axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$' + ' and ' + r'$%s$' % C)
 		axs[0, 1].set_xlabel(r'$r$')
 		axs[0, 1].set_xlim(r_min, r_max)
 
@@ -200,7 +238,7 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 
 		ax_right = axs[0, 1].twinx()
 		ax_right.semilogy(C1D[1:, 0], C1D[1:, 1], color='#ff7f0e')
-		ax_right.set_ylabel(C, color='#ff7f0e', rotation=270, labelpad=10)
+		ax_right.set_ylabel(r'$%s$' % C, color='#ff7f0e', rotation=270, labelpad=10)
 		ax_right.tick_params('y', colors='#ff7f0e')
 		ax_right.set_ylim(C_min*Cnn1D[-1, 1], C_max*Cnn1D[-1, 1])
 
@@ -209,15 +247,17 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 		fplot(axs[1, 1])(C1Dcor[1:, 0], C1Dcor[1:, 1])
 
 		axs[1, 1].set_xlabel(r'$r$')
-		axs[1, 1].set_ylabel(C + r'$/C_{\rho\rho}$')
-		axs[1, 1].set_title('radial ' + C + r'$/C_{\rho\rho}$')
+		axs[1, 1].set_ylabel(r'$%s$' % C + r'$/C_{\rho\rho}$')
+		axs[1, 1].set_title('radial ' + r'$%s$' % C + r'$/C_{\rho\rho}$')
 
 		axs[1, 1].set_xlim(r_min, r_max)
 		axs[1, 1].set_ylim(C_min, C_max)
 
 		return fig
 
-	fig1 = plot_correlation(r'$C_{uu}$', Cuu2D, Cuu1D, Cuu1Dcor, Cuu_min, Cuu_max)
-	fig2 = plot_correlation(r'$C_{dd}$', Cdd2D, Cdd1D, Cdd1Dcor, Cdd_min, Cdd_max)
+	fig0 = plot_correlation('C_{uu}', Cuu2D, Cuu1D, Cuu1Dcor, Cuu_min, Cuu_max, CL=CuuL, CT=CuuT)
+	fig1 = plot_correlation('C_{\delta u \delta u}', Cww2D, Cww1D, Cww1Dcor, Cww_min, Cww_max, CL=CwwL, CT=CwwT)
+	fig2 = plot_correlation('C_{|u||u|}', Cdd2D, Cdd1D, Cdd1Dcor, Cdd_min, Cdd_max)
+	fig3 = plot_correlation('C_{\hat{u}\hat{u}}', Cee2D, Cee1D, Cee1Dcor, Cee_min, Cee_max, CL=CeeL, CT=CeeT)
 
 	plt.show()
