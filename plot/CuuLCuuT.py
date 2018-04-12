@@ -39,7 +39,7 @@ for dir in dirs:
 		dr[dir], time_step[dir], period_dump[dir] = operator.itemgetter(10, 13, 15)(pickle.load(p_file))
 	for t in dt_list:
 		with open(fname(dir, t), 'rb') as C_file:
-			ra[(dir, t)], CuuT[(dir, t)], CuuL[(dir, t)], CwwL[(dir, t)], CwwT[(dir, t)] = pickle.load(C_file)
+			ra[(dir, t)], CuuT[(dir, t)], CuuL[(dir, t)], CwwT[(dir, t)], CwwL[(dir, t)] = pickle.load(C_file)
 
 dr_list = sorted(list(OrderedDict.fromkeys([dr[dir] for dir in dr if dr[dir] >= dr_min and dr[dir] <= dr_max])))
 dr0_list = sorted(list(OrderedDict.fromkeys([dr[dir] for dir in dr if dr[dir] < dr_min or dr[dir] > dr_max])))
@@ -54,15 +54,6 @@ scalarMap0 = cmx.ScalarMappable(norm=cNorm0, cmap=jet0)
 colors = {**{dr_list[i]:scalarMap.to_rgba(i) for i in range(len(dr_list))}, **{dr0_list[i]:scalarMap0.to_rgba(i + 1) for i in range(len(dr0_list))}}
 
 markers = {time_step_list[i]:default_markers[i] for i in range(len(time_step_list))}
-
-fig, ax = plt.subplots(1, 2)
-for dir in dirs:
-	ax[0].semilogx(dr[dir]*time_step[dir]*period_dump[dir]*dt_list, list(map(lambda t: CuuL[(dir, t)], dt_list)), color=colors[dr[dir]])
-	ax[1].semilogx(dr[dir]*time_step[dir]*period_dump[dir]*dt_list, list(map(lambda t: CuuT[(dir, t)], dt_list)), color=colors[dr[dir]])
-ax[0].set_xlabel(r'$\tilde{\nu}_r \Delta t$')
-ax[1].set_xlabel(r'$\tilde{\nu}_r \Delta t$')
-ax[0].set_ylabel(r'$C_{uu}^L$')
-ax[1].set_ylabel(r'$C_{uu}^T$')
 
 def plot(C, CL, CT):
 
@@ -140,24 +131,24 @@ def plot(C, CL, CT):
 		axT1.set_xscale('log')
 
 		lines1 = list(map(lambda dt: Line2D([0], [0], lw=0, marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
-		lines1 += [Line2D([0], [0], lw=0, label=''), Line2D([0], [0], color='black', linestyle='--', label=r'$1$')]
+		# lines1 += [Line2D([0], [0], lw=0, label=''), Line2D([0], [0], color='black', linestyle='--', label=r'$1$')]
 		lines = [Line2D([0], [0], lw=0, marker='s', color='black', label=r'$\tilde{\nu}_r \Delta t^*$')]
 		# ax1.legend(handles=lines1)
 		axL.legend(handles=lines)
 		axT.legend(handles=lines)
 
-		leg = plt.subplot(gs[:, 2])
+		leg = plt.subplot(gs0[:, 2])
 
 	else:
-		gs = GridSpec(1, 3, width_ratios=[5, 5, 1])
-		axL = plt.subplot(gs[0])
-		axT = plt.subplot(gs[1])
-		leg = plt.subplot(gs[:, 1])	
+		gs0 = GridSpec(1, 3, width_ratios=[5, 5, 1])
+		axL = plt.subplot(gs0[0])
+		axT = plt.subplot(gs0[1])
+		leg = plt.subplot(gs0[:, 1])	
 
 	axL.set_xlabel(r'$\tilde{\nu}_r\Delta t$')
-	axL.set_ylabel(r'$%%s^L(\frac{r}{a}=%.3e, \Delta t)$' % (C, ra[(dirs[0], dt_list[0])]))
+	axL.set_ylabel(r'$%s^L(\frac{r}{a}=%.3e, \Delta t)$' % (C, ra[(dirs[0], dt_list[0])]))
 	axT.set_xlabel(r'$\tilde{\nu}_r\Delta t$')
-	axT.set_ylabel(r'$%%s^T(\frac{r}{a}=%.3e, \Delta t)$' % (C, ra[(dirs[0], dt_list[0])]))
+	axT.set_ylabel(r'$%s^T(\frac{r}{a}=%.3e, \Delta t)$' % (C, ra[(dirs[0], dt_list[0])]))
 
 	leg.axis('off')
 	lines0 = list(map(lambda d: Line2D([0], [0], color=colors[d], lw=2, label=r'$\tilde{\nu}_r = %.0e$' % d), sorted(np.append(dr_list, dr0_list))))
@@ -176,14 +167,14 @@ def plot(C, CL, CT):
 			axT1.scatter(1/dr[dir], CT[(dir, drdtmax[dir])], color=colors[dr[dir]], marker=markers[time_step[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
 
 	linesL1, linesT1 = [], []
-	if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']) and 'FIT' in os.environ and eval(os.environ['FIT']):
-		dirs_to_fit = sorted([dir for dir in dirs if dr[dir] in dr_list and dr[dir] > dr_c], key=lambda dir: 1/dr[dir])
-		slopeL, interceptL, stderrL = operator.itemgetter(0, 1, 4)(st.linregress(list(map(lambda dir: np.log(1/dr[dir]), dirs_to_fit)), list(map(lambda dir: CL[(dir, drdtmax[dir])], dirs_to_fit))))
-		axL1.plot(list(map(lambda dir: 1/dr[dir], dirs_to_fit)), list(map(lambda dir: slopeL*np.log(1/dr[dir]) + interceptL, dirs_to_fit)), linestyle='-.', color='black')
-		linesL1 = [Line2D([0], [0], color='black', linestyle='-.', label='slope = ' + r'$%.1e \pm %.0e$' % (slopeL, stderrL))]
-		slopeT, interceptT, stderrT = operator.itemgetter(0, 1, 4)(st.linregress(list(map(lambda dir: np.log(1/dr[dir]), dirs_to_fit)), list(map(lambda dir: CT[(dir, drdtmax[dir])], dirs_to_fit))))
-		axT1.plot(list(map(lambda dir: 1/dr[dir], dirs_to_fit)), list(map(lambda dir: slopeT*np.log(1/dr[dir]) + interceptT, dirs_to_fit)), linestyle='-.', color='black')
-		linesT1 = [Line2D([0], [0], color='black', linestyle='-.', label='slope = ' + r'$%.1e \pm %.0e$' % (slopeT, stderrT))]
+	# if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']) and 'FIT' in os.environ and eval(os.environ['FIT']):
+	# 	dirs_to_fit = sorted([dir for dir in dirs if dr[dir] in dr_list and dr[dir] > dr_c], key=lambda dir: 1/dr[dir])
+	# 	slopeL, interceptL, stderrL = operator.itemgetter(0, 1, 4)(st.linregress(list(map(lambda dir: np.log(1/dr[dir]), dirs_to_fit)), list(map(lambda dir: CL[(dir, drdtmax[dir])], dirs_to_fit))))
+	# 	axL1.plot(list(map(lambda dir: 1/dr[dir], dirs_to_fit)), list(map(lambda dir: slopeL*np.log(1/dr[dir]) + interceptL, dirs_to_fit)), linestyle='-.', color='black')
+	# 	linesL1 = [Line2D([0], [0], color='black', linestyle='-.', label='slope = ' + r'$%.1e \pm %.0e$' % (slopeL, stderrL))]
+	# 	slopeT, interceptT, stderrT = operator.itemgetter(0, 1, 4)(st.linregress(list(map(lambda dir: np.log(1/dr[dir]), dirs_to_fit)), list(map(lambda dir: CT[(dir, drdtmax[dir])], dirs_to_fit))))
+	# 	axT1.plot(list(map(lambda dir: 1/dr[dir], dirs_to_fit)), list(map(lambda dir: slopeT*np.log(1/dr[dir]) + interceptT, dirs_to_fit)), linestyle='-.', color='black')
+	# 	linesT1 = [Line2D([0], [0], color='black', linestyle='-.', label='slope = ' + r'$%.1e \pm %.0e$' % (slopeT, stderrT))]
 	if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']):
 		axL1.legend(handles=lines1 + linesL1)
 		axT1.legend(handles=lines1 + linesT1)
