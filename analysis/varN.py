@@ -36,6 +36,7 @@ Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else -1 # n
 max_box_size = float(eval(os.environ['MAX_BOX_SIZE'])) if 'MAX_BOX_SIZE' in os.environ else 10 # size of the square box in which particles are counted
 
 Nbins = int(eval(os.environ['N_BINS'])) if 'N_BINS' in os.environ else 10 # number of bins for the histogram
+phimax = float(eval(os.environ['PHIMAX'])) if 'PHIMAX' in os.environ else 1
 
 with open(parameters_file, 'rb') as param_file:
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
@@ -62,7 +63,7 @@ if 'SAVE' in os.environ and eval(os.environ['SAVE']):
 
 # PLOT
 
-histogram = list(map(lambda bin: (np.sum(densities >= bin/Nbins) - np.sum(densities > (bin + 1)/Nbins))/len(densities), range(Nbins)))
+histogram = list(map(lambda bin: (np.sum(densities >= phimax*bin/Nbins) - np.sum(densities > phimax*(bin + 1)/Nbins))/len(densities), range(Nbins)))
 plt.semilogy(np.linspace(0, 1, len(histogram)), histogram, '.')
 plt.title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, S_{max}=%.2e, N_{cases}=%.2e, r_{max}=%.2e$' % (init_frame, int_max, Ncases, max_box_size))
 plt.xlabel(r'$\phi_{loc}$')
