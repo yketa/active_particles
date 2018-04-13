@@ -59,6 +59,11 @@ fname = lambda var, dir, t: str('%s/%s_%s_I%s_T%s_M%s_C%s.pickle' % (dir, var, d
 snap_max = float_to_letters(int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ else 1) # maximum number of intervals for MSD calculation
 snap_per = float_to_letters(int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.environ else 50) # period of intervals to take to calculate MSD
 
+var, nvar = os.environ['CORRELATION'] if 'CORRELATION' in os.environ else 'Cww', 'Cnn'
+C = {'Cuu':'C_{uu}', 'Cww':'C_{\delta u \delta u}', 'Cdd':'C_{|u||u|}', 'Cee':'C_{\hat{u}\hat{u}}'}[var]
+var += 'b' if not('ENDPOINT' in os.environ and not(eval(os.environ['ENDPOINT']))) else ''
+nvar += 'b' if not('ENDPOINT' in os.environ and not(eval(os.environ['ENDPOINT']))) else ''
+
 def cut(arr, r_min, r_max=-1):
 	r_max = arr[-1, 0] if r_max < 0 else r_max
 	ind_min = next(ind for ind in range(len(arr)) if arr[ind, 0] >= r_min)
@@ -70,7 +75,7 @@ for dir in dirs:
 	with open(dir + '/param.pickle', 'rb') as param_file:
 		N[dir], box_size[dir], time_step[dir], period_dump[dir], dr[dir], a[dir] = operator.itemgetter(0, 5, 13, 15, 10, 1)(pickle.load(param_file))
 	for t in dt_list:
-		with open(fname('Cwwb', dir, t), 'rb') as Cuu_file, open(fname('Cnnb', dir, t), 'rb') as Cnn_file:
+		with open(fname(var, dir, t), 'rb') as Cuu_file, open(fname(nvar, dir, t), 'rb') as Cnn_file:
 			Cuu1D, Cuu2D[(dir, t)] = operator.itemgetter(2, 0)(pickle.load(Cuu_file))
 
 			if 'CUT' in os.environ and eval(os.environ['CUT']):
@@ -107,14 +112,14 @@ ax3 = plt.subplot(gs[:, 2])
 ax3.axis('off')
 
 ax0.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
-ax0.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
+ax0.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r %s(r, \Delta t)$' % C)
 
 ax1.set_ylabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t^*$')
 ax1.set_xscale(drdtmax_xs)
 ax1.set_yscale(drdtmax_ys)
 
 ax2.set_xlabel(r'$\tau_r \equiv \tilde{\nu}_r^{-1}$')
-ax2.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t^*)$')
+ax2.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r %s(r, \Delta t^*)$' % C)
 ax2.set_xscale(chimax_xs)
 ax2.set_yscale(chimax_ys)
 
@@ -177,16 +182,16 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 	ax13 = plt.subplot(gs[:, 2])
 	ax13.axis('off')
 
-	ax10.set_title('integrated from 2D ' + r'$C_{uu}$')
+	ax10.set_title('integrated from 2D ' + r'$%s$' % C)
 	ax10.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
-	ax10.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
+	ax10.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r %s(r, \Delta t)$' % C)
 
 	ax11.set_ylabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t^*$')
 	ax11.set_xscale(drdtmax_xs)
 	ax11.set_yscale(drdtmax_ys)
 
 	ax12.set_xlabel(r'$\tau_r \equiv \tilde{\nu}_r^{-1}$')
-	ax12.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t^*)$')
+	ax12.set_ylabel(r'$\chi(\Delta t^*) = \frac{N}{L^2}$' + (r'$ \int_{r=0}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=0}^{r=L/2} dr$') + ' '+ r'$2 \pi r %s(r, \Delta t^*)$' % C)
 	ax12.set_xscale(chimax_xs)
 	ax12.set_yscale(chimax_ys)
 
@@ -236,7 +241,7 @@ ax02.axis('off')
 
 ax00.set_title(r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
 ax00.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
-ax00.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r C_{uu}(r, \Delta t)$')
+ax00.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r %s(r, \Delta t)$' % C)
 
 ax01.set_title((r'$S_{init}=%.1e, $' % int(eval(os.environ['SINGLE_MSD'])) if 'SINGLE_MSD' in os.environ else '') + r'$S_{max}=%1.e$' % float(eval(letters_to_float(snap_max))))
 ax01.set_xscale(msd_xs)
