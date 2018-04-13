@@ -64,7 +64,7 @@ if 'SAVE' in os.environ and eval(os.environ['SAVE']):
 # PLOT
 
 histogram = list(map(lambda bin: (np.sum(densities >= phimax*bin/Nbins) - np.sum(densities > phimax*(bin + 1)/Nbins))/len(densities), range(Nbins)))
-plt.semilogy(np.linspace(0, 1, len(histogram)), histogram, '.')
+plt.semilogy(np.linspace(0, phimax, len(histogram)), histogram, '.')
 plt.title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, S_{max}=%.2e, N_{cases}=%.2e, r_{max}=%.2e$' % (init_frame, int_max, Ncases, max_box_size))
 plt.xlabel(r'$\phi_{loc}$')
 plt.ylabel(r'$P(\phi_{loc})$')
