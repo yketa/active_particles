@@ -13,7 +13,7 @@ from scipy import stats as st
 from matplotlib.lines import Line2D
 from matplotlib.gridspec import GridSpec
 import matplotlib.colors as colors
-import matplotlib.cm as cmx 
+import matplotlib.cm as cmx
 from collections import OrderedDict
 
 var = os.environ['CORRELATION'] if 'CORRELATION' in os.environ else 'Cww'
@@ -27,9 +27,14 @@ dr_c = float(eval(os.environ['DR_C'])) if 'DR_C' in os.environ else 3e-4
 colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet'
 default_markers = ['.', 's', '*', 'o']
 
+density = os.environ['DENSITY'] if 'DENSITY' in os.environ else 0.8
+vzero = os.environ['VZERO'] if 'VZERO' in os.environ else 1e-2
+number = os.environ['NUMBER'] if 'NUMBER' in os.environ else 1e5
+
 dt_list = np.array([1, 2, 4, 5, 10, 20, 40, 50, 100, 200, 400, 500, 1000, 2000, 4000])
 # dr_list = np.array([2e-5, 7e-5, 2e-4, 7e-4, 2e-3, 7e-3])
-dirs = [dir for dir in os.listdir() if 'Dk8000_Vj1000' in dir and 'Nq1000_Ll' in dir]
+
+dirs = [dir for dir in os.listdir() if 'D%s_V%s' % tuple(map(float_to_letters, [density, vzero])) in dir and 'N%s_Ll' % float_to_letters(number) in dir]
 
 r_min = float(eval(os.environ['R_MIN'])) if 'R_MIN' in os.environ else 1
 r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20
@@ -72,7 +77,7 @@ def plot(C, CL, CT):
 	# RATIO
 
 	fig = plt.figure()
-	fig.suptitle(r'$\phi=0.80, \tilde{v}=1\cdot10^{-2}, N=1\cdot10^5$' + '\n' + r'$S_{init} = 5\cdot10^3, S_{max}=1\cdot10^2, N_{cases}=5\cdot10^2$')
+	fig.suptitle(r'$\phi=%1.2f, \tilde{v}=%.2e, N=%.2e$' % (density, vzero, number)+ '\n' + r'$S_{init} = %.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, N_cases, int_max))
 
 	if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']):
 		gs = GridSpec(2, 2, width_ratios=[10, 1])
@@ -124,7 +129,7 @@ def plot(C, CL, CT):
 	# RAW CL AND CT
 
 	fig0 = plt.figure()
-	fig0.suptitle(r'$\phi=0.80, \tilde{v}=1\cdot10^{-2}, N=1\cdot10^5$' + '\n' + r'$S_{init} = 5\cdot10^3, S_{max}=1\cdot10^2, N_{cases}=5\cdot10^2$')
+	fig0.suptitle(r'$\phi=%1.2f, \tilde{v}=%.2e, N=%.2e$' % (density, vzero, number)+ '\n' + r'$S_{init} = %.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, N_cases, int_max))
 
 	if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']):
 		gs0 = GridSpec(2, 3, width_ratios=[5, 5, 1])
@@ -155,7 +160,7 @@ def plot(C, CL, CT):
 		gs0 = GridSpec(1, 2, width_ratios=[10, 1])
 		axL = plt.subplot(gs0[0])
 		axT = plt.subplot(gs0[1])
-		leg = plt.subplot(gs0[:, 1])	
+		leg = plt.subplot(gs0[:, 1])
 
 	axL.set_xlabel(r'$\tilde{\nu}_r\Delta t$')
 	axL.set_ylabel(r'$%s^L(\frac{r}{a}=%.3e, \Delta t)$' % (C, ra[dirs[0]]))
@@ -194,4 +199,3 @@ def plot(C, CL, CT):
 plot(C, CL, CT)
 
 plt.show()
-
