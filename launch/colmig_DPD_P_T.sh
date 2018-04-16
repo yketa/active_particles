@@ -1,3 +1,5 @@
+#! /bin/bash
+
 export N=${NUMBER-2000}
 export N_STEPS=${N_STEPS-1e4}
 export PERIOD_DUMP=${PERIOD_DUMP-1e2}
@@ -28,4 +30,3 @@ sbatch --job-name=$sim_name ${CHAIN:+-d afterok:$CHAIN} <<EOF
 
 /home/yketa/miniconda3/bin/python3.6 /home/yketa/hoomd/scripts/collective_migration_DPD_polydisperse_active.py >> $output_file
 EOF
-

@@ -1,3 +1,5 @@
+#! /bin/bash
+
 if [[ "$DATA" == "" ]]; then
 	echo "No data name submitted."
 	exit 0
@@ -38,4 +40,3 @@ for INITIAL_FRAME in $INITIAL_FRAME; do
 	/home/yketa/miniconda3/bin/python3.6 /home/yketa/hoomd/scripts/msd.py >> $output_file
 done
 EOF
-

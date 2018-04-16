@@ -1,3 +1,5 @@
+#! /bin/bash
+
 if [[ "$DATA" == "" ]]; then
 	echo "No data name submitted."
 	exit 0
@@ -47,4 +49,3 @@ for TIME in $TIME; do
 	/home/yketa/bin/_colmig_DPD_P_A_Cuu >> $output_file
 done
 EOF
-
