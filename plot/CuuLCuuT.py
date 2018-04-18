@@ -27,9 +27,9 @@ dr_c = float(eval(os.environ['DR_C'])) if 'DR_C' in os.environ else 3e-4
 colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet'
 default_markers = ['.', 's', '*', 'o']
 
-density = os.environ['DENSITY'] if 'DENSITY' in os.environ else 0.8
-vzero = os.environ['VZERO'] if 'VZERO' in os.environ else 1e-2
-number = os.environ['NUMBER'] if 'NUMBER' in os.environ else 1e5
+density = float(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8
+vzero = float(eval(os.environ['VZERO'])) if 'VZERO' in os.environ else 1e-2
+number = float(eval(os.environ['NUMBER'])) if 'NUMBER' in os.environ else 1e5
 
 dt_list = np.array([1, 2, 4, 5, 10, 20, 40, 50, 100, 200, 400, 500, 1000, 2000, 4000])
 # dr_list = np.array([2e-5, 7e-5, 2e-4, 7e-4, 2e-3, 7e-3])
@@ -157,10 +157,10 @@ def plot(C, CL, CT):
 		leg = plt.subplot(gs0[:, 2])
 
 	else:
-		gs0 = GridSpec(1, 2, width_ratios=[10, 1])
+		gs0 = GridSpec(1, 3, width_ratios=[5, 5, 1])
 		axL = plt.subplot(gs0[0])
 		axT = plt.subplot(gs0[1])
-		leg = plt.subplot(gs0[:, 1])
+		leg = plt.subplot(gs0[2])
 
 	axL.set_xlabel(r'$\tilde{\nu}_r\Delta t$')
 	axL.set_ylabel(r'$%s^L(\frac{r}{a}=%.3e, \Delta t)$' % (C, ra[dirs[0]]))
