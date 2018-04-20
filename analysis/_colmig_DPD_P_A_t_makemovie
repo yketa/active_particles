@@ -1,0 +1,184 @@
+#! /bin/bash
+
+if [ "$DATA" == "" ]; then
+	echo "No data name provided."
+	exit 0
+fi
+
+SIM_DIR=${SIMULATION_DIRECTORY-/home/yketa/hoomd/colmig_DPD_P_A}
+
+FRAME_INIT="${INITIAL_FRAME-0}"
+FRAME_FIN="${FINAL_FRAME-10000}"
+FRAME_PER="${FRAME_PERIOD-1}"
+FRAME_MAX="${FRAME_MAXIMUM-1000}"
+TIME_SCA="${TIME_SCALE-LIN}"
+
+. /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
+MOV=t_${DATA}_I$(float_to_letters $FRAME_INIT)_M$(float_to_letters $FRAME_MAX)_P$(float_to_letters $FRAME_PER)
+
+MOV_DIR="${MOVIE_DIRECTORY-${SIM_DIR}/movie/${MOV}}"
+rm -r "$MOV_DIR" &> /dev/null; mkdir "$MOV_DIR"; mkdir "${MOV_DIR}/frames"
+MOV_NAME="${MOVIE_NAME-${MOV}.mp4}"
+
+DATA_DIR="${DATA_DIRECTORY-${SIM_DIR}/data/${DATA}}"
+PAR_FILE="${PARAMETERS_FILE-${DATA_DIR}/param.pickle}"
+LOG_FILE="${LOGOUTPUT_FILE-${DATA_DIR}/log-output.log}"
+WRAP_FILE="${WRAPPED_FILE-${DATA_DIR}/trajectory.gsd}"
+UNWRAP_FILE="${UNWRAPPED_FILE-${DATA_DIR}/trajectory.dat}"
+
+WIDTH="${ARROW_WIDTH-1e-3}"
+HEAD_W="${HEAD_WIDTH-3e2}"
+HEAD_L="${HEAD_LENGH-1.5}"
+
+FRAME_VER="${FRAME_VERTICAL_SIZE-12}"
+FRAME_HOR="${FRAME_HORIZONTAL_SIZE-12}"
+FRAME_DEF="${FRAME_DEFINITION-80}"
+
+L_MAX="${MAX_BOX_SIZE--1}"
+
+MOVIE_DIRECTORY="$MOV_DIR" DATA_DIRECTORY="$DATA_DIR" PARAMETERS_FILE="$PAR_FILE" LOGOUTPUT_FILE="$LOG_FILE" WRAPPED_FILE="$WRAP_FILE" UNWRAPPED_FILE="$UNWRAP_FILE" INITIAL_FRAME="$FRAME_INIT" FINAL_FRAME="$FRAME_FIN" FRAME_PERIOD="$FRAME_PER" FRAME_MAXIMUM="$FRAME_MAX" TIME_SCALE="$TIME_SCA" ARROW_WIDTH="$WIDTH" HEAD_WIDTH="$HEAD_W" HEAD_LENGTH="$HEAD_L" FRAME_VERTICAL_SIZE="$FRAME_VER" FRAME_HORIZONTAL_SIZE="$FRAME_HOR" FRAME_DEFINITION="$FRAME_DEF" MAX_BOX_SIZE="$L_MAX" /home/yketa/miniconda3/bin/python3.6 << 'EOF'
+
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+import gsd
+import gsd.hoomd
+import gsd.pygsd
+
+import pickle
+
+import os
+import sys
+import subprocess as sb
+
+import operator
+
+sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
+from readdat import *
+
+import math
+from collections import OrderedDict
+
+movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
+data_directory = os.environ['DATA_DIRECTORY'] # data directory
+
+parameters_file = os.environ['PARAMETERS_FILE'] # parameters pickle file
+logoutput_file = os.environ['LOGOUTPUT_FILE'] # log output file
+wrap_file_name = os.environ['WRAPPED_FILE'] # wrapped trajectory file
+unwrap_file_name = os.environ['UNWRAPPED_FILE'] # unwrapped trajectory file
+
+frame_init = int(eval(os.environ['INITIAL_FRAME'])) # initial frame for the calculation of the displacement
+frame_fin = int(eval(os.environ['FINAL_FRAME'])) # final frame for the calculation of the displacement
+frame_per = int(eval(os.environ['FRAME_PERIOD'])) # render one frame every frame_period frames
+frame_max = int(eval(os.environ['FRAME_MAXIMUM'])) # maximum number of frames
+time_sca = os.environ['TIME_SCALE'] # time scale for the selection of frames
+
+width = float(eval(os.environ['ARROW_WIDTH'])) # width of the arrows
+head_width = width*float(eval(os.environ['HEAD_WIDTH'])) # width of the arrows' head (input in ratio of the width of the arrows)
+head_length = head_width*float(eval(os.environ['HEAD_LENGTH'])) # width of the arrows' head (input in ratio of the width of the arrows' head)
+
+frame_ver = float(eval(os.environ['FRAME_VERTICAL_SIZE'])) # vertical size of the frames (in inches)
+frame_hor = float(eval(os.environ['FRAME_HORIZONTAL_SIZE'])) # horizontal size of the frames (in inches)
+frame_def = float(eval(os.environ['FRAME_DEFINITION'])) # definition of images (in dots per inches (dpi))
+
+with open(parameters_file, 'rb') as param_file:
+	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
+
+max_box_size = box_size if float(eval(os.environ['MAX_BOX_SIZE'])) < 0 else float(eval(os.environ['MAX_BOX_SIZE'])) # maximum size of the box rendered in the movie
+
+Nentries = N_steps//period_dump # number of time snapshots in trajectory file
+Nframes = np.min([Nentries, frame_fin]) - frame_init # number of frames available for the movie
+Ntimes = np.min([Nframes//frame_per, frame_max]) # number of rendered frames
+frames = (frame_init - 1) + np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), (np.exp(np.linspace(np.log(1), np.log(Nframes), Ntimes)) if time_sca == 'LOG' else np.linspace(1, Nframes, Ntimes)))))) # rendered frames
+
+data = np.genfromtxt(fname=logoutput_file, skip_header=True)
+
+prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
+
+def draw_circle(ax, position, radius):
+
+	circle = plt.Circle(tuple(position), radius, color='black', fill=False)
+	ax.add_artist(circle)
+
+	return 0
+
+def draw_arrow(ax, position, displacement):
+
+	length = np.sqrt(np.sum(displacement**2))
+	ax.arrow(position[0], position[1], displacement[0], displacement[1], color='black', width=length*width, head_width=length*head_width, head_length=length*head_length)
+
+	return 0
+
+with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters output file
+
+	bytes = out_param.write("PHYSICAL PARAMETERS\n")
+	bytes = out_param.write("N=%d\n" % N) # number of particles
+	bytes = out_param.write("mean radius=%e\n" % a) # mean radius of the particles
+	bytes = out_param.write("PDI=%e\n" % pdi) # polydispersity index
+	bytes = out_param.write("density=%e\n" % density) # number density of the particles
+	bytes = out_param.write("L=%e\n" % box_size) # size of the box
+	bytes = out_param.write("dotgamma=%e\n" % shear_rate) # shear rate
+	bytes = out_param.write("kT=%e\n" % kT) # temperature
+	bytes = out_param.write("mu=%e\n" % mu) # mobility of the particles
+	bytes = out_param.write("k=%e\n" % k) # spring constant of the harmonic contact repulsion of the particles
+	bytes = out_param.write("v_0=%e\n" % vzero) # amplitude of the self-propelling force
+	bytes = out_param.write("D_r=%e\n" % dr) # rotation diffusion constant of the self-propelling force
+	bytes = out_param.write("damping=%e\n" % damp_bro) # damping for the Brownian dynamics
+	bytes = out_param.write("PREPARATION PARAMETERS\n")
+	bytes = out_param.write("FIRE steps=%e\n" % prep_steps) # number of FIRE minimization steps
+	bytes = out_param.write("INTEGRATION PARAMETERS\n")
+	bytes = out_param.write("dt=%e\n" % time_step) # integration time step
+	bytes = out_param.write("steps=%d\n" % N_steps) # number of integration steps
+	bytes = out_param.write("T_dump=%d\n\n" % period_dump) # period of dumping to gsd file
+
+	with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
+		w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
+
+		for frame in range(len(frames) - 1):
+
+			bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(frames[frame]*time_step*period_dump))
+			bytes = out_param.write("E_p=%e\n" % data[prep_frames + frames[frame], 1])
+			bytes = out_param.write("kT=%e\n" % data[prep_frames + frames[frame], 2])
+			bytes = out_param.write("pxx=%e\n" % data[prep_frames + frames[frame], 3])
+			bytes = out_param.write("pyy=%e\n" % data[prep_frames + frames[frame], 6])
+			bytes = out_param.write("pxy=%e\n" % data[prep_frames + frames[frame], 4])
+			bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + frames[frame], 10])
+
+			sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % (len(frames) - 1))
+
+			positions = w_traj[int(prep_frames + frames[frame])].particles.position[:, :2] # positions of the particles (with periodic boundary conditions)
+			diameters = w_traj[int(prep_frames + frames[frame])].particles.diameter # diameters of the particles
+			displacements = getarray(unwrap_file, N, frames[frame + 1]) - getarray(unwrap_file, N, frames[frame]) # velocities (or displacement) of the particles
+
+			particles_to_draw = [particle for particle in range(N) if (np.abs(positions[particle]) <= max_box_size/2).all()]
+			positions = operator.itemgetter(particles_to_draw)(positions)
+			diameters = operator.itemgetter(particles_to_draw)(diameters)
+			displacements = operator.itemgetter(particles_to_draw)(displacements)
+
+			fig, ax = plt.subplots()
+			fig.set_size_inches(frame_hor, frame_ver)
+
+			circles = list(map(lambda position, diameter: draw_circle(ax, position, diameter/2), *[positions, diameters]))
+			arrows = list(map(lambda position, displacement: draw_arrow(ax, position, displacement), *[positions, displacements]))
+
+			ax.set_xlim([-1.1*max_box_size/2, 1.1*max_box_size/2])
+			ax.set_ylim([-1.1*max_box_size/2, 1.1*max_box_size/2])
+			ax.set_aspect('equal')
+
+			ax.set_xlabel(r'$x$')
+			ax.set_ylabel(r'$y$')
+
+			ax.set_title(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e, L=%.3e, r_{max}=%.3e$' % (N, density, vzero, dr, box_size, max_box_size) + '\n' + r'$t=%e, \Delta t=%e$' % (frames[frame]*time_step*period_dump, (frames[frame + 1] - frames[frame])*time_step*period_dump))
+
+			fig.savefig(movie_directory + '/frames/' + '%010d' % frame)
+
+			plt.close(fig)
+
+	sys.stdout.write("\n")
+
+EOF
+
+/home/yketa/bin/ffmpeg -r 5 -f image2 -s 1280x960 -i "${MOV_DIR}"/frames/%10d.png -pix_fmt yuv420p "${MOV_DIR}/$MOV_NAME"
