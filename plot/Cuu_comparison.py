@@ -16,6 +16,8 @@ from exponents import *
 
 from scipy import stats as st
 
+os.chdir('/home/yketa/hoomd/colmig_DPD_P_A/data')
+
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
 mp.rcParams.update({'font.size': font_size})
 
@@ -115,4 +117,3 @@ fig.subplots_adjust(wspace=0.1)
 fig.subplots_adjust(hspace=0.15)
 
 plt.show()
-

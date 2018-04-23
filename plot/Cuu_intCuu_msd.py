@@ -16,6 +16,8 @@ import matplotlib.cm as cmx
 import matplotlib as mp
 from scipy import stats as st
 
+os.chdir('/home/yketa/hoomd/colmig_DPD_P_A/data')
+
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
 mp.rcParams.update({'font.size': font_size})
 
@@ -47,7 +49,7 @@ colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet'
 ncol_legend = int(eval(os.environ['NCOL_LEGEND'])) if 'NCOL_LEGEND' in os.environ else 1
 ratio_legend = int(eval(os.environ['RATIO_LEGEND'])) if 'RATIO_LEGEND' in os.environ else 10
 
-wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.4 
+wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.4
 hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
 
 dirs = [dir for dir in os.listdir() if str('D%s_V%s' % tuple(map(float_to_letters, [density, vzero]))) in dir and str('N%s_Ll' % float_to_letters(number)) in dir]
@@ -102,7 +104,7 @@ dr0_list = sorted(list(OrderedDict.fromkeys([dr[dir] for dir in dr if dr[dir] < 
 time_step_list = sorted(list(OrderedDict.fromkeys([time_step[dir] for dir in time_step])))
 
 # colors = {dr_list[i]:plt.cm.RdYlBu(np.linspace(0, 1, len(dr_list))[i]) for i in range(len(dr_list))}
-jet = cm = plt.get_cmap(colormap) 
+jet = cm = plt.get_cmap(colormap)
 cNorm  = colors.Normalize(vmin=0, vmax=len(dr_list) - 1)
 scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
 jet0 = cm0 = plt.get_cmap('Greys')
@@ -146,7 +148,7 @@ for dir in dirs:
 	intCuumax[dir] = np.max(intCuu[dir])
 	with open(str('%s/int%s_%s_I%s_M%s_C%s_RMIN%s_RMAX%s.pickle' % ((dir, var, dir[:-7], init_frame, int_max) + tuple(list(map(float_to_letters, [N_cases, r_min, r_max if 'CUT' in os.environ and eval(os.environ['CUT']) else box_size[dir]/2]))))), 'wb') as dump_file:
 		pickle.dump([np.transpose([list(map(lambda t: dr[dir] * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu[dir]]), float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])]))), dr[dir]*period_dump[dir]*time_step[dir]*float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])]))), np.max(intCuu[dir])], dump_file)
-	
+
 	if dr[dir] <= dr_max and dr[dir] >= dr_min:
 		fplot(ax0)(list(map(lambda t: (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1) * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu[dir], marker=markers[time_step[dir]], linestyle='-', color=colors[dr[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
 		ax1.scatter(1/dr[dir], drdtmax[dir], marker=markers[time_step[dir]], color=colors[dr[dir]])
@@ -156,7 +158,7 @@ if 'FIT' in os.environ and eval(os.environ['FIT']):
 	slopes, intercepts, stderr = {}, {}, {}
 	for part in range(2):
 		exploitables[part] = sorted(exploitables[part], key=lambda dir: 1/dr[dir])
-	
+
 		slopes[(part, ax1)], intercepts[(part, ax1)], stderr[(part, ax1)] = operator.itemgetter(0, 1, 4)(st.linregress(list(map(lambda dir: np.log(1/dr[dir]), exploitables[part])), list(map(lambda dir: np.log(drdtmax[dir]), exploitables[part]))))
 		ax1.plot(list(map(lambda dir: 1/dr[dir], exploitables[part])), list(map(lambda x: x**slopes[(part, ax1)]*np.exp(intercepts[(part, ax1)]), list(map(lambda dir: 1/dr[dir], exploitables[part])))), ['--', '-.'][part], color='black', label=(r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t^* \propto (\tilde{\nu}_r^{-1})^{%.1e \pm %.0e}$' % (slopes[(part, ax1)], stderr[(part, ax1)]))
 
@@ -216,7 +218,7 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 			exploitables1[dr[dir] < dr_c] = np.append(exploitables1[dr[dir] < dr_c], dir)
 		drdtmax1[dir] = (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1)*period_dump[dir]*time_step[dir]*float(eval(letters_to_float(dt_list[np.argmax(intCuu1[dir])])))
 		intCuumax1[dir] = np.max(intCuu1[dir])
-		
+
 		if dr[dir] <= dr_max and dr[dir] >= dr_min:
 			fplot(ax10)(list(map(lambda t: (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1) * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu1[dir], marker=markers[time_step[dir]], linestyle='-', color=colors[dr[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
 			ax11.scatter(1/dr[dir], drdtmax1[dir], marker=markers[time_step[dir]], color=colors[dr[dir]])
@@ -226,7 +228,7 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 		slopes1, intercepts1, stderr1 = {}, {}, {}
 		for part in range(2):
 			exploitables1[part] = sorted(exploitables1[part], key=lambda dir: 1/dr[dir])
-		
+
 			slopes1[(part, ax11)], intercepts1[(part, ax11)], stderr1[(part, ax11)] = operator.itemgetter(0, 1, 4)(st.linregress(list(map(lambda dir: np.log(1/dr[dir]), exploitables1[part])), list(map(lambda dir: np.log(drdtmax1[dir]), exploitables1[part]))))
 			ax11.plot(list(map(lambda dir: 1/dr[dir], exploitables1[part])), list(map(lambda x: x**slopes1[(part, ax11)]*np.exp(intercepts1[(part, ax11)]), list(map(lambda dir: 1/dr[dir], exploitables1[part])))), ['--', '-.'][part], color='black', label=(r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t^* \propto (\tilde{\nu}_r^{-1})^{%.1e \pm %.0e}$' % (slopes1[(part, ax11)], stderr1[(part, ax11)]))
 
@@ -317,4 +319,3 @@ fig2.subplots_adjust(hspace=hspace)
 fig2.suptitle(r'$N=%.1e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else ''))
 
 plt.show()
-

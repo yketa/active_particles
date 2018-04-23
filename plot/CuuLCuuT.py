@@ -17,6 +17,8 @@ import matplotlib.cm as cmx
 import matplotlib as mp
 from collections import OrderedDict
 
+os.chdir('/home/yketa/hoomd/colmig_DPD_P_A/data')
+
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
 mp.rcParams.update({'font.size': font_size})
 
@@ -34,7 +36,7 @@ default_markers = ['.', 's', '*', 'o']
 ncol_legend = int(eval(os.environ['NCOL_LEGEND'])) if 'NCOL_LEGEND' in os.environ else 1
 ratio_legend = int(eval(os.environ['RATIO_LEGEND'])) if 'RATIO_LEGEND' in os.environ else 10
 
-wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.4 
+wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.4
 hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
 
 density = float(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8

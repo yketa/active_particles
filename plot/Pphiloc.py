@@ -14,6 +14,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 sys.path.append('/home/yketa')
 from exponents import *
 
+os.chdir('/home/yketa/hoomd/colmig_DPD_P_A/data')
+
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
 mp.rcParams.update({'font.size': font_size})
 
@@ -74,4 +76,3 @@ ax.set_title(r'$N=%.1e, \phi=%1.2f, \tilde{v} = %.2e$' % (N, density, vzero) + '
 ax.set_xlabel(r'$\log( \tau_r \equiv \tilde{\nu}_r^{-1})$')
 ax.set_ylabel(r'$\phi_{loc}$')
 plt.show()
-
