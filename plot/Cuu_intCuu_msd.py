@@ -13,7 +13,11 @@ from collections import OrderedDict
 from matplotlib.gridspec import GridSpec
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import matplotlib as mp
 from scipy import stats as st
+
+font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
+mp.rcParams.update({'font.size': font_size})
 
 density = float(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8
 number = int(eval(os.environ['NUMBER'])) if 'NUMBER' in os.environ else int(1e5)
@@ -21,6 +25,8 @@ vzero = float(eval(os.environ['VZERO'])) if 'VZERO' in os.environ else 1e-2
 
 r_min = float(eval(os.environ['R_MIN'])) if 'R_MIN' in os.environ else 1
 r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20
+if not('CUT' in os.environ):
+	os.environ['CUT'] = True
 
 dr_min = float(eval(os.environ['DR_MIN'])) if 'DR_MIN' in os.environ else 1e-10
 dr_max = float(eval(os.environ['DR_MAX'])) if 'DR_MAX' in os.environ else 1e10
@@ -37,6 +43,12 @@ msd_xs = os.environ['MSD_XSCALE'] if 'MSD_XSCALE' in os.environ else 'log'
 msd_ys = os.environ['MSD_YSCALE'] if 'MSD_YSCALE' in os.environ else 'log'
 
 colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet'
+
+ncol_legend = int(eval(os.environ['NCOL_LEGEND'])) if 'NCOL_LEGEND' in os.environ else 1
+ratio_legend = int(eval(os.environ['RATIO_LEGEND'])) if 'RATIO_LEGEND' in os.environ else 10
+
+wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.4 
+hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
 
 dirs = [dir for dir in os.listdir() if str('D%s_V%s' % tuple(map(float_to_letters, [density, vzero]))) in dir and str('N%s_Ll' % float_to_letters(number)) in dir]
 # dirs = ['Dk8000_Vj1000_Rg3000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg2000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rj1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rf5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rj5000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rj5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll3000', 'Dk8000_Vj1000_Rg5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rg4000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rk1000_Nq1000_Ll2000', 'Dk8000_Vj1000_Ri5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rh1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rh1000_Nq1000_Ll0000', 'Dk8000_Vj1000_Ri1000_Nq1000_Ll1000', 'Dk8000_Vj1000_Rh5000_Nq1000_Ll0000', 'Dk8000_Vj1000_Rh5000_Nq1000_Ll1000', 'Dk8000_Vj1000_Ri1000_Nq1000_Ll0000']
@@ -103,7 +115,7 @@ markers = {time_step_list[i]:default_markers[i] for i in range(len(time_step_lis
 # CHI, CHIMAX, DRDTMAX
 
 fig = plt.figure()
-gs = GridSpec(2, 3, width_ratios=[5, 5, 1])
+gs = GridSpec(2, 3, width_ratios=[1, 1, 2/ratio_legend])
 ax0 = plt.subplot(gs[:, 0])
 ax1 = plt.subplot(gs[0, 1])
 ax2 = plt.subplot(gs[1, 1], sharex=ax1)
@@ -132,7 +144,7 @@ for dir in dirs:
 		exploitables[dr[dir] < dr_c] = np.append(exploitables[dr[dir] < dr_c], dir)
 	drdtmax[dir] = (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1)*period_dump[dir]*time_step[dir]*float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])])))
 	intCuumax[dir] = np.max(intCuu[dir])
-	with open(str('%s/intCuu_%s.pickle' % (dir, dir[:-7])), 'wb') as dump_file:
+	with open(str('%s/int%s_%s_I%s_M%s_C%s_RMIN%s_RMAX%s.pickle' % ((dir, var, dir[:-7], init_frame, int_max) + tuple(list(map(float_to_letters, [N_cases, r_min, r_max if 'CUT' in os.environ and eval(os.environ['CUT']) else box_size[dir]/2]))))), 'wb') as dump_file:
 		pickle.dump([np.transpose([list(map(lambda t: dr[dir] * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu[dir]]), float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])]))), dr[dir]*period_dump[dir]*time_step[dir]*float(eval(letters_to_float(dt_list[np.argmax(intCuu[dir])]))), np.max(intCuu[dir])], dump_file)
 	
 	if dr[dir] <= dr_max and dr[dir] >= dr_min:
@@ -164,17 +176,17 @@ lines += [Line2D([0], [0], lw=0, label='')]
 lines += list(map(lambda dt: Line2D([0], [0], lw=0, marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
 linesdt = list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
 # lines0 += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
-ax3.legend(handles=lines, loc='center')
+ax3.legend(handles=lines, loc='center', ncol=ncol_legend)
 
-fig.subplots_adjust(wspace=0.4)
-fig.subplots_adjust(hspace=0.05)
+fig.subplots_adjust(wspace=wspace)
+fig.subplots_adjust(hspace=hspace)
 fig.suptitle(r'$N=%.1e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else '') + '\n' + r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
 
 # CHI, CHIMAX, DRDTMAX (integrated from 2D)
 
 if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 	fig1 = plt.figure()
-	gs1 = GridSpec(2, 3, width_ratios=[5, 5, 1])
+	gs1 = GridSpec(2, 3, width_ratios=[1, 1, 2/ratio_legend])
 	ax10 = plt.subplot(gs[:, 0])
 	ax11 = plt.subplot(gs[0, 1])
 	ax12 = plt.subplot(gs[1, 1], sharex=ax1)
@@ -224,16 +236,16 @@ if 'TWOD' in os.environ and eval(os.environ['TWOD']):
 		ax11.legend()
 		ax12.legend()
 
-	ax13.legend(handles=lines, loc='center')
+	ax13.legend(handles=lines, loc='center', ncol=ncol_legend)
 
-	fig1.subplots_adjust(wspace=0.4)
-	fig1.subplots_adjust(hspace=0.05)
+	fig1.subplots_adjust(wspace=wspace)
+	fig1.subplots_adjust(hspace=hspace)
 	fig1.suptitle(r'$N=%1.e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else '') + '\n' + r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
 
 # CHI, MSD
 
 fig0 = plt.figure()
-gs0 = GridSpec(1, 3, width_ratios=[5, 5, 1])
+gs0 = GridSpec(1, 3, width_ratios=[1, 1, 2/ratio_legend])
 ax00 = plt.subplot(gs0[0])
 ax01 = plt.subplot(gs0[1])
 ax02 = plt.subplot(gs0[2])
@@ -261,12 +273,48 @@ for dir in dirs:
 if not('SINGLE_MSD' in os.environ):
 	lines1 = list(map(lambda init: Line2D([0], [0], color='black', lw=2, linestyle=linestyles[init], label=r'$S_{init} = %.0e$' % init), init_list))
 	ax01.legend(handles=lines1)
-ax02.legend(handles=lines0, loc='center')
+ax02.legend(handles=lines0, loc='center', ncol=ncol_legend)
 ax00.legend(handles=linesdt)
 
-fig0.subplots_adjust(wspace=0.4)
-fig0.subplots_adjust(hspace=0.05)
+fig0.subplots_adjust(wspace=wspace)
+fig0.subplots_adjust(hspace=hspace)
 fig0.suptitle(r'$N=%.1e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else ''))
+
+# CHI, MSD
+
+fig2 = plt.figure()
+gs2 = GridSpec(1, 3, width_ratios=[1, 1, 2/ratio_legend])
+ax20 = plt.subplot(gs0[0])
+ax21 = plt.subplot(gs0[1])
+ax22 = plt.subplot(gs0[2])
+ax22.axis('off')
+
+ax20.set_title(r'$N_{cases}=5\cdot10^2, S_{init}=5\cdot10^3, S_{max}=1\cdot10^2$')
+ax20.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
+ax20.set_ylabel(r'$\chi(\Delta t) = \frac{N}{L^2}$' + (r'$ \int_{r=r_{min}}^{r=r_{max}} dr$' if 'CUT' in os.environ and eval(os.environ['CUT']) else r'$\int_{r=a}^{r=L/2} dr$') + ' '+ r'$2 \pi r %s(r, \Delta t)$' % C)
+
+ax21.set_title((r'$S_{init}=%.1e, $' % int(eval(os.environ['SINGLE_MSD'])) if 'SINGLE_MSD' in os.environ else '') + r'$S_{max}=%1.e$' % float(eval(letters_to_float(snap_max))))
+ax21.set_xscale(msd_xs)
+ax21.set_yscale(msd_ys)
+ax21.set_xlabel((r'$\tilde{\nu}_r$' if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else '') + r'$\Delta t$')
+ax21.set_ylabel(r'$<|\Delta r(\Delta t)|^2>$')
+
+msd_fname = lambda dir, init: str('%s/msd_sterr_%s_I%s_M%s_P%s.csv' % (dir, dir[:-7], float_to_letters(init), snap_max, snap_per))
+
+for dir in dirs:
+        fplot(ax20)(list(map(lambda t: (dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1) * period_dump[dir] * time_step[dir] * float(eval(letters_to_float(t))), dt_list)), intCuu[dir], marker=markers[time_step[dir]], linestyle='-', color=colors[dr[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
+        for init in init_list:
+                ax21.errorbar(msd[(dir, init)][:, 0]*(dr[dir] if not('DRDT' in os.environ and not(eval(os.environ['DRDT']))) else 1), msd[(dir, init)][:, 1], yerr=msd[(dir, init)][:, 2]/msd[(dir, init)][:, 0], color=colors[dr[dir]], linestyle=linestyles[init], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
+
+if not('SINGLE_MSD' in os.environ):
+        lines1 = list(map(lambda init: Line2D([0], [0], color='black', lw=2, linestyle=linestyles[init], label=r'$S_{init} = %.0e$' % init), init_list))
+        ax21.legend(handles=lines1)
+ax22.legend(handles=lines0, loc='center', ncol=ncol_legend)
+ax20.legend(handles=linesdt)
+
+fig2.subplots_adjust(wspace=wspace)
+fig2.subplots_adjust(hspace=hspace)
+fig2.suptitle(r'$N=%.1e, \phi=%1.2f, \tilde{v}=%.1e$' % (number, density, vzero) + (r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max) if 'CUT' in os.environ and eval(os.environ['CUT']) else ''))
 
 plt.show()
 

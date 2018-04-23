@@ -9,13 +9,17 @@ import sys
 import operator
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import matplotlib as mp
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 sys.path.append('/home/yketa')
 from exponents import *
 
+font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
+mp.rcParams.update({'font.size': font_size})
+
 N = int(eval(os.environ['N'])) if 'N' in os.environ else int(1e5)
-density = int(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8
-vzero = int(eval(os.environ['VZERO'])) if 'VZERO' in os.environ else 1e-2
+density = float(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8
+vzero = float(eval(os.environ['VZERO'])) if 'VZERO' in os.environ else 1e-2
 
 dr_min = float(eval(os.environ['DR_MIN'])) if 'DR_MIN' in os.environ else 1e-5
 dr_max = float(eval(os.environ['DR_MAX'])) if 'DR_MAX' in os.environ else 1e-2

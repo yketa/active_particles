@@ -14,7 +14,11 @@ from matplotlib.lines import Line2D
 from matplotlib.gridspec import GridSpec
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import matplotlib as mp
 from collections import OrderedDict
+
+font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 15
+mp.rcParams.update({'font.size': font_size})
 
 var = os.environ['CORRELATION'] if 'CORRELATION' in os.environ else 'Cww'
 C = {'Cuu':'C_{uu}', 'Cww':'C_{\delta u \delta u}', 'Cdd':'C_{|u||u|}', 'Cee':'C_{\hat{u}\hat{u}}'}[var]
@@ -26,6 +30,12 @@ dr_c = float(eval(os.environ['DR_C'])) if 'DR_C' in os.environ else 3e-4
 
 colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet'
 default_markers = ['.', 's', '*', 'o']
+
+ncol_legend = int(eval(os.environ['NCOL_LEGEND'])) if 'NCOL_LEGEND' in os.environ else 1
+ratio_legend = int(eval(os.environ['RATIO_LEGEND'])) if 'RATIO_LEGEND' in os.environ else 10
+
+wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.4 
+hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
 
 density = float(eval(os.environ['DENSITY'])) if 'DENSITY' in os.environ else 0.8
 vzero = float(eval(os.environ['VZERO'])) if 'VZERO' in os.environ else 1e-2
@@ -79,8 +89,11 @@ def plot(C, CL, CT):
 	fig = plt.figure()
 	fig.suptitle(r'$\phi=%1.2f, \tilde{v}=%.2e, N=%.2e$' % (density, vzero, number)+ '\n' + r'$S_{init} = %.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, N_cases, int_max))
 
+	fig.subplots_adjust(wspace=wspace)
+	fig.subplots_adjust(hspace=hspace)
+
 	if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']):
-		gs = GridSpec(2, 2, width_ratios=[10, 1])
+		gs = GridSpec(2, 2, width_ratios=[ratio_legend, 1])
 		ax = plt.subplot(gs[0, 0])
 
 		ax1 = plt.subplot(gs[1, 0])
@@ -98,7 +111,7 @@ def plot(C, CL, CT):
 		leg = plt.subplot(gs[:, 1])
 
 	else:
-		gs = GridSpec(1, 2, width_ratios=[10, 1])
+		gs = GridSpec(1, 2, width_ratios=[ratio_legend, 1])
 		ax = plt.subplot(gs[0])
 		leg = plt.subplot(gs[:, 1])
 
@@ -110,7 +123,7 @@ def plot(C, CL, CT):
 	if not('INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX'])):
 		lines0 += [Line2D([0], [0], lw=0, label='')]
 		lines0 += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
-	leg.legend(handles=lines0, loc='center')
+	leg.legend(handles=lines0, loc='center', ncol=ncol_legend)
 
 	for dir in dirs:
 		ax.semilogx(dr[dir]*time_step[dir]*period_dump[dir]*dt_list, list(map(lambda t: CT[(dir, t)]/CL[(dir, t)], dt_list)), color=colors[dr[dir]], marker='' if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']) else markers[time_step[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
@@ -131,8 +144,11 @@ def plot(C, CL, CT):
 	fig0 = plt.figure()
 	fig0.suptitle(r'$\phi=%1.2f, \tilde{v}=%.2e, N=%.2e$' % (density, vzero, number)+ '\n' + r'$S_{init} = %.2e, S_{max}=%.2e, N_{cases}=%.2e$' % (init_frame, N_cases, int_max))
 
+	fig0.subplots_adjust(wspace=wspace)
+	fig0.subplots_adjust(hspace=hspace)
+
 	if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']):
-		gs0 = GridSpec(2, 3, width_ratios=[5, 5, 1])
+		gs0 = GridSpec(2, 3, width_ratios=[1, 1, 2/ratio_legend])
 		axL = plt.subplot(gs0[0, 0])
 		axT = plt.subplot(gs0[1, 0])
 
@@ -157,7 +173,7 @@ def plot(C, CL, CT):
 		leg = plt.subplot(gs0[:, 2])
 
 	else:
-		gs0 = GridSpec(1, 3, width_ratios=[5, 5, 1])
+		gs0 = GridSpec(1, 3, width_ratios=[1, 1, 2/ratio_legend])
 		axL = plt.subplot(gs0[0])
 		axT = plt.subplot(gs0[1])
 		leg = plt.subplot(gs0[2])
@@ -172,7 +188,7 @@ def plot(C, CL, CT):
 	if not('INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX'])):
 		lines0 += [Line2D([0], [0], lw=0, label='')]
 		lines0 += list(map(lambda dt: Line2D([0], [0], marker=markers[dt], color='black', label=r'$dt=%.0e$' % dt), time_step_list))
-	leg.legend(handles=lines0, loc='center')
+	leg.legend(handles=lines0, loc='center', ncol=ncol_legend)
 
 	for dir in dirs:
 		axL.semilogx(dr[dir]*time_step[dir]*period_dump[dir]*dt_list, list(map(lambda t: CL[(dir, t)], dt_list)), color=colors[dr[dir]], marker='' if 'INTCUUMAX' in os.environ and eval(os.environ['INTCUUMAX']) else markers[time_step[dir]], label=r'$\tilde{\nu}_r = %.0e$' % dr[dir])
