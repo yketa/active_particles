@@ -98,9 +98,9 @@ data = np.genfromtxt(fname=logoutput_file, skip_header=True)
 
 prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
-def draw_circle(ax, position, radius):
+def draw_circle(ax, position, radius, color):
 
-	circle = plt.Circle(tuple(position), radius, color='black', fill=False)
+	circle = plt.Circle(tuple(position), radius, color='black', fill=True if color else False)
 	ax.add_artist(circle)
 
 	return 0
@@ -137,6 +137,8 @@ with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters 
 	with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 		w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
 
+		tracer_particle = np.argmin(np.sum(getarray(unwrap_file, N, frames[0])**2, axis=1))
+
 		for frame in range(len(frames) - 1):
 
 			bytes = out_param.write("FRAME %d" % (frame + 1) + ": t=%e\n" %(frames[frame]*time_step*period_dump))
@@ -154,6 +156,8 @@ with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters 
 			displacements = getarray(unwrap_file, N, frames[frame + 1]) - getarray(unwrap_file, N, frames[frame]) # velocities (or displacement) of the particles
 
 			particles_to_draw = [particle for particle in range(N) if (np.abs(positions[particle]) <= max_box_size/2).all()]
+			if not(tracer_particle in particles_to_draw):
+				tracer_particle = np.argmin(np.sum(getarray(unwrap_file, N, frame)**2, axis=1))
 			positions = operator.itemgetter(particles_to_draw)(positions)
 			diameters = operator.itemgetter(particles_to_draw)(diameters)
 			displacements = operator.itemgetter(particles_to_draw)(displacements)
@@ -161,7 +165,7 @@ with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters 
 			fig, ax = plt.subplots()
 			fig.set_size_inches(frame_hor, frame_ver)
 
-			circles = list(map(lambda position, diameter: draw_circle(ax, position, diameter/2), *[positions, diameters]))
+			circles = list(map(lambda position, diameter: draw_circle(ax, position, diameter/2, (position == positions[particles_to_draw.index(tracer_particle)]).all()), *[positions, diameters]))
 			arrows = list(map(lambda position, displacement: draw_arrow(ax, position, displacement), *[positions, displacements]))
 
 			ax.set_xlim([-1.1*max_box_size/2, 1.1*max_box_size/2])
