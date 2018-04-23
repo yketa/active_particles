@@ -16,6 +16,8 @@ import matplotlib as mp
 from collections import OrderedDict
 import operator
 
+os.chdir('/home/yketa/hoomd/colmig_DPD_P_A/data')
+
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 20
 marker_size = int(eval(os.environ['MARKER_SIZE'])) if 'MARKER_SIZE' in os.environ else 20
 mp.rcParams.update({'font.size': font_size, 'lines.markersize': marker_size})
