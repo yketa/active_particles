@@ -48,7 +48,7 @@ r_max = box_size/2 if r_max < 0 else r_max
 
 prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
-Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the velocity grid
+Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the strain and vorticity grid
 grid_points = np.array([(x, y) for x in np.linspace(- box_size/2, box_size/2, Ncases, endpoint=False) for y in np.linspace(- box_size/2, box_size/2, Ncases, endpoint=False)])
 
 Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
@@ -73,8 +73,8 @@ def Averaging(var, CGfactors):
 	# graining factors
 	return np.sum(var*CGfactors)
 
-def strain(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
-	# returns strain at point point
+def strain_vorticity(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
+	# returns strain and vorticity at point point
 
 	positions = (w_traj[int(prep_frames + time + (dis_time if 'ENDPOINT' in os.environ and eval(os.environ['ENDPOINT']) else 0))].particles.position[:, :2] - point + box_size/2)%box_size - box_size/2 # position at time time (with boundary conditions) with point as the centre of the frame
 
@@ -84,7 +84,7 @@ def strain(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut
 
 	wrcut = np.where(np.sqrt(np.sum(positions**2, axis=1)) < r_cut)[0] # particles indexes within r_cut of point
 	if wrcut.size == 0: # there is no particles within r_cut of point
-		return 0
+		return 0, 0
 
 	pos_wrcut = np.array(operator.itemgetter(*wrcut)(positions), ndmin=2)
 	dis_wrcut = np.array(operator.itemgetter(*wrcut)(displacements), ndmin=2)
@@ -92,14 +92,18 @@ def strain(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut
 	CGfactors = CGfp(pos_wrcut, sigma) # coarse graining factors
 	rho, Ax, Auy, Ay, Aux, Auxy, Auyx = tuple(map(lambda var: Averaging(var, CGfactors), [np.full(len(pos_wrcut), fill_value=1), pos_wrcut[:, 0], dis_wrcut[:, 1], pos_wrcut[:, 1], dis_wrcut[:, 0], dis_wrcut[:, 0]*pos_wrcut[:, 1], dis_wrcut[:, 1]*pos_wrcut[:, 0]]))
 
-	return 0.5*(-(Ax*Auy + Ay*Aux)/((rho*sigma)**2) + (Auxy + Auyx)/(rho*(sigma**2)))
+	strain = 0.5*((Ay*Aux + Ax*Auy)/((rho*sigma)**2) - (Auxy + Auyx)/(rho*(sigma**2)))
+	vorticity = (Ax*Auy - Ay*Aux)/((rho*sigma)**2) - (Auyx - Auxy)/(rho*(sigma**2))
 
-def strain_grid(Ncases, grid_points, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
-	# returns strain Ncases x Ncases grid associated to the box
+	return strain, vorticity
 
-	grid = list(map(lambda point: strain(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut), grid_points))
+def strain_vorticity_grid(Ncases, grid_points, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
+	# returns strain and vorticity Ncases x Ncases grid associated to the box
 
-	return np.reshape(grid, (Ncases, Ncases))
+	Sgrid, Cgrid = tuple(np.transpose(list(map(lambda point: strain_vorticity(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut), grid_points))))
+
+	correct_grid = lambda Grid: np.transpose(np.reshape(Grid, (Ncases, Ncases)))[::-1] # get grid in the correct directions
+	return correct_grid(Sgrid), correct_grid(Cgrid)
 
 def corField(field):
 	# Return 2D correlation of a scalar field.
@@ -112,16 +116,17 @@ def corField(field):
 
 with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_file_name, 'rb') as unwrap_file:
 	w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);
-	Sgrid = list(map(lambda time: strain_grid(Ncases, grid_points, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut), times))
+	Sgrid, Cgrid = tuple(np.transpose(list(map(lambda time: strain_vorticity_grid(Ncases, grid_points, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut), times)), (1, 0, 2, 3)))
 
-Css2D = (lambda C, Norm: C/Norm)(*tuple(np.sum(list(map(corField, Sgrid)), axis=0))) # 2D strain correlation
+Css2D, Ccc2D = tuple(list(map(lambda Grid: (lambda C, Norm: C/Norm)(*tuple(np.sum(list(map(corField, Grid)), axis=0))), [Sgrid, Cgrid]))) # strain and vorticity fields correlations
 
 # SAVING
 
 filename = lambda var: data_dir + str('/' + var + ('b' if not('ENDPOINT' in os.environ and eval(os.environ['ENDPOINT'])) else '') + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s_RCUT%s_SIGM%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases, r_cut, sigma]))) # filename
 
-with open(filename('Css'), 'wb') as Css_dump_file:
+with open(filename('Css'), 'wb') as Css_dump_file, open(filename('Ccc'), 'wb') as Ccc_dump_file:
 	pickle.dump([Sgrid, Css2D], Css_dump_file)
+	pickle.dump([Cgrid, Ccc2D], Ccc_dump_file)
 
 # EXECUTION TIME
 
@@ -139,58 +144,62 @@ if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	from matplotlib.gridspec import GridSpec
 	cmap = plt.cm.jet
 
-	fig, ax = plt.subplots(1, 2)
+	def plot(Grid, Corr, var):
 
-	fig.set_size_inches(16, 16)
-	fig.subplots_adjust(wspace=0.4)
-	fig.subplots_adjust(hspace=0.3)
+		fig, ax = plt.subplots(1, 2)
 
-	fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, \Delta t=%.2e, S_{max}=%.2e, N_{cases}=%.2e, r_{cut}=%.2e, \sigma=%.2e$' % (init_frame, dis_time*period_dump*time_step, int_max, Ncases, r_cut, sigma))
+		fig.set_size_inches(16, 16)
+		fig.subplots_adjust(wspace=0.4)
+		fig.subplots_adjust(hspace=0.3)
 
-	# strain
+		fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (N, density, vzero, dr) + '\n' + r'$S_{init}=%.2e, \Delta t=%.2e, S_{max}=%.2e, N_{cases}=%.2e, r_{cut}=%.2e, \sigma=%.2e$' % (init_frame, dis_time*period_dump*time_step, int_max, Ncases, r_cut, sigma))
 
-	S = '\epsilon_{xy}'
-	S2D = Sgrid[0]
+		# variable map
 
-	Smin = -2*np.std(S2D)
-	Smax = 2*np.std(S2D)
+		S2D = Grid[0]
 
-	SvNorm = colors.Normalize(vmin=Smin, vmax=Smax)
-	SscalarMap = cmx.ScalarMappable(norm=SvNorm, cmap=cmap)
+		Smin = -2*np.std(S2D)
+		Smax = 2*np.std(S2D)
 
-	ax[0].imshow(S2D, cmap=cmap, norm=SvNorm, extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
+		SvNorm = colors.Normalize(vmin=Smin, vmax=Smax)
+		SscalarMap = cmx.ScalarMappable(norm=SvNorm, cmap=cmap)
 
-	ax[0].set_xlabel(r'$x$')
-	ax[0].set_ylabel(r'$y$')
-	ax[0].set_title('2D ' + r'$%s$' % S)
+		ax[0].imshow(S2D, cmap=cmap, norm=SvNorm, extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
 
-	divider0 = make_axes_locatable(ax[0])
-	cax0 = divider0.append_axes("right", size="5%", pad=0.05)
-	cb0 = mpl.colorbar.ColorbarBase(cax0, cmap=cmap, norm=SvNorm, orientation='vertical')
-	cb0.set_label(r'$%s$' % S, labelpad=20, rotation=270)
+		ax[0].set_xlabel(r'$x$')
+		ax[0].set_ylabel(r'$y$')
+		ax[0].set_title('2D ' + r'$%s$' % var)
 
-	# Css2D
+		divider0 = make_axes_locatable(ax[0])
+		cax0 = divider0.append_axes("right", size="5%", pad=0.05)
+		cb0 = mpl.colorbar.ColorbarBase(cax0, cmap=cmap, norm=SvNorm, orientation='vertical')
+		cb0.set_label(r'$%s$' % var, labelpad=20, rotation=270)
 
-	C = 'C_{\epsilon_{xy}\epsilon_{xy}}'
+		# 2D correlations
 
-	Cmin = np.min(Css2D)
-	Cmax = np.max(Css2D)
+		C = 'C_{%s%s}' % (var, var)
 
-	CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
-	CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
+		Cmin = np.min(Corr)
+		Cmax = np.max(Corr)
 
-	r_max_cases = int(r_max*(Ncases/box_size))
-	C2D_display = np.roll(np.roll(Css2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1]
+		CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
+		CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
 
-	ax[1].imshow(C2D_display, cmap=cmap, norm=CvNorm, extent=[-r_max, r_max, -r_max, r_max])
+		r_max_cases = int(r_max*(Ncases/box_size))
+		C2D_display = np.roll(np.roll(Corr, int(Ncases/2), axis=0), int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1]
 
-	ax[1].set_xlabel(r'$x$')
-	ax[1].set_ylabel(r'$y$')
-	ax[1].set_title('2D ' + r'$%s$' % C)
+		ax[1].imshow(C2D_display, cmap=cmap, norm=CvNorm, extent=[-r_max, r_max, -r_max, r_max])
 
-	divider1 = make_axes_locatable(ax[1])
-	cax1 = divider1.append_axes("right", size="5%", pad=0.05)
-	cb1 = mpl.colorbar.ColorbarBase(cax1, cmap=cmap, norm=CvNorm, orientation='vertical')
-	cb1.set_label(r'$%s$' % C, labelpad=20, rotation=270)
+		ax[1].set_xlabel(r'$x$')
+		ax[1].set_ylabel(r'$y$')
+		ax[1].set_title('2D ' + r'$%s$' % C)
+
+		divider1 = make_axes_locatable(ax[1])
+		cax1 = divider1.append_axes("right", size="5%", pad=0.05)
+		cb1 = mpl.colorbar.ColorbarBase(cax1, cmap=cmap, norm=CvNorm, orientation='vertical')
+		cb1.set_label(r'$%s$' % C, labelpad=20, rotation=270)
+
+	plot(Sgrid, Css2D, '\epsilon_{xy}')
+	plot(Cgrid, Ccc2D, '\omega')
 
 	plt.show()
