@@ -22,6 +22,9 @@ from readdat import *
 
 from collections import OrderedDict
 
+from datetime import datetime
+startTime = datetime.now()
+
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
 wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
@@ -119,6 +122,10 @@ filename = lambda var: data_dir + str('/' + var + ('b' if not('ENDPOINT' in os.e
 
 with open(filename('Css'), 'wb') as Css_dump_file:
 	pickle.dump([Sgrid, Css2D], Css_dump_file)
+
+# EXECUTION TIME
+
+print("Execution time: %s" % (datetime.now() - startTime))
 
 # PLOT
 

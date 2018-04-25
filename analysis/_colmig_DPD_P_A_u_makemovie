@@ -63,6 +63,9 @@ from readdat import *
 import math
 from collections import OrderedDict
 
+from datetime import datetime
+startTime = datetime.now()
+
 movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
 data_directory = os.environ['DATA_DIRECTORY'] # data directory
 
@@ -107,7 +110,7 @@ def render_frame(frame):
 	# building envrionment for _colmig_DPD_P_A_frame call
 
 	env = os.environ.copy()
-	
+
 	env['SAVE'] = 'True'
 	env['SHOW'] = 'False'
 
@@ -167,13 +170,15 @@ with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters 
 		bytes = out_param.write("pyy=%e\n" % data[prep_frames + frames[frame], 6])
 		bytes = out_param.write("pxy=%e\n" % data[prep_frames + frames[frame], 4])
 		bytes = out_param.write("tilt=%e\n\n" % data[prep_frames + frames[frame], 10])
-		
+
 		sys.stdout.write("Frame: %d" % (frame + 1) + "/%d \r" % len(frames))
 		out = render_frame(frame)
 
 	sys.stdout.write("\n")
 
+# EXECUTION TIME
+print("Execution time: %s" % (datetime.now() - startTime))
+
 EOF
 
 /home/yketa/bin/ffmpeg -r 5 -f image2 -s 1280x960 -i "${MOV_DIR}"/frames/%10d.png -pix_fmt yuv420p "${MOV_DIR}/$MOV_NAME"
-

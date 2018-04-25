@@ -62,6 +62,9 @@ from readdat import *
 import math
 from collections import OrderedDict
 
+from datetime import datetime
+startTime = datetime.now()
+
 movie_directory = os.environ['MOVIE_DIRECTORY'] # movie making directory
 data_directory = os.environ['DATA_DIRECTORY'] # data directory
 
@@ -182,6 +185,9 @@ with open(movie_directory + "/param.txt", "w") as out_param: # movie parameters 
 			plt.close(fig)
 
 	sys.stdout.write("\n")
+
+# EXECUTION TIME
+print("Execution time: %s" % (datetime.now() - startTime))
 
 EOF
 

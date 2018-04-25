@@ -20,6 +20,9 @@ from readdat import *
 
 from collections import OrderedDict
 
+from datetime import datetime
+startTime = datetime.now()
+
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
 wrap_file_name = os.environ['WRAPPED_FILE'] if 'WRAPPED_FILE' in os.environ else data_dir + '/trajectory.gsd' # wrapped trajectory file (.gsd)
@@ -150,6 +153,10 @@ with open(filename('Cnn'), 'wb') as Cnn_dump_file, open(filename('Cuu'), 'wb') a
 	pickle.dump([Cww2D, Cww1D, Cww1Dcor, CwwL, CwwT], Cww_dump_file)
 	pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cdd_dump_file)
 	pickle.dump([Cee2D, Cee1D, Cee1Dcor, CeeL, CeeT], Cee_dump_file)
+
+# EXECUTION TIME
+
+print("Execution time: %s" % (datetime.now() - startTime))
 
 # PLOT
 

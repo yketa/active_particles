@@ -29,6 +29,9 @@ from readdat import *
 
 import math
 
+from datetime import datetime
+startTime = datetime.now()
+
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
 parameters_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters pickle file
@@ -112,7 +115,11 @@ with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file, open(unwrap_fil
 
 	if 'SAVE' in os.environ and eval(os.environ['SAVE']):
 		fig.savefig(os.environ['PICTURE_NAME'] if 'PICTURE_NAME' in os.environ else data_dir + '/D%s_V%s_R%s_N%s_F%s_T%s_RMAX%s_VMIN_%s_VMAX%s_MOVE%s.eps' % tuple(map(float_to_letters, [density, vzero, dr, N, frame, np.max([0, dt]), max_box_size, v_min, v_max, eval(os.environ['MOVE']) if 'MOVE' in os.environ else False])), dpi=frame_def)
+
+	# EXECUTION TIME
+	print("Execution time: %s" % (datetime.now() - startTime))
+
 	if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 		plt.show()
-		
+
 	plt.close()

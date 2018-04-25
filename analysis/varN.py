@@ -23,6 +23,9 @@ from exponents import *
 import math
 from collections import OrderedDict
 
+from datetime import datetime
+startTime = datetime.now()
+
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
 parameters_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters pickle file
@@ -71,6 +74,7 @@ plt.ylabel(r'$P(\phi_{loc})$')
 if 'SAVEFIG' in os.environ and eval(os.environ['SAVEFIG']):
 	plt.savefig(filename('eps'))
 	print('Figure saved to %s.' % filename('eps'))
+# EXECUTION TIME
+print("Execution time: %s" % (datetime.now() - startTime))
 if 'SHOW' in os.environ and eval(os.environ['SHOW']):
 	plt.show()
-

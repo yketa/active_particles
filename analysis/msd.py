@@ -14,6 +14,9 @@ from readdat import *
 
 from collections import OrderedDict
 
+from datetime import datetime
+startTime = datetime.now()
+
 def mean_square_displacement(data_dir='/home/yketa/hoomd', parameters_file='param.pickle', unwrapped_file='trajectory.dat', init_frame=-1, snap_max=1, snap_period=1):
 	# Returns mean square displacements at associated times.
 
@@ -62,3 +65,5 @@ snap_period = int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.enviro
 
 mean_square_displacement(data_dir=data_dir, parameters_file=parameters_file, unwrapped_file=unwrapped_file, init_frame=init_frame, snap_max=snap_max, snap_period=snap_period) # calculation of the mean square displacement
 
+# EXECUTION TIME
+print("Execution time: %s" % (datetime.now() - startTime))
