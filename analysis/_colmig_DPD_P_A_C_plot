@@ -80,9 +80,9 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, **directional_correlatio
 	Cmax = np.max(C2D)
 
 	CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
-	CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap) 
+	CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
 
-	r_max_cases = int(r_max*(box_size/Ncases))
+	r_max_cases = int(r_max*(Ncases/box_size))
 	C2D_display = np.roll(np.roll(C2D, int(Ncases/2), axis=0), int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:int(Ncases/2) + r_max_cases + 1]
 
 	axs[0, 0].imshow(C2D_display, cmap=cmap, norm=CvNorm, extent=[-r_max, r_max, -r_max, r_max])
