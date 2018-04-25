@@ -89,7 +89,6 @@ def strain(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut
 	CGfactors = CGfp(pos_wrcut, sigma) # coarse graining factors
 	rho, Ax, Auy, Ay, Aux, Auxy, Auyx = tuple(map(lambda var: Averaging(var, CGfactors), [np.full(len(pos_wrcut), fill_value=1), pos_wrcut[:, 0], dis_wrcut[:, 1], pos_wrcut[:, 1], dis_wrcut[:, 0], dis_wrcut[:, 0]*pos_wrcut[:, 1], dis_wrcut[:, 1]*pos_wrcut[:, 0]]))
 
-	print(0.5*(-(Ax*Auy + Ay*Aux)/((rho*sigma)**2) + (Auxy + Auyx)/(rho*(sigma**2))))
 	return 0.5*(-(Ax*Auy + Ay*Aux)/((rho*sigma)**2) + (Auxy + Auyx)/(rho*(sigma**2)))
 
 def strain_grid(Ncases, grid_points, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
