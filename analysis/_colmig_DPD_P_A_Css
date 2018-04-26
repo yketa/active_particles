@@ -79,36 +79,37 @@ def Averaging(var, CGfactors):
 def get_neighbours(point, neighbours_grid, cases_rcut, spacing):
 	# get neighbour list of point
 	index = (point//spacing + cases_rcut)%cases_rcut
-	neighbours = [] # neighbour list
-	for inc in [np.array([inc_x, inc_y]) for inc_x in [-1, 0, 1] for inc_y in [-1, 0, 1]]:
-		neighbours += neighbours_grid[tuple((index + inc + cases_rcut)%cases_rcut)]
+	sum_index = lambda ind, inc: tuple((ind + inc + cases_rcut)%cases_rcut)
+	neighbours = np.array(np.concatenate([neighbours_grid[sum_index(index, np.array([inc_x, inc_y]))] for inc_x in [-1, 0, 1] for inc_y in [-1, 0, 1]]), dtype=int) # neighbour list
 	return neighbours
 
 def strain_vorticity(point, time, dis_time, prep_frames, positions, unwrap_file, sigma, r_cut, neighbours_grid, cases_rcut, spacing):
 	# returns strain and vorticity at point point
 
-	pos = (positions - point + box_size/2)%box_size - box_size/2 # position at time time (with boundary conditions) with point as the centre of the frame
-
-	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
-	pos1 = getarray(unwrap_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
-	displacements = pos1 - pos0 # displacements of the particles between time and time + dis_time
-
 	wrcut = get_neighbours(point, neighbours_grid, cases_rcut, spacing) # particles indexes within r_cut of point
-	if len(wrcut) == 0: # there is no particles within r_cut of point
+	Nwrcut = len(wrcut) # number of neighbouring particles
+	if Nwrcut == 0: # there is no particles within r_cut of point
 		return 0, 0
 
-	pos_wrcut = np.array(operator.itemgetter(*wrcut)(pos), ndmin=2)
-	dis_wrcut = np.array(operator.itemgetter(*wrcut)(displacements), ndmin=2)
+	pos_wrcut = (np.array(operator.itemgetter(*wrcut)(positions), ndmin=2) - point + box_size/2)%box_size - box_size/2 # position at time time (with boundary conditions) with point as the centre of the frame
+	pos0_wrcut = np.reshape(list(map(lambda particle: list(map(lambda axis: getval(unwrap_file, N, time, particle, axis), range(2))), wrcut)), (Nwrcut, 2)) # positions at time time (without periodic boundary conditions)
+	pos1_wrcut = np.reshape(list(map(lambda particle: list(map(lambda axis: getval(unwrap_file, N, time + dis_time, particle, axis), range(2))), wrcut)), (Nwrcut, 2)) # positions at time time + dis_time (without periodic boundary conditions)
+	dis_wrcut = pos1_wrcut - pos0_wrcut # displacements of the particles between time and time + dis_time
 
 	CGfactors = CGfp(pos_wrcut, sigma, r_cut) # coarse graining factors
-	rho, Ax, Auy, Ay, Aux, Auxy, Auyx = tuple(map(lambda var: Averaging(var, CGfactors), [np.full(len(pos_wrcut), fill_value=1), pos_wrcut[:, 0], dis_wrcut[:, 1], pos_wrcut[:, 1], dis_wrcut[:, 0], dis_wrcut[:, 0]*pos_wrcut[:, 1], dis_wrcut[:, 1]*pos_wrcut[:, 0]]))
-
-	if rho != 0:
+	rho = Averaging(np.full(len(pos_wrcut), fill_value=1), CGfactors) # averaged density
+	if rho == 0:
+		return 0, 0
+	else:
+		# terms
+		tAx, tAy, tAux, tAuy = tuple(CGfactors*np.array([pos_wrcut[:, 0], pos_wrcut[:, 1], dis_wrcut[:, 0], dis_wrcut[:, 1]]))
+		tAuxy, tAuyx = tuple(np.array([tAux, tAuy])*np.array([pos_wrcut[:, 1], pos_wrcut[:, 0]]))
+		# averages
+		Ax, Ay, Aux, Auy, Auxy, Auyx = tuple(map(np.sum, [tAx, tAy, tAux, tAuy, tAuxy, tAuyx]))
+		# strain and vorticity
 		strain = 0.5*((Ay*Aux + Ax*Auy)/((rho*sigma)**2) - (Auxy + Auyx)/(rho*(sigma**2)))
 		vorticity = (Ax*Auy - Ay*Aux)/((rho*sigma)**2) - (Auyx - Auxy)/(rho*(sigma**2))
 		return strain, vorticity
-	else:
-		return 0, 0
 
 def add_to_neighbours_grid(position, neighbours_grid, index, cases_rcut, spacing):
 	# add index to neighbours_grid box corresponding to position of particle
@@ -119,11 +120,13 @@ def strain_vorticity_grid(Ncases, grid_points, time, dis_time, prep_frames, w_tr
 	# returns strain and vorticity Ncases x Ncases grid associated to the box
 
 	# neighbours grid
+	startTime0 = datetime.now()
 	cases_rcut = int(box_size/r_cut) # number of boxes in one direction for the neighbours grid
 	spacing = box_size/cases_rcut # spacing between two consecutive boxes
 	neighbours_grid = {(x, y): [] for x in range(cases_rcut) for y in range(cases_rcut)} # neighbours grid
 	positions = w_traj[int(prep_frames + time + (dis_time if 'ENDPOINT' in os.environ and eval(os.environ['ENDPOINT']) else 0))].particles.position[:, :2]
 	add_neighbours = list(map(lambda index: add_to_neighbours_grid(positions[index], neighbours_grid, index, cases_rcut, spacing), range(N)))
+	print("Neighbour grid computation time (time = %e): %s" % (time, datetime.now() - startTime0))
 
 	# strain and vorticity grid calculation
 	Sgrid, Cgrid = tuple(np.transpose(list(map(lambda point: strain_vorticity(point, time, dis_time, prep_frames, positions, unwrap_file, sigma, r_cut, neighbours_grid, cases_rcut, spacing), grid_points))))
