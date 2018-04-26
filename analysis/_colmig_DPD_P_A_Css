@@ -153,7 +153,7 @@ Css2D, Ccc2D = tuple(list(map(lambda Grid: (lambda C, Norm: C/Norm)(*tuple(np.su
 
 filename = lambda var: data_dir + str('/' + var + ('b' if not('ENDPOINT' in os.environ and eval(os.environ['ENDPOINT'])) else '') + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s_RCUT%s_SIGM%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases, r_cut, sigma]))) # filename
 
-with open(filename('test_Css'), 'wb') as Css_dump_file, open(filename('test_Ccc'), 'wb') as Ccc_dump_file:
+with open(filename('Css'), 'wb') as Css_dump_file, open(filename('Ccc'), 'wb') as Ccc_dump_file:
 	pickle.dump([Sgrid, Css2D], Css_dump_file)
 	pickle.dump([Cgrid, Ccc2D], Ccc_dump_file)
 
