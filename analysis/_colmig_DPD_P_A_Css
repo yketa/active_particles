@@ -49,7 +49,7 @@ r_max = box_size/2 if r_max < 0 else r_max
 prep_frames = math.ceil(prep_steps/period_dump) # number of preparation frames
 
 Ncases = int(eval(os.environ['N_CASES'])) if 'N_CASES' in os.environ else int(np.sqrt(N)) + (1 - int(np.sqrt(N))%2) # number of cases in each direction to compute the strain and vorticity grid
-grid_points = np.array([(x, y) for x in np.linspace(- box_size/2, box_size/2, Ncases, endpoint=False) for y in np.linspace(- box_size/2, box_size/2, Ncases, endpoint=False)])
+grid_points = np.array([(x, y) for x in np.linspace(- box_size*(1 - 1/Ncases)/2, box_size*(1 - 1/Ncases)/2, Ncases, endpoint=True) for y in np.linspace(- box_size*(1 - 1/Ncases)/2, box_size*(1 - 1/Ncases)/2, Ncases, endpoint=True)])
 
 Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
 init_frame = int(Nentries/2) if init_frame < 0 else init_frame # initial frame
@@ -59,48 +59,74 @@ dis_time = Nframes + dis_time if dis_time <= 0 else dis_time # length of the int
 
 times = np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.linspace(init_frame, Nentries - dis_time - 1, int_max))))) # frames at which to calculate the correlation displacement
 
-def CGf(r, sigma):
+def CGf(r, sigma, r_cut):
 	# coarse graining function
-	Dg = 2*np.pi*(sigma**2)*(1 - np.exp(-0.5*((r_cut/sigma)**2))) # normalisation factor
-	return np.exp(-0.5*((r/sigma)**2))/Dg
+	if r < r_cut:
+		return 0
+	else:
+		Dg = 2*np.pi*(sigma**2)*(1 - np.exp(-0.5*((r_cut/sigma)**2))) # normalisation factor
+		return np.exp(-0.5*((r/sigma)**2))/Dg
 
-def CGfp(positions, sigma):
+def CGfp(positions, sigma, r_cut):
 	# coarse graining factors
-	return np.array(list(map(lambda position: CGf(np.sqrt(np.sum(position**2)), sigma), positions)))
+	return np.array(list(map(lambda position: CGf(np.sqrt(np.sum(position**2)), sigma, r_cut), positions)))
 
 def Averaging(var, CGfactors):
 	# averages the particle dependent variable var with coarse
 	# graining factors
 	return np.sum(var*CGfactors)
 
-def strain_vorticity(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
+def get_neighbours(point, neighbours_grid, cases_rcut, spacing):
+	# get neighbour list of point
+	index = (point//spacing + cases_rcut)%cases_rcut
+	neighbours = [] # neighbour list
+	for inc in [np.array([inc_x, inc_y]) for inc_x in [-1, 0, 1] for inc_y in [-1, 0, 1]]:
+		neighbours += neighbours_grid[tuple((index + inc + cases_rcut)%cases_rcut)]
+	return neighbours
+
+def strain_vorticity(point, time, dis_time, prep_frames, positions, unwrap_file, sigma, r_cut, neighbours_grid, cases_rcut, spacing):
 	# returns strain and vorticity at point point
 
-	positions = (w_traj[int(prep_frames + time + (dis_time if 'ENDPOINT' in os.environ and eval(os.environ['ENDPOINT']) else 0))].particles.position[:, :2] - point + box_size/2)%box_size - box_size/2 # position at time time (with boundary conditions) with point as the centre of the frame
+	pos = (positions - point + box_size/2)%box_size - box_size/2 # position at time time (with boundary conditions) with point as the centre of the frame
 
 	pos0 = getarray(unwrap_file, N, time) # positions at time time (without periodic boundary conditions)
 	pos1 = getarray(unwrap_file, N, time + dis_time) # position at time time + dis_time (without periodic boundary conditions)
 	displacements = pos1 - pos0 # displacements of the particles between time and time + dis_time
 
-	wrcut = np.where(np.sqrt(np.sum(positions**2, axis=1)) < r_cut)[0] # particles indexes within r_cut of point
-	if wrcut.size == 0: # there is no particles within r_cut of point
+	wrcut = get_neighbours(point, neighbours_grid, cases_rcut, spacing) # particles indexes within r_cut of point
+	if len(wrcut) == 0: # there is no particles within r_cut of point
 		return 0, 0
 
-	pos_wrcut = np.array(operator.itemgetter(*wrcut)(positions), ndmin=2)
+	pos_wrcut = np.array(operator.itemgetter(*wrcut)(pos), ndmin=2)
 	dis_wrcut = np.array(operator.itemgetter(*wrcut)(displacements), ndmin=2)
 
-	CGfactors = CGfp(pos_wrcut, sigma) # coarse graining factors
+	CGfactors = CGfp(pos_wrcut, sigma, r_cut) # coarse graining factors
 	rho, Ax, Auy, Ay, Aux, Auxy, Auyx = tuple(map(lambda var: Averaging(var, CGfactors), [np.full(len(pos_wrcut), fill_value=1), pos_wrcut[:, 0], dis_wrcut[:, 1], pos_wrcut[:, 1], dis_wrcut[:, 0], dis_wrcut[:, 0]*pos_wrcut[:, 1], dis_wrcut[:, 1]*pos_wrcut[:, 0]]))
 
-	strain = 0.5*((Ay*Aux + Ax*Auy)/((rho*sigma)**2) - (Auxy + Auyx)/(rho*(sigma**2)))
-	vorticity = (Ax*Auy - Ay*Aux)/((rho*sigma)**2) - (Auyx - Auxy)/(rho*(sigma**2))
+	if rho != 0:
+		strain = 0.5*((Ay*Aux + Ax*Auy)/((rho*sigma)**2) - (Auxy + Auyx)/(rho*(sigma**2)))
+		vorticity = (Ax*Auy - Ay*Aux)/((rho*sigma)**2) - (Auyx - Auxy)/(rho*(sigma**2))
+		return strain, vorticity
+	else:
+		return 0, 0
 
-	return strain, vorticity
+def add_to_neighbours_grid(position, neighbours_grid, index, cases_rcut, spacing):
+	# add index to neighbours_grid box corresponding to position of particle
+	neighbours_grid[tuple((position//spacing + cases_rcut)%cases_rcut)] += [index]
+	return 0
 
 def strain_vorticity_grid(Ncases, grid_points, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut):
 	# returns strain and vorticity Ncases x Ncases grid associated to the box
 
-	Sgrid, Cgrid = tuple(np.transpose(list(map(lambda point: strain_vorticity(point, time, dis_time, prep_frames, w_traj, unwrap_file, sigma, r_cut), grid_points))))
+	# neighbours grid
+	cases_rcut = int(box_size/r_cut) # number of boxes in one direction for the neighbours grid
+	spacing = box_size/cases_rcut # spacing between two consecutive boxes
+	neighbours_grid = {(x, y): [] for x in range(cases_rcut) for y in range(cases_rcut)} # neighbours grid
+	positions = w_traj[int(prep_frames + time + (dis_time if 'ENDPOINT' in os.environ and eval(os.environ['ENDPOINT']) else 0))].particles.position[:, :2]
+	add_neighbours = list(map(lambda index: add_to_neighbours_grid(positions[index], neighbours_grid, index, cases_rcut, spacing), range(N)))
+
+	# strain and vorticity grid calculation
+	Sgrid, Cgrid = tuple(np.transpose(list(map(lambda point: strain_vorticity(point, time, dis_time, prep_frames, positions, unwrap_file, sigma, r_cut, neighbours_grid, cases_rcut, spacing), grid_points))))
 
 	correct_grid = lambda Grid: np.transpose(np.reshape(Grid, (Ncases, Ncases)))[::-1] # get grid in the correct directions
 	return correct_grid(Sgrid), correct_grid(Cgrid)
@@ -124,7 +150,7 @@ Css2D, Ccc2D = tuple(list(map(lambda Grid: (lambda C, Norm: C/Norm)(*tuple(np.su
 
 filename = lambda var: data_dir + str('/' + var + ('b' if not('ENDPOINT' in os.environ and eval(os.environ['ENDPOINT'])) else '') + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s_RCUT%s_SIGM%s.pickle' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases, r_cut, sigma]))) # filename
 
-with open(filename('Css'), 'wb') as Css_dump_file, open(filename('Ccc'), 'wb') as Ccc_dump_file:
+with open(filename('test_Css'), 'wb') as Css_dump_file, open(filename('test_Ccc'), 'wb') as Ccc_dump_file:
 	pickle.dump([Sgrid, Css2D], Css_dump_file)
 	pickle.dump([Cgrid, Ccc2D], Ccc_dump_file)
 
