@@ -20,6 +20,8 @@ int_max = int(eval(os.environ['INTERVAL_MAXIMUM'])) if 'INTERVAL_MAXIMUM' in os.
 
 r_max = float(eval(os.environ['R_MAX'])) if 'R_MAX' in os.environ else 20 # half size of the box showed for 2D correlation
 
+points_theta = int(eval(os.environ['POINTS_THETA'])) if 'POINTS_THETA' in os.environ else 100 # number of points for the polar angular coordinate
+
 with open(parameters_file, 'rb') as param_file:
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
 
@@ -40,13 +42,13 @@ dis_time = Nframes + dis_time if dis_time <= 0 else dis_time # length of the int
 
 filename = lambda var: data_dir + str('/' + var + ('b' if not('ENDPOINT' in os.environ and eval(os.environ['ENDPOINT'])) else '') + '_D%s_V%s_R%s_N%s_I%s_T%s_M%s_C%s_RCUT%s_SIGM%s' % tuple(map(float_to_letters, [density, vzero, dr, N, init_frame, dis_time, int_max, Ncases, r_cut, sigma]))) # filename
 
-with open(filename('Css') + '.pickle', 'rb') as Css_dump_file:
+with open((filename('Css') + '.pickle') if not('FILENAME' in os.environ) else os.environ['FILENAME'], 'rb') as Css_dump_file:
 	Css2D = pickle.load(Css_dump_file)[1]
 
 # PLOT
 
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button, RadioButtons
+from matplotlib.widgets import Slider
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
@@ -99,8 +101,9 @@ axs[0].add_artist(circle)
 
 # Css(theta)
 
-theta = np.linspace(0, 2*np.pi, 100)
+theta = np.linspace(0, 2*np.pi, points_theta)
 C = list(map(lambda ang: value(r_max/2, ang), theta))
+axs[0].set_title(r'$C^4_4(r = %.3e) = %.3e$' % (r_max/2, np.trapz(np.array(C)*np.cos(4*theta), theta)/np.pi))
 l, = axs[1].plot(theta, C, lw=2, color='red')
 
 axs[1].axhline(y=0, linestyle='--', color='black')
@@ -117,8 +120,10 @@ sr = Slider(cax1, r'$r$', 0, r_max, valinit=r_max/2)
 
 def update(val):
     r = sr.val
-    l.set_ydata(list(map(lambda ang: value(r, ang), theta)))
+    C = list(map(lambda ang: value(r, ang), theta))
+    l.set_ydata(C)
     circle.set_radius(r)
+    axs[0].set_title(r'$C^4_4(r = %.3e) = %.3e$' % (r, np.trapz(np.array(C)*np.cos(4*theta), theta)/np.pi))
     fig.canvas.draw_idle()
 sr.on_changed(update)
 
