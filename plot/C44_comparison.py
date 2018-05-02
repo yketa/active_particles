@@ -6,7 +6,8 @@ import matplotlib.cm as cmx
 import matplotlib.colors as colors
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider, RadioButtons
+from matplotlib.gridspec import GridSpec
 
 import numpy as np
 import os
@@ -18,6 +19,12 @@ from exponents import *
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 10
 marker_size = int(eval(os.environ['MARKER_SIZE'])) if 'MARKER_SIZE' in os.environ else 20
 mpl.rcParams.update({'font.size': font_size, 'lines.markersize': marker_size})
+
+ratio_legend = int(eval(os.environ['RATIO_LEGEND'])) if 'RATIO_LEGEND' in os.environ else 7 # width ratio between legend and figure
+ncol_legend = int(eval(os.environ['NCOL_LEGEND'])) if 'NCOL_LEGEND' in os.environ else 1 # number of columns for the legend
+
+wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.2
+hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
 
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
 
@@ -82,12 +89,16 @@ for file in files:
 
 # PLOT
 
-class LineBuilder: # adjustable powerlaw line
-	def __init__(self, line, slope, x0, y0):
+law_func = lambda law, slope, x, y, X: {'Powerlaw': y/(x**slope)*(X**slope), 'Exponential': y*np.exp(slope*(X - x))}[law] # function corresponding to chosen law ('PWL' = powerlaw, 'EXP' = exponential)
+
+class LineBuilder: # adjustable line
+	def __init__(self, line, slope, x0, y0, leg):
 		self.line = line
 		self.slope = slope # slope of the line
 		self.x0 = x0 # x coordinate through which line passes
 		self.y0 = y0 # y coordinate through which line passes
+		self.leg = leg # legend axis
+		self.law = 'Powerlaw' # law of the line
 		self.xs = np.array(line.get_xdata())
 		self.ys = np.array(line.get_ydata())
 		self.cid = line.figure.canvas.mpl_connect('button_press_event', self)
@@ -95,40 +106,59 @@ class LineBuilder: # adjustable powerlaw line
 		if event.inaxes!=self.line.axes: return
 		self.x0 = event.xdata
 		self.y0 = event.ydata
-		self.ys = self.y0/(self.x0**self.slope)*(self.xs**self.slope) # line passes through clicked point
+		self.draw()
+	def draw(self):
+		self.ys = law_func(self.law, self.slope, self.x0, self.y0, self.xs) # line passes through clicked point according to law
 		self.line.set_data(self.xs, self.ys)
+		self.leg.legend(handles=legend0 + [legend_slope(self.slope, self.law)], loc='center', ncol=ncol_legend) # legend according to law
+		ax.set_xscale({'Exponential': 'linear', 'Powerlaw': 'log'}[adjustable_line.law]) # change scale of the graph to always have a straight line
 		self.line.figure.canvas.draw()
 
-fig, ax = plt.subplots()
+fig = plt.figure()
 fig.set_size_inches(30, 30)
+fig.subplots_adjust(wspace=wspace)
+fig.subplots_adjust(hspace=hspace)
+
+gs = GridSpec(1, 2, width_ratios=[1, 1/ratio_legend])
+ax = plt.subplot(gs[0])
+leg = plt.subplot(gs[1])
+leg.axis('off')
 
 ax.set_xlabel(r'$r$')
 ax.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$' + ' ' + r'$C_{\epsilon_{xy}\epsilon_{xy}}(r, \theta)$' + ' ' + r'$\cos4\theta$')
 ax.set_xlim([r_min, r_max])
 ax.set_ylim([y_min, y_max])
+ax.set_yscale('log')
+ax.set_xscale('log')
 
 for file in files:
 	ax.loglog(X, C44[file], color=colors[dt(file)], label=r'$\Delta t = %.0e$' % (period_dump*time_step*dt(file)))
 
 legend0 = list(map(lambda t: Line2D([0], [0], color=colors[t], label=r'$\Delta t = %.2e$' % (t*time_step*period_dump)), dt_list))
 legend0 += [Line2D([0], [0], lw=0, label='')]
-legend_slope = lambda sl: Line2D([0], [0], color='black', linestyle='--', label=r'$C_4^4(r) \propto r^{%.2e}$' % sl) # legend for adjustable powerlaw line
-ax.legend(handles=legend0 + [legend_slope(slope0)])
+legend_slope = lambda sl, law: Line2D([0], [0], color='black', linestyle='--', label=r'$C_4^4(r) \propto$' + {'Powerlaw': r'$r^{%.2e}$' % sl, 'Exponential': r'$e^{%.2er}$' % sl}[law]) # legend for adjustable powerlaw line
+leg.legend(handles=legend0 + [legend_slope(slope0, 'Powerlaw')], loc='center', ncol=ncol_legend)
 
-line, = ax.loglog(X, y0/(x0**slope0)*(X**slope0), color='black', linestyle='--') # adjustable powerlaw line
-adjustable_line = LineBuilder(line, slope0, x0, y0)
+line, = ax.plot(X, y0/(x0**slope0)*(X**slope0), color='black', linestyle='--') # adjustable powerlaw line
+adjustable_line = LineBuilder(line, slope0, x0, y0, leg)
 
-divider = make_axes_locatable(ax)
-cax = divider.append_axes("bottom", size="5%", pad=0.6)
+divider_ax = make_axes_locatable(ax)
+cax = divider_ax.append_axes("bottom", size="5%", pad=0.6)
 sr = Slider(cax, 'slope', slope_min, slope_max, valinit=slope0) # slider
-def update(val):
+def update_slope(val):
 	# change line slope on slider update
 	adjustable_line.slope = sr.val # new slope
-	adjustable_line.ys = adjustable_line.y0/(adjustable_line.x0**adjustable_line.slope)*(adjustable_line.xs**adjustable_line.slope) # y values of adjustable line
-	adjustable_line.line.set_data(adjustable_line.xs, adjustable_line.ys)
-	adjustable_line.line.figure.canvas.draw()
-	ax.legend(handles=legend0 + [legend_slope(adjustable_line.slope)])
-sr.on_changed(update)
+	adjustable_line.draw()
+sr.on_changed(update_slope)
+
+divider_leg = make_axes_locatable(leg)
+cleg = divider_leg.append_axes("bottom", size="20%", pad=0.6)
+radio = RadioButtons(cleg, ('Powerlaw', 'Exponential'), active=0) # radio button
+def update_law(law):
+	# change fitting law
+	adjustable_line.law = law # new law
+	adjustable_line.draw()
+radio.on_clicked(update_law)
 
 title = r'$N=%.2e, \phi=%1.2f, $' % (N, density)
 title += r'$\tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (vzero, dr) if not('TEMPERATURE' in os.environ and eval(os.environ['TEMPERATURE'])) else r'$kT=%.2e, k=%.2e$' % (kT, k)
