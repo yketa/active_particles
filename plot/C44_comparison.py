@@ -8,6 +8,7 @@ from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import Slider, RadioButtons
 from matplotlib.gridspec import GridSpec
+import matplotlib.patches as mpatches
 
 import numpy as np
 import os
@@ -134,7 +135,12 @@ ax.set_xscale('log')
 for file in files:
 	ax.loglog(X, C44[file], color=colors[dt(file)], label=r'$\Delta t = %.0e$' % (period_dump*time_step*dt(file)))
 
-legend0 = list(map(lambda t: Line2D([0], [0], color=colors[t], label=r'$\Delta t = %.2e$' % (t*time_step*period_dump)), dt_list))
+if not('TEMPERATURE' in os.environ and eval(os.environ['TEMPERATURE'])):
+	legend0 = [mpatches.Patch(color='none', label=r'$nD_0 = \frac{Nv_0^2}{2\nu_r L^2}$')]
+	legend0 += list(map(lambda t: Line2D([0], [0], color=colors[t], label=r'$nD_0\Delta t = %.2e$' % ((t*time_step*period_dump*N*(vzero**2))/(2*dr*(box_size**2)))), dt_list))
+else:
+	legend0 = [mpatches.Patch(color='none', label=r'$nD_0 = \frac{2 k_B T N}{\lambda a L^2}$')]
+	legend0 += list(map(lambda t: Line2D([0], [0], color=colors[t], label=r'$nD_0\Delta t = %.2e$' % ((2*kT*N*t*time_step*period_dump)/(damp_bro*a*(box_size**2)))), dt_list))
 legend0 += [Line2D([0], [0], lw=0, label='')]
 legend_slope = lambda sl, law: Line2D([0], [0], color='black', linestyle='--', label=r'$C_4^4(r) \propto$' + {'Powerlaw': r'$r^{%.2e}$' % sl, 'Exponential': r'$e^{%.2er}$' % sl}[law]) # legend for adjustable powerlaw line
 leg.legend(handles=legend0 + [legend_slope(slope0, 'Powerlaw')], loc='center', ncol=ncol_legend)
