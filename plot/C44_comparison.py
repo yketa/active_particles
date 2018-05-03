@@ -65,6 +65,7 @@ points_theta = int(eval(os.environ['POINTS_THETA'])) if 'POINTS_THETA' in os.env
 
 with open(data_dir + '/param.pickle', 'rb') as param_file:
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
+av_p_sep = box_size/np.sqrt(N) # average particle separation
 
 # C44
 
@@ -76,7 +77,7 @@ for file in files:
 sep = box_size/Ncases # distance corresponding to a grid box length
 def value(r, ang, file):
     # return Css[t] value at (r, ang) in polar coordinates
-    point = r*np.array([np.cos(ang), np.sin(ang)])
+    point = (r*av_p_sep)*np.array([np.cos(ang), np.sin(ang)])
     index = (point//sep + Ncases)%Ncases
     return Css[file][tuple(list(map(int, index)))]
 
@@ -125,7 +126,7 @@ ax = plt.subplot(gs[0])
 leg = plt.subplot(gs[1])
 leg.axis('off')
 
-ax.set_xlabel(r'$r$')
+ax.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
 ax.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$' + ' ' + r'$C_{\epsilon_{xy}\epsilon_{xy}}(r, \theta)$' + ' ' + r'$\cos4\theta$')
 ax.set_xlim([r_min, r_max])
 ax.set_ylim([y_min, y_max])
