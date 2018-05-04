@@ -1,7 +1,6 @@
 #! /bin/bash
 
 export N=${NUMBER-1e5}
-export N_STEPS=${N_STEPS-1e4}
 export PERIOD_DUMP=${PERIOD_DUMP-1e2}
 export TIME_STEP=${TIME_STEP-1e-2}
 

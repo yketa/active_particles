@@ -50,7 +50,6 @@ dr = float(eval(os.environ['ROTATION_DIFFUSION']))*(mu*k) if 'ROTATION_DIFFUSION
 damp_bro = float(eval(os.environ['DAMPING_BROWNIAN'])) if 'DAMPING_BROWNIAN' in os.environ else 1 # damping for the Brownian dynamics
 
 time_step = float(eval(os.environ['TIME_STEP'])) if 'TIME_STEP' in os.environ else 1e-2 # integration time step
-N_steps = int(eval(os.environ['N_STEPS'])) if 'N_STEPS' in os.environ else int(1e4) # number of integration steps
 
 period_dump = int(eval(os.environ['PERIOD_DUMP'])) if 'PERIOD_DUMP' in os.environ else 100 # period of dumping to gsd file
 
