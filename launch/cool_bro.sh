@@ -11,7 +11,7 @@ export PREPARATION_TIME=${PREPARATION_TIME-10}
 export COOLING_RATE=${COOLING_RATE-1e-2}
 
 . /home/yketa/exponents.sh # exporting letters expressions and float conversion functions
-DATA=D$(float_to_letters $DENSITY)_K0$(float_to_letters $TEMPERATURE_INITIAL)_K1$(float_to_letters $TEMPERATURE_FINAL)_CR$(float_to_letters $COOLING_RATE)_N$(float_to_letters $N) # name of the data
+DATA=D$(float_to_letters $DENSITY)_K0$(float_to_letters $TEMPERATURE_INITIAL)_K1$(float_to_letters $TEMPERATURE_FINAL)_PT$(float_to_letters $PREPARATION_TIME)_CR$(float_to_letters $COOLING_RATE)_N$(float_to_letters $N) # name of the data
 sim_name=${DATA}_L$(float_to_letters ${OVERWRITE-$(ls -d /home/yketa/hoomd/colmig_DPD_P_A/data/*/ | grep $DATA | wc -l)})
 
 export DATA_DIRECTORY=/home/yketa/hoomd/colmig_DPD_P_A/data/${sim_name}
