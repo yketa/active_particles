@@ -55,6 +55,29 @@ import matplotlib.cm as cmx
 import matplotlib as mpl
 cmap = plt.cm.jet
 
+class AdjustablePlot: # adjustable circle
+	def __init__(self, circle, radius, line, slider):
+		self.circle = circle
+		self.radius = radius # radius of the circle
+		self.line = line
+		self.slider = slider # slider which also adjusts radius
+		self.cid = line.figure.canvas.mpl_connect('button_press_event', self)
+	def __call__(self, event):
+		if event.inaxes!=self.circle.axes: return
+		self.radius = np.sqrt(event.xdata**2 + event.ydata**2)
+		self.slider.set_val(self.radius)
+		self.draw()
+	def draw(self):
+		# circle
+		self.circle.set_radius(self.radius) # adjusting circle radius
+		self.circle.figure.canvas.draw()
+		# line
+		C = list(map(lambda ang: value(self.radius, ang), theta))
+		self.line.set_ydata(C)
+		self.line.figure.canvas.draw()
+		# C44
+		axs[0].set_title(r'$C^4_4(r = %.3e) = %.3e$' % (self.radius, np.trapz(np.array(C)*np.cos(4*theta), theta)/np.pi))
+
 font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 10
 mpl.rcParams.update({'font.size': font_size})
 
@@ -118,13 +141,11 @@ divider1 = make_axes_locatable(axs[1])
 cax1 = divider1.append_axes("bottom", size="5%", pad=0.5)
 sr = Slider(cax1, r'$r$', 0, r_max, valinit=r_max/2)
 
+plots = AdjustablePlot(circle, circle.get_radius(), l, sr)
+
 def update(val):
-    r = sr.val
-    C = list(map(lambda ang: value(r, ang), theta))
-    l.set_ydata(C)
-    circle.set_radius(r)
-    axs[0].set_title(r'$C^4_4(r = %.3e) = %.3e$' % (r, np.trapz(np.array(C)*np.cos(4*theta), theta)/np.pi))
-    fig.canvas.draw_idle()
+    plots.radius = sr.val
+    plots.draw()
 sr.on_changed(update)
 
 plt.show()
