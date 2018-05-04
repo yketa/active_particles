@@ -121,7 +121,7 @@ while not(fire.has_converged()):
 # PARAMETERS FILE
 
 with open(name_par, 'wb') as par_file: # parameters saving file
-	pickle.dump([N, a, pdi, N_sizes, density, box_size, kT0, kT1, prep_time, cool_rate, mu, k, vzero, dr, damp_bro, time_step, N_steps, period_dump, prep_steps], par_file)
+	pickle.dump([N, a, pdi, N_sizes, density, box_size, kT0, kT1, prep_time, cool_rate, mu, k, vzero, dr, damp_bro, time_step, period_dump, prep_steps], par_file)
 
 # INTEGRATION MODE
 
