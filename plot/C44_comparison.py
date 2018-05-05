@@ -28,6 +28,7 @@ wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.2
 hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
 
 data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
+os.chdir(data_dir) # change working directory to data directory
 
 r_cut = float(eval(os.environ['R_CUT'])) if 'R_CUT' in os.environ else 2 # cut-off radius for Css calculation
 sigma = float(eval(os.environ['SIGMA'])) if 'SIGMA' in os.environ else 2 # gaussian standard deviation for Css calculation
@@ -63,7 +64,7 @@ x0 = np.exp(np.mean([np.log(r_min), np.log(r_max)])) # x coordinate in the middl
 points_x = int(eval(os.environ['POINTS_THETA'])) if 'POINTS_THETA' in os.environ else 100 # number of radii to evaluate
 points_theta = int(eval(os.environ['POINTS_THETA'])) if 'POINTS_THETA' in os.environ else 100 # number of angles to evaluate
 
-with open(data_dir + '/param.pickle', 'rb') as param_file:
+with open('param.pickle', 'rb') as param_file:
 	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
 av_p_sep = box_size/np.sqrt(N) # average particle separation
 
@@ -137,10 +138,10 @@ for file in files:
 	ax.loglog(X, C44[file], color=colors[dt(file)], label=r'$\Delta t = %.0e$' % (period_dump*time_step*dt(file)))
 
 if not('TEMPERATURE' in os.environ and eval(os.environ['TEMPERATURE'])):
-	legend0 = [mpatches.Patch(color='none', label=r'$nD_0 = \frac{Nv_0^2}{2\nu_r L^2}$')]
+	legend0 = [mpatches.Patch(color='none', label=r'$nD_0 = \frac{Nv_0^2}{2\nu_r L^2} = %.2e$' % ((N*(vzero**2))/(2*dr*(box_size**2))))]
 	legend0 += list(map(lambda t: Line2D([0], [0], color=colors[t], label=r'$nD_0\Delta t = %.2e$' % ((t*time_step*period_dump*N*(vzero**2))/(2*dr*(box_size**2)))), dt_list))
 else:
-	legend0 = [mpatches.Patch(color='none', label=r'$nD_0 = \frac{2 k_B T N}{\lambda a L^2}$')]
+	legend0 = [mpatches.Patch(color='none', label=r'$nD_0 = \frac{2 k_B T N}{\lambda a L^2} = %.2e$' % ((2*kT*N)/(damp_bro*a*(box_size**2))))]
 	legend0 += list(map(lambda t: Line2D([0], [0], color=colors[t], label=r'$nD_0\Delta t = %.2e$' % ((2*kT*N*t*time_step*period_dump)/(damp_bro*a*(box_size**2)))), dt_list))
 legend0 += [Line2D([0], [0], lw=0, label='')]
 legend_slope = lambda sl, law: Line2D([0], [0], color='black', linestyle='--', label=r'$C_4^4(r) \propto$' + {'Powerlaw': r'$r^{%.2e}$' % sl, 'Exponential': r'$e^{%.2er}$' % sl}[law]) # legend for adjustable powerlaw line
