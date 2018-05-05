@@ -1,7 +1,5 @@
 #! /home/yketa/miniconda3/bin/python3.6
 
-# ALGORITHM BASED ON FILY, HENKES AND MARCHETTI, SOFT MATTER, 2014, 10, 2132
-
 import os
 
 import subprocess
@@ -22,6 +20,7 @@ data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else '
 call = subprocess.call(['mkdir', '-p', data_dir]) # creation of the simulation data directory if it does not exist
 
 name_par = data_dir + '/' + os.environ['NAME_PAR'] if 'NAME_PAR' in os.environ else data_dir + '/param.pickle' # name of the simulation parameters saving file
+name_par_cool = data_dir + '/' + os.environ['NAME_PAR_COOL'] if 'NAME_PAR_COOL' in os.environ else data_dir + '/param_cool.pickle' # name of the simulation parameters specific to cooling saving file
 
 name_log = data_dir + '/' + os.environ['NAME_LOG'] if 'NAME_LOG' in os.environ else data_dir + '/log-output.log' # name of the log output file
 name_trajectory = data_dir + '/' + os.environ['NAME_TRAJECTORY'] if 'NAME_TRAJECTORY' in os.environ else data_dir + '/trajectory' # name of the trajectory output files (.gsd and .data)
@@ -118,10 +117,13 @@ while not(fire.has_converged()):
 	hoomd.run(100) # run FIRE until it has converged
 	prep_steps += 100
 
-# PARAMETERS FILE
+# PARAMETERS FILES
 
 with open(name_par, 'wb') as par_file: # parameters saving file
-	pickle.dump([N, a, pdi, N_sizes, density, box_size, kT0, kT1, prep_time, cool_rate, mu, k, vzero, dr, damp_bro, time_step, period_dump, prep_steps], par_file)
+	pickle.dump([N, a, pdi, N_sizes, density, box_size, kT0, mu, k, vzero, dr, damp_bro, 0, time_step, int((abs(kT1 - kT0)/(cool_rate * time_step))), period_dump, prep_steps], par_file)
+
+with open(name_par_cool, 'wb') as par_cool_file: # parameters specific to cooling file
+	pickle.dump([kT1, prep_time, cool_rate], par_cool_file)
 
 # INTEGRATION MODE
 
