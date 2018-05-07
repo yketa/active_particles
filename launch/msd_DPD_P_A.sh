@@ -30,10 +30,7 @@ echo "INITIAL_FRAME: $INITIAL_FRAME"> $output_file
 
 sbatch --job-name=${MSD_PAR}_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:k80:1
-#SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/${MSD_PAR}_${DATA}.%j.out
-#SBATCH --ntasks-per-node 1
+$(OUTPUT=/home/yketa/hoomd/colmig_DPD_P_A/sub/out/${MSD_PAR}_${DATA}.%j.out /home/yketa/hoomd/colmig_DPD_P_A/sub/launch/header.sh)
 
 for INITIAL_FRAME in $INITIAL_FRAME; do
 	export INITIAL_FRAME=\$INITIAL_FRAME

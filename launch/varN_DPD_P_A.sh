@@ -34,11 +34,7 @@ output_file=${DATA_DIRECTORY}/out/${VARN_TIME}.out
 
 sbatch --job-name=${VARN_TIME}_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:k80:1
-#SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/${VARN_TIME}_${DATA}.%j.out
-#SBATCH --ntasks-per-node 1
+$(OUTPUT=/home/yketa/hoomd/colmig_DPD_P_A/sub/out/${VARN_TIME}_${DATA}.%j.out /home/yketa/hoomd/colmig_DPD_P_A/sub/launch/header.sh)
 
 /home/yketa/miniconda3/bin/python3.6 /home/yketa/hoomd/scripts/varN.py >> $output_file
 EOF
-

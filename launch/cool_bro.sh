@@ -21,10 +21,7 @@ output_file=/home/yketa/hoomd/colmig_DPD_P_A/out/${sim_name}.out
 
 sbatch --job-name=$sim_name ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:k80:1
-#SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/${sim_name}.%j.out
-#SBATCH --ntasks-per-node 1
+$(OUTPUT=/home/yketa/hoomd/colmig_DPD_P_A/sub/out/${sim_name}.%j.out /home/yketa/hoomd/colmig_DPD_P_A/sub/launch/header.sh)
 
 /home/yketa/miniconda3/bin/python3.6 /home/yketa/hoomd/scripts/cooling_brownian.py >> $output_file
 EOF

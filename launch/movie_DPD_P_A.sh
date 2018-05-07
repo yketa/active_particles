@@ -30,11 +30,7 @@ output_file=/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}/out/${MOV_PAR}.out
 
 sbatch --job-name=${MOV_PAR}_${DATA} <<EOF
 #!/bin/bash
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:k80:1
-#SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/${MOV_PAR}_${DATA}.%j.out
-#SBATCH --ntasks-per-node 1
+$(OUTPUT=/home/yketa/hoomd/colmig_DPD_P_A/sub/out/${MOV_PAR}_${DATA}.%j.out /home/yketa/hoomd/colmig_DPD_P_A/sub/launch/header.sh)
 
 /bin/bash /home/yketa/bin/_colmig_DPD_P_A_makemovie >> $output_file
 EOF
-

@@ -39,10 +39,7 @@ echo "TIME: $TIME" > $output_file
 
 sbatch --job-name=${CUU_TIME}_${DATA} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #!/bin/bash
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:k80:1
-#SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/${CUU_TIME}_${DATA}.%j.out
-#SBATCH --ntasks-per-node 1
+$(OUTPUT=/home/yketa/hoomd/colmig_DPD_P_A/sub/out/${CUU_TIME}_${DATA}.%j.out /home/yketa/hoomd/colmig_DPD_P_A/sub/launch/header.sh)
 
 for TIME in $TIME; do
 	export TIME=\$TIME

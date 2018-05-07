@@ -28,11 +28,7 @@ output_file=/home/yketa/hoomd/colmig_DPD_P_A/data/${DATA}/out/${FRA_PAR}.out
 
 sbatch --job-name=${FRA_PAR}_${DATA} <<EOF
 #!/bin/bash
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:k80:1
-#SBATCH --output /home/yketa/hoomd/colmig_DPD_P_A/sub/out/${FRA_PAR}_${DATA}.%j.out
-#SBATCH --ntasks-per-node 1
+$(OUTPUT=/home/yketa/hoomd/colmig_DPD_P_A/sub/out/${FRA_PAR}_${DATA}.%j.out /home/yketa/hoomd/colmig_DPD_P_A/sub/launch/header.sh)
 
 /home/yketa/miniconda3/bin/python3.6 /home/yketa/bin/_colmig_DPD_P_A_frame >> $output_file
 EOF
-
