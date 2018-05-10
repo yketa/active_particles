@@ -1,0 +1,3 @@
+[submodule "mpl_fitting_line"]
+	path = mpl_fitting_line
+	url = git@github.com:yketa/mpl_fitting_line.git
