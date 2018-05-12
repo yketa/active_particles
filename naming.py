@@ -174,5 +174,5 @@ def endpoint():
     True.
     """
 
-    if get_env('ENDPOINT', default=False, type=bool): return ''
+    if get_env('ENDPOINT', default=False, vartype=bool): return ''
     return 'b'
