@@ -3,7 +3,7 @@ Module init provides functions useful when initialising simulations or
 analysis.
 """
 
-from os import getenv as getOSenv
+from os import environ as environment
 
 def get_env(var_name, default=None, vartype=str):
     """
@@ -25,10 +25,10 @@ def get_env(var_name, default=None, vartype=str):
     """
 
     try:
-        return vartype(getOSenv(var_name))
+        return vartype(environment[var_name])
     except ValueError:
         try:
-            return vartype(eval(getOSenv(var_name)))
+            return vartype(eval(environment[var_name]))
         except:
             return default
     except:
