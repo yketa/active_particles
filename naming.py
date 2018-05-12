@@ -136,7 +136,7 @@ class Css(__File):
             ('init_frame', '_I'), ('dt', '_T'), ('int_max', '_M'),
             ('Ncases', '_C'), ('r_cut', '_RCUT'), ('sigma', '_SIGM')
         ])                              # parameters and corresponding abbreviations (in order)
-        self.extension = '.p'           # file extension
+        self.extension = '.pickle'           # file extension
 
 class Ccc(Css):
     """
