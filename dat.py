@@ -81,9 +81,9 @@ class Dat:
 		"""
 
 		try:
-			inc_var = {'position':0, 'velocity':2*N}[variable]	# increment in bytes_per_element to accesss variable
-		except KeyError:										# if variable is not 'position' or 'velocity'
-			inc_var = 0											# consider variable as 'position'
+			inc_var = {'position':0, 'velocity':2*self.N}[variable]	# increment in bytes_per_element to accesss variable
+		except KeyError:											# if variable is not 'position' or 'velocity'
+			inc_var = 0												# consider variable as 'position'
 
 		self.file.seek(self.bytes_per_element*(
 			4*self.N*time + inc_var + 2*particle + axis))	# set file's current position according to frame, variable, number of particles, and axis
