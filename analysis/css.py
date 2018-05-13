@@ -348,7 +348,8 @@ def plot(Grid, Corr, var):
 	SscalarMap = cmx.ScalarMappable(norm=SvNorm, cmap=cmap)
 
 	ax[0].imshow(S2D, cmap=cmap, norm=SvNorm,
-		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
+		extent=[-parameters['box_size']/2, parameters['box_size']/2,
+			-parameters['box_size']/2, parameters['box_size']/2])
 
 	ax[0].set_xlabel(r'$x$')
 	ax[0].set_ylabel(r'$y$')
