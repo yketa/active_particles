@@ -173,7 +173,7 @@ class Dat:
 			Array of position at frame 'time'.
 		"""
 
-		self.variable(time, *particle, variable='position')
+		return self.variable(time, *particle, variable='position')
 
 	def velocity(self, time, *particle):
 		"""
@@ -198,4 +198,4 @@ class Dat:
 			Array of velocity at frame 'time'.
 		"""
 
-		self.variable(time, *particle, variable='velocity')
+		return self.variable(time, *particle, variable='velocity')
