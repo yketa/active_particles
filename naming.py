@@ -34,8 +34,9 @@ log_file = 'log-output.log'                     # simulation log output file
 wrapped_trajectory_file = 'trajectory.gsd'      # wrapped trajectory file (with periodic boundary conditions)
 unwrapped_trajectory_file = 'trajectory.dat'    # unwrapped trajectory file (without periodic boundary conditions)
 
-
 # FILES NAMING
+
+__image_extension = '.eps'  # default image extension
 
 class __File:
     """
@@ -136,7 +137,7 @@ class Css(__File):
             ('init_frame', '_I'), ('dt', '_T'), ('int_max', '_M'),
             ('Ncases', '_C'), ('r_cut', '_RCUT'), ('sigma', '_SIGM')
         ])                              # parameters and corresponding abbreviations (in order)
-        self.extension = '.pickle'           # file extension
+        self.extension = '.pickle'      # file extension
 
 class Ccc(Css):
     """

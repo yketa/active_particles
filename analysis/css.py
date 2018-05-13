@@ -4,7 +4,7 @@ their correlations.
 
 Files are saved according to active_particles.naming.Css (shear strain) and
 active_particles.naming.Ccc (displacement vorticity) standards. Data in these
-files can be plotted with active_particles.analysis.Css_plot.
+files can be plotted with active_particles.analysis.css_plot.
 
 Environment parameters
 ----------------------
@@ -21,15 +21,15 @@ UNWRAPPED_FILE : string
 	Unwrapped trajectory file. (.dat)
 	NOTE: .dat files defined with active_particles.dat
 	DEFAULT: DATA_DIRECTORY/active_particles.naming.unwrapped_trajectory_file
-TIME : int
-	Lag time for displacement.
-	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
-	number of simulation frames + TIME.
-	DEFAULT: -1
 INITIAL_FRAME : int
 	Frame to consider as initial.
 	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
 	the middle frame of the simulation.
+	DEFAULT: -1
+TIME : int
+	Lag time for displacement.
+	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
+	number of simulation frames - INITIAL_FRAME + TIME.
 	DEFAULT: -1
 INTERVAL_MAXIMUM : int
 	Maximum number of intervals of length dt considered in correlations
@@ -102,6 +102,16 @@ from operator import itemgetter
 from collections import OrderedDict
 
 from datetime import datetime
+
+import matplotlib as mpl
+if get_env('SHOW', default=False, vartype=bool):
+	mpl.use('Agg')	# avoids crash if launching without display
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.gridspec import GridSpec
+cmap = plt.cm.jet
 
 def define_variables():
 	"""
@@ -433,14 +443,6 @@ if __name__ == '__main__':	# executing as script
 	# PLOT
 
 	if get_env('SHOW', default=False, vartype=bool):
-
-		import matplotlib as mpl
-		import matplotlib.pyplot as plt
-		import matplotlib.colors as colors
-		import matplotlib.cm as cmx
-		from mpl_toolkits.axes_grid1 import make_axes_locatable
-		from matplotlib.gridspec import GridSpec
-		cmap = plt.cm.jet
 
 		plot(Sgrid, Css2D, '\epsilon_{xy}')	# plotting shear strain map and correlation
 		plot(Cgrid, Ccc2D, '\omega')		# plotting displacement vorticity map and correlation
