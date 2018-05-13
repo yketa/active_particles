@@ -1,10 +1,25 @@
 """
-Module css calculates shear strain and displacement vorticity as well as
-their correlations.
+Module css calculates or plots shear strain and displacement vorticity as well
+as their correlations.
 
 Files are saved according to active_particles.naming.Css (shear strain) and
-active_particles.naming.Ccc (displacement vorticity) standards. Data in these
-files can be plotted with active_particles.analysis.css_plot.
+active_particles.naming.Ccc (displacement vorticity) standards.
+
+Environment modes
+-----------------
+COMPUTE : bool
+	Compute shear strain and displacement vorticity.
+	DEFAULT : False
+PLOT : bool
+	Plot saved shear strain and displacement vorticity as well as their
+	correlations.
+	DEFAULT : False
+SHOW [COMPUTE or PLOT mode] : bool
+	Show graphs.
+	DEFAULT : False
+SAVE [COMPUTE or PLOT mode] : bool
+	Save graphs.
+	DEFAULT : False
 
 Environment parameters
 ----------------------
@@ -48,20 +63,18 @@ N_CASES : int
 	displacement vorticity grid.
 	DEFAULT: smallest integer value greater than or equal to the square root of
 		the number of particles from the simulation parameters file.
-
-Environment parameters to set when plotting data (SHOW=True)
-------------------------------------------------
-R_MAX : float
+R_MAX [PLOT or SHOW mode] : float
 	Half size of the box showed for 2D correlation.
 	NOTE: R_MAX < 0 will be interpreted as the box shown being the actual
 	simulation box.
 	DEFAULT: 20
-DISPLAY_GRID : int
+DISPLAY_GRID [PLOT or SHOW mode] : int
 	Index of map in list of variable maps to display.
 	DEFAULT : 0
 
 Output
 ------
+[COMPUTE MODE]
 > Prints execution time.
 > Saves the list of computed shear strain maps and the averaged shear strain
 correlation according to active_particles.naming.Css standards in
@@ -69,10 +82,11 @@ DATA_DIRECTORY.
 > Saves the list of computed displacement vorticity maps and the averaged
 displacement vorticity correlations according to active_particles.naming.Ccc
 standards in DATA_DIRECTORY.
+[SHOW or PLOT mode]
 > Plots data map and correlation for both shear strain and displacement
-vorticity if SHOW=True is set in the environment.
-	> These figures are saved in DATA_DIRECTORY if SAVE=True is set in the
-	environment.
+vorticity.
+[SAVE mode]
+> Saves data map and correlation figures in DATA_DIRECTORY.
 """
 
 import active_particles.naming as naming
@@ -85,7 +99,7 @@ from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
 from active_particles.analysis.coarse_graining import CoarseGraining
 
-from os import getcwd as current_dir
+from os import getcwd
 
 from math import ceil
 
@@ -104,7 +118,7 @@ from collections import OrderedDict
 from datetime import datetime
 
 import matplotlib as mpl
-if get_env('SHOW', default=False, vartype=bool):
+if not(get_env('SHOW', default=False, vartype=bool)):
 	mpl.use('Agg')	# avoids crash if launching without display
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
@@ -112,64 +126,6 @@ import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.gridspec import GridSpec
 cmap = plt.cm.jet
-
-def define_variables():
-	"""
-	Defines variables which are needed both to compute shear strain and
-	displacement vorticity correlations or to plot already computed shear
-	strain and displacement vorticity correlations from
-	active_particles.analysis.Css_plot.
-
-	NOTE: Variables are defined globally inside the Css module.
-	"""
-
-	global data_dir ; data_dir = get_env('DATA_DIRECTORY',
-		default=current_dir())	# data directory
-
-	global dt ; dt = get_env('TIME', default=-1, vartype=int)	# lag time for displacement
-
-	global init_frame ; init_frame = get_env('INITIAL_FRAME', default=-1,
-		vartype=int)	# frame to consider as initial
-	global int_max ; int_max = get_env('INTERVAL_MAXIMUM', default=1,
-		vartype=int)	# maximum number of intervals of length dt considered in correlations calculations
-
-	global r_max ; r_max = get_env('R_MAX', default=20, vartype=float)	# half size of the box showed for 2D correlation
-
-	parameters_file = get_env('PARAMETERS_FILE',
-		default=data_dir + '/' + naming.parameters_file)			# simulation parameters file
-	with open(parameters_file, 'rb') as param_file:
-		global parameters ; parameters = pickle.load(param_file)	# parameters hash table
-
-	global r_cut ; r_cut = parameters['a']*get_env('R_CUT', default=2,
-		vartype=float)														# cut-off radius for coarse graining function
-	global sigma ; sigma = get_env('SIGMA', default=r_cut, vartype=float)	# length scale of the spatial extent of the coarse graining function
-
-	r_max = parameters['box_size']/2 if r_max < 0 else r_max	# half size of the box showed for 2D correlation
-
-	global prep_frames ; prep_frames = ceil(parameters['prep_steps']
-		/parameters['period_dump'])	# number of preparation frames (FIRE energy minimisation)
-
-	global Ncases ; Ncases = get_env('N_CASES',
-		default=ceil(np.sqrt(parameters['N'])), vartype=int)	# number of boxes in each direction to compute the shear strain and displacement vorticity grid
-
-	global Nentries ; Nentries =\
-		parameters['N_steps']//parameters['period_dump'] 			# number of time snapshots in velocity and position files
-	init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
-	global Nframes ; Nframes = Nentries - init_frame 				# number of frames available for the calculation
-
-	dt = Nframes + dt if dt <= 0 else dt	# length of the interval of time for which displacements are calculated
-
-	attributes = {'density': parameters['density'],
-		'vzero': parameters['vzero'], 'dr': parameters['dr'],
-		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
-		'int_max': int_max, 'Ncases': Ncases, 'r_cut': r_cut, 'sigma': sigma}	# attributes displayed in filenames
-	naming_Css = naming.Css()													# Css naming object
-	global Css_filename ; Css_filename, = naming_Css.filename(**attributes)
-	naming_Ccc = naming.Ccc()													# Ccc naming object
-	global Ccc_filename ; Ccc_filename, = naming_Ccc.filename(**attributes)
-
-	global display_grid ; display_grid = get_env('DISPLAY_GRID', default=0,
-		vartype=int)	# index of map in list of variable maps to display
 
 def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	box_size, neighbours_grid):
@@ -309,7 +265,7 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 		np.reshape(Grid, (Ncases, Ncases)))[::-1]	# get grids with the same orientation as positions
 	return correct_grid(Sgrid), correct_grid(Cgrid)	# shear strain and displacement vorticity grids
 
-def plot(Grid, Corr, var):
+def plot(Grid, Corr, var, naming_standard):
 	"""
 	Plots variable grid and correlations.
 
@@ -321,6 +277,8 @@ def plot(Grid, Corr, var):
 		Variable correlation grid.
 	var : string
 		Name of variable.
+	naming_standard : active_particles.naming standard
+		Standard naming object.
 	"""
 
 	fig, ax = plt.subplots(1, 2)	# 1 x 2 figure
@@ -390,62 +348,128 @@ def plot(Grid, Corr, var):
 		orientation='vertical')
 	cb1.set_label(r'$%s$' % C, labelpad=20, rotation=270)
 
-if __name__ == '__main__':	# executing as script
+	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
+		image_name, = naming_standard.image().filename(**attributes)
+		fig.savefig(data_dir + '/' + image_name)
 
-	startTime = datetime.now()
+if __name__ == '__main__':	# executing as script
 
 	# VARIABLE DEFINITIONS
 
-	define_variables()	# define some of variables needed to compute shear strain and displacement vorticity correlations
+	data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
-	wrap_file_name = get_env('WRAPPED_FILE',
-		default=data_dir + '/' + naming.wrapped_trajectory_file)	# wrapped trajectory file (.gsd)
-	unwrap_file_name = get_env('UNWRAPPED_FILE',
-		default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+	dt = get_env('TIME', default=-1, vartype=int)	# lag time for displacement
 
-	grid_points = np.array([(x, y) for x in\
-		np.linspace(- parameters['box_size']*(1 - 1./Ncases)/2,
-		parameters['box_size']*(1 - 1./Ncases)/2, Ncases, endpoint=True)\
-		for y in\
-		np.linspace(- parameters['box_size']*(1 - 1./Ncases)/2,
-		parameters['box_size']*(1 - 1./Ncases)/2, Ncases, endpoint=True)
-		])	# grid points at which shear strain will be evaluated
+	init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)	# frame to consider as initial
+	int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)	# maximum number of intervals of length dt considered in correlations calculations
 
-	times = np.array(list(OrderedDict.fromkeys(map(
-		lambda x: int(x),
-		np.linspace(init_frame, Nentries - dt - 1, int_max)
-		))))	# frames at which shear strain will be calculated
+	r_max = get_env('R_MAX', default=20, vartype=float)	# half size of the box showed for 2D correlation
 
-	# SHEAR STRAIN, DISPLACEMENT VORTICITY AND THEIR CORRELATIONS
+	parameters_file = get_env('PARAMETERS_FILE',
+		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
+	with open(parameters_file, 'rb') as param_file:
+		parameters = pickle.load(param_file)				# parameters hash table
 
-	with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file,\
-		open(unwrap_file_name, 'rb') as unwrap_file:	# opens wrapped and unwrapped trajectory files
+	r_cut = parameters['a']*get_env('R_CUT', default=2, vartype=float)	# cut-off radius for coarse graining function
+	sigma = get_env('SIGMA', default=r_cut, vartype=float)				# length scale of the spatial extent of the coarse graining function
 
-		w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);	# wrapped trajectory object
-		u_traj = Dat(unwrap_file, parameters['N'])		# unwrapped trajectory object
-		Sgrid, Cgrid = tuple(np.transpose(list(map(lambda time:
-			strain_vorticity_grid(parameters['box_size'], Ncases, grid_points,
-			time, dt, prep_frames, w_traj, u_traj, sigma, r_cut)
-			, times)), (1, 0, 2, 3)))					# lists of shear strain and displacement vorticity correlations
+	r_max = parameters['box_size']/2 if r_max < 0 else r_max	# half size of the box showed for 2D correlation
 
-	Css2D, Ccc2D = tuple(map(corField2D_scalar_average, [Sgrid, Cgrid]))	# shear strain and displacement vorticity fields correlations
+	prep_frames = ceil(parameters['prep_steps']/parameters['period_dump'])	# number of preparation frames (FIRE energy minimisation)
 
-	# SAVING
+	Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
+		vartype=int)	# number of boxes in each direction to compute the shear strain and displacement vorticity grid
 
-	with open(data_dir + '/' + Css_filename, 'wb') as Css_dump_file,\
-		open(data_dir + '/' + Ccc_filename, 'wb') as Ccc_dump_file:
-		pickle.dump([Sgrid, Css2D], Css_dump_file)
-		pickle.dump([Cgrid, Ccc2D], Ccc_dump_file)
+	Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in velocity and position files
+	init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
+	Nframes = Nentries - init_frame									# number of frames available for the calculation
 
-	# EXECUTION TIME
+	dt = Nframes + dt if dt <= 0 else dt	# length of the interval of time for which displacements are calculated
 
-	print("Execution time: %s" % (datetime.now() - startTime))
+	attributes = {'density': parameters['density'],
+		'vzero': parameters['vzero'], 'dr': parameters['dr'],
+		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
+		'int_max': int_max, 'Ncases': Ncases, 'r_cut': r_cut, 'sigma': sigma}	# attributes displayed in filenames
+	naming_Css = naming.Css()													# Css naming object
+	Css_filename, = naming_Css.filename(**attributes)							# Css filename
+	naming_Ccc = naming.Ccc()													# Ccc naming object
+	Ccc_filename, = naming_Ccc.filename(**attributes)							# Css filename
 
-	# PLOT
+	display_grid = get_env('DISPLAY_GRID', default=0, vartype=int)	# index of map in list of variable maps to display
 
-	if get_env('SHOW', default=False, vartype=bool):
+	# MODE SELECTION
 
-		plot(Sgrid, Css2D, '\epsilon_{xy}')	# plotting shear strain map and correlation
-		plot(Cgrid, Ccc2D, '\omega')		# plotting displacement vorticity map and correlation
+	if get_env('COMPUTE', default=False, vartype=bool):	# COMPUTE mode
 
-		plt.show()
+		startTime = datetime.now()
+
+		# VARIABLE DEFINITIONS
+
+		wrap_file_name = get_env('WRAPPED_FILE',
+			default=data_dir + '/' + naming.wrapped_trajectory_file)	# wrapped trajectory file (.gsd)
+		unwrap_file_name = get_env('UNWRAPPED_FILE',
+			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+
+		grid_points = np.array([(x, y) for x in\
+			np.linspace(- parameters['box_size']*(1 - 1./Ncases)/2,
+			parameters['box_size']*(1 - 1./Ncases)/2, Ncases, endpoint=True)\
+			for y in\
+			np.linspace(- parameters['box_size']*(1 - 1./Ncases)/2,
+			parameters['box_size']*(1 - 1./Ncases)/2, Ncases, endpoint=True)
+			])	# grid points at which shear strain will be evaluated
+
+		times = np.array(list(OrderedDict.fromkeys(map(
+			lambda x: int(x),
+			np.linspace(init_frame, Nentries - dt - 1, int_max)
+			))))	# frames at which shear strain will be calculated
+
+		# SHEAR STRAIN, DISPLACEMENT VORTICITY AND THEIR CORRELATIONS
+
+		with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file,\
+			open(unwrap_file_name, 'rb') as unwrap_file:	# opens wrapped and unwrapped trajectory files
+
+			w_traj = gsd.hoomd.HOOMDTrajectory(wrap_file);	# wrapped trajectory object
+			u_traj = Dat(unwrap_file, parameters['N'])		# unwrapped trajectory object
+			Sgrid, Cgrid = tuple(np.transpose(list(map(lambda time:
+				strain_vorticity_grid(parameters['box_size'], Ncases, grid_points,
+				time, dt, prep_frames, w_traj, u_traj, sigma, r_cut)
+				, times)), (1, 0, 2, 3)))					# lists of shear strain and displacement vorticity correlations
+
+		Css2D, Ccc2D = tuple(map(corField2D_scalar_average, [Sgrid, Cgrid]))	# shear strain and displacement vorticity fields correlations
+
+		# SAVING
+
+		with open(data_dir + '/' + Css_filename, 'wb') as Css_dump_file,\
+			open(data_dir + '/' + Ccc_filename, 'wb') as Ccc_dump_file:
+			pickle.dump([Sgrid, Css2D], Css_dump_file)
+			pickle.dump([Cgrid, Ccc2D], Ccc_dump_file)
+
+		# EXECUTION TIME
+
+		print("Execution time: %s" % (datetime.now() - startTime))
+
+		# PLOT
+
+		if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
+
+			plot(Sgrid, Css2D, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
+			plot(Cgrid, Ccc2D, '\omega', naming_Ccc)		# plotting displacement vorticity map and correlation
+
+			plt.show()
+
+	if get_env('PLOT', default=False, vartype=bool):	# PLOT mode
+
+		# DATA
+
+		with open(data_dir + '/' + Css_filename, 'rb') as Css_dump_file,\
+			open(data_dir + '/' + Ccc_filename, 'rb') as Ccc_dump_file:
+			Sgrid, Css2D = pickle.load(Css_dump_file)
+			Cgrid, Ccc2D = pickle.load(Ccc_dump_file)
+
+		# PLOT
+
+		plot(Sgrid, Css2D, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
+		plot(Cgrid, Ccc2D, '\omega', naming_Ccc)		# plotting displacement vorticity map and correlation
+
+		if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
+			plt.show()
