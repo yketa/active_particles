@@ -150,7 +150,7 @@ class _File:
     def image(self):
         """
         This function is the default image name generator, which only changes
-        file extension with __image_extension.
+        file extension with _image_extension.
         """
 
         return self.add_ext(OrderedDict(), _image_extension)

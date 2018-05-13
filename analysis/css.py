@@ -75,7 +75,7 @@ DISPLAY_GRID [PLOT or SHOW mode] : int
 Output
 ------
 [COMPUTE MODE]
-> Prints execution time.
+> Prints neigbours grid computation time and execution time.
 > Saves the list of computed shear strain maps and the averaged shear strain
 correlation according to active_particles.naming.Css standards in
 DATA_DIRECTORY.
