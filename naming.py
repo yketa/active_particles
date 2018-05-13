@@ -9,6 +9,8 @@ from active_particles.exponents import float_to_letters, letters_to_float,\
 from active_particles.init import get_env
 
 from collections import OrderedDict
+from itertools import chain
+from copy import deepcopy
 
 # GLOSSARY
 
@@ -36,22 +38,23 @@ unwrapped_trajectory_file = 'trajectory.dat'    # unwrapped trajectory file (wit
 
 # FILES NAMING
 
-__image_extension = '.eps'  # default image extension
+_image_extension = '.eps'  # default image extension
 
-class __File:
+class _File:
     """
     Naming files.
 
     This is the superclass which provides methods to get and read names for
-    all subclasses defined specifically per files.
+    all subclasses defined specifically per files which we will call
+    'standards'.
 
     All subclasses must be initiated with
         > self.name : string
-            generic name
+            Generic name.
         > self.parameters : ordered dictionary
-            hash table of parameters and their abbreviations
+            Hash table of parameters and their abbreviations.
         > self.extension : string
-            file extension
+            File extension.
     """
 
     def filename(self, **definitions):
@@ -119,7 +122,40 @@ class __File:
 
         return par_values
 
-class Css(__File):
+    def add_ext(self, ext_parameters, ext_extension):
+        """
+        From a default standard, this function returns an extended standard
+        with additional parameters and different extension.
+
+        Parameters
+        ----------
+        ext_parameters : ordered dictionary
+            Hash table of additional parameters and their abbreviations.
+        ext_extension : string
+            Different file extension.
+
+        Returns
+        -------
+        ext_self : active_particles.naming standard
+            Extended standard object.
+        """
+
+        ext_self = deepcopy(self)                               # creates a deep copy of the standard
+        ext_self.parameters = OrderedDict(chain(
+            self.parameters.items(), ext_parameters.items()))   # extended ordered dictionary of parameters
+        ext_self.extension = ext_extension                      # extended standard extension
+
+        return ext_self
+
+    def image(self):
+        """
+        This function is the default image name generator, which only changes
+        file extension with __image_extension.
+        """
+
+        return self.add_ext(OrderedDict(), _image_extension)
+
+class Css(_File):
     """
     Naming shear strain maps and shear strain correlation files.
     """
