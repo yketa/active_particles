@@ -323,14 +323,14 @@ def plot(grid, corr, var, naming_standard):
 
 	C = 'C_{%s%s}' % (var, var)
 
-	Cmin = np.min(Corr)
-	Cmax = np.max(Corr)
+	Cmin = np.min(corr)
+	Cmax = np.max(corr)
 
 	CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
 	CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
 
 	r_max_cases = int(r_max*(Ncases/box_size))
-	C2D_display = np.roll(np.roll(Corr, int(Ncases/2), axis=0),
+	C2D_display = np.roll(np.roll(corr, int(Ncases/2), axis=0),
 		int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:
 		int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:
 		int(Ncases/2) + r_max_cases + 1]	# part of variable correlations to display
