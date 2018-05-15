@@ -16,22 +16,6 @@ from os import environ as envvar
 
 # GLOSSARY
 
-glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
-        # | NAME | DEFINITION | SYMBOL | FORMAT |
-        ('density', 'surface packing fraction', r'$\phi', '{:1.2f}'),
-        ('vzero', 'self-propelling velocity', r'$\tilde{v}$', '{:.2e}'),
-        ('dr', 'rotational diffusion constant', r'$\tilde{\nu}_r$', '{:.2e}'),
-        ('N', 'number of particles', r'$N$', '{:.2e}'),
-        ('init_frame', 'initial frame', r'$S_{init}$', '{:.2e}'),
-        ('dt', 'lag time', r'$\Delta t$', '{:.2e}'),
-        ('int_max', 'maximum number of intervals', r'$S_{max}$', '{:.2e}'),
-        ('Ncases', 'number of boxes in one direction of a grid',
-            r'$N_{cases}$', '{:.2e}'),
-        ('r_cut', 'cut-off radius', r'$r_{cut}$', '{:.2e}'),
-        ('sigma', 'length scale of Gaussian function', r'$\sigma$', '{:.2e}'),
-        ('box_size', 'length of the box in one dimension', r'$L$', '{:.2e}')
-    )))
-
 class Glossary:
     """
     This class references VarInfo objects.
@@ -128,6 +112,22 @@ class VarInfo:
         """
 
         return self.symbol + '=' + self.format.format(value)
+
+glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
+        # | NAME | DEFINITION | SYMBOL | FORMAT |
+        ('density', 'surface packing fraction', r'$\phi', '{:1.2f}'),
+        ('vzero', 'self-propelling velocity', r'$\tilde{v}$', '{:.2e}'),
+        ('dr', 'rotational diffusion constant', r'$\tilde{\nu}_r$', '{:.2e}'),
+        ('N', 'number of particles', r'$N$', '{:.2e}'),
+        ('init_frame', 'initial frame', r'$S_{init}$', '{:.2e}'),
+        ('dt', 'lag time', r'$\Delta t$', '{:.2e}'),
+        ('int_max', 'maximum number of intervals', r'$S_{max}$', '{:.2e}'),
+        ('Ncases', 'number of boxes in one direction of a grid',
+            r'$N_{cases}$', '{:.2e}'),
+        ('r_cut', 'cut-off radius', r'$r_{cut}$', '{:.2e}'),
+        ('sigma', 'length scale of Gaussian function', r'$\sigma$', '{:.2e}'),
+        ('box_size', 'length of the box in one dimension', r'$L$', '{:.2e}')
+    )))
 
 # DEFAULT NAMES
 
