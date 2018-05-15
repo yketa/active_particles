@@ -21,7 +21,7 @@ significant_figures = 4	# number of significant figures displayed in file names
 
 # TRANSLATIONS
 
-__exponents = {'a':'-11', 'b':'-10', 'c':'-9', 'd':'-8', 'e':'-7', 'f':'-6',
+_exponents = {'a':'-11', 'b':'-10', 'c':'-9', 'd':'-8', 'e':'-7', 'f':'-6',
 	'g':'-5', 'h':'-4', 'i':'-3', 'j':'-2', 'k':'-1', 'l':'0', 'm':'1',
 	'n':'2', 'o':'3', 'p':'4', 'q':'5', 'r':'6', 's':'7', 't':'8', 'u':'9',
 	'v':'10', 'w':'11', 'x':'12', 'y':'13', 'z':'14'}	# associative array of exponents and corresponding letters
@@ -44,7 +44,7 @@ def letters_to_float(let):
 
 	expr = str(let[1]				# integer part
 		+ '.' + let[2:]				# decimals
-		+ 'e' + __exponents[let[0]]	# exponent
+		+ 'e' + _exponents[let[0]]	# exponent
 	)
 
 	try:
@@ -69,7 +69,7 @@ def float_to_letters(flo):
 
 	expo_int = int(floor(log10(abs(flo))))	# integer exponent
 	try:
-		expo_let = list(__exponents.keys())[list(__exponents.values()).index(
+		expo_let = list(_exponents.keys())[list(_exponents.values()).index(
 			'%i' % expo_int							# corresponding letter exponent
 			)]
 	except KeyError: return 'l0000'					# return 0 if exponent not attainable
