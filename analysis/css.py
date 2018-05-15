@@ -307,7 +307,7 @@ def plot(grid, corr, var, naming_standard):
 	SscalarMap = cmx.ScalarMappable(norm=SvNorm, cmap=cmap)
 
 	ax[0].imshow(grid, cmap=cmap, norm=SvNorm,
-		extent=[-box_size2, box_size/2, -box_size/2, box_size/2])
+		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
 
 	ax[0].set_xlabel(r'$x$')
 	ax[0].set_ylabel(r'$y$')
