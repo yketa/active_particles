@@ -317,9 +317,9 @@ class Gsd(HOOMDTrajectory):
 			self[time].particles.position[:, :self.dimensions])			# positions at frame time
 
 		if 'centre' in kwargs:
-			box_dim = self[time].configuration.box[:self.densions]	# box dimensions
+			box_dim = self[time].configuration.box[:self.dimensions]	# box dimensions
 			return (positions - np.array(kwargs['centre'])
-				+ box_dim/2)%box_dim - box_dim/2					# positions with centre as centre
+				+ box_dim/2)%box_dim - box_dim/2						# positions with centre as centre
 		return positions
 
 	def velocity(self, time, *particles):
