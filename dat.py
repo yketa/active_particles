@@ -103,11 +103,11 @@ class Dat:
 
 		axis = 0 if axis > self.v_dim[index_var] else axis	# set axis as 0 if input axis is greater than variable dimension
 
-		self.file.seek(self.bytes_per_element*(		# set file's current position
-			time*np.sum(self.v_dim)*self.N			# to desired frame
-			+ np.sum(self.v_dim[:index_var])*self.N	# to desired variable
-			+ self.v_dim[index_var]*particle		# to desired particle
-			+ axis))								# to desired axis
+		self.file.seek(self.bytes_per_element*(					# set file's current position
+			time*np.sum(self.v_dim, dtype=int)*self.N			# to desired frame
+			+ np.sum(self.v_dim[:index_var], dtype=int)*self.N	# to desired variable
+			+ self.v_dim[index_var]*particle					# to desired particle
+			+ axis))											# to desired axis
 
 		return struct.unpack(self.element_type,
 			self.file.read(self.bytes_per_element))[0]		# variable
