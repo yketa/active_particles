@@ -278,7 +278,7 @@ class Css(_File):
 
         if 'BOX_SIZE' in envvar:                        # modified box size
             self.parameters = OrderedDict(chain(self.parameters.items(),
-                {'box_size': '_L'}.items()))
+                {'box_size': '_B'}.items()))
         if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:    # modified centre of the box
             self.parameters = OrderedDict(chain(self.parameters.items(),
                 OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
