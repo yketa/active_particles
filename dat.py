@@ -5,19 +5,26 @@ Module dat defines the object Dat, which allows one to write to and read from
 
 import numpy as np
 import struct
+from collections import OrderedDict
 
 class Dat:
 	"""
-	.dat files are designed to save trajectory (position and velocity) data for
-	simulations in 2D, with constant number N of particles. These are binary
-	files, containing numbers organised according to the following scheme:
-	|                    FRAME (= CALL TO Dat.dump) 0                   | ...
-	|           POSITIONS             |           VELOCITIES            | ...
-	| PARTICLE 0 | ... | PARTICLE N-1 | PARTICLE 0 | ... | PARTICLE N-1 | ...
-	|   x  |  y  | ... |   x   |  y   |   x  |  y  | ... |   x   |  y   | ...
+	.dat files are designed to save time-dependent variables (e.g., position
+	and velocity) data for systems of any dimensions, with constant number N of
+	particles. These are binary files, containing numbers organised according
+	to the following scheme:
+
+	|          FRAME (=CALL TO active_particles.dat.Dat.dump) 1          |..
+	|           VARIABLE 1           |..|           VARIABLE M           |..
+	|  PARTICLE 1  |..|  PARTICLE N  |..|  PARTICLE 1  |..|  PARTICLE N  |..
+	|x_1|..|x_{d_1}|..|x_1|..|x_{d_1}|..|x_1|..|x_{d_M}|..|x_1|..|x_{d_M}|..
+
+	with M the number of variables, N the number of particles, d_i the
+	dimension of the i_th variable.
 	"""
 
-	def __init__(self, data_file, N, element_type='d'):
+	def __init__(self, data_file, N, variables=OrderedDict([('position', 2),
+		('velocity', 2)]), element_type='d'):
 		"""
 		Parameters
 		----------
@@ -27,36 +34,45 @@ class Dat:
 			open data_file in 'r+b' mode.
 		N : int
 			Number of particles.
+		variables : ordered dictionary
+			Variable names as keys and dimensions as values. (default:
+			{'position': 2, 'velocity': 2})
+			NOTE: It is strongly advised to have 'position' as first variable.
 		element_type : packing format
 			Data packing format. (default: double float)
 		"""
 
 		self.file = data_file									# .dat file
 		self.N = N												# number of particles
+		self.variables = variables								# variables dictionary
+		self.v_number = len(self.variables)						# number of variables
+		self.v_names = self.variables.keys()					# variable names
+		self.v_dim = self.variables.values()					# variable dimensions
 		self.element_type = element_type						# data picking format
 		self.bytes_per_element = struct.calcsize(element_type)	# element_type number of bytes
 
-	def dump(self, positions, velocities):
+	def dump(self, *var_data):
 		"""
 		Dump to file following the .dat file format (trajectory file).
 
 		NOTE: self.file has to be open in 'wb' or 'r+b' mode.
 
-		Parameters
-		----------
-		positions : (self.N, 2) shaped array like
-			List of position coordinates.
-		velocities : (self.N, 2) shaped array like
-			List of velocity coordinates.
+		Positional arguments
+		--------------------
+		var_data : (self.N, self.variables[variable name]) shaped array like
+			Array of variable coordinates.
+			NOTE: Arrays of variables have to be passed in the order of
+			self.variables.
 		"""
 
-		for data in [positions, velocities]:							# for each variable to dump
-			for particle in range(self.N):								# for each particle
-				for coord in range(2):									# for each dimension of space
-						self.file.write(struct.pack(self.element_type,	# dump to file
-							data[particle][coord]))
+		for var in range(self.v_number):										# for all variables to dump
+			data = np.reshape(var_data[var], (self.N, self.v_dim[var]))			# reshaping variable according to known dimension
+			for particle in range(self.N):										# for all particles
+				for coord in range(self.v_dim[var]):							# for each dimension of variable
+					self.file.write(struct.pack(self.element_type,				# dump to file
+						data[particle, coord]))
 
-	def get_value(self, time, particle, axis, variable='position'):
+	def get_value(self, time, particle, axis=0, variable='position'):
 		"""
 		Returns the projection on axis 'axis' of the variable 'variable' of
 		particle 'particle' at the frame 'time'.
@@ -69,10 +85,10 @@ class Dat:
 			Frame index.
 		particle : int
 			Particle index.
-		axis : int (either 0 for x-axis or 1 for y-axis)
-			Axis index.
+		axis : int
+			Axis index. (default: 0)
 		variable : string (either 'position' or 'velocity')
-			Name of the variable. (default: position)
+			Name of the variable. (default: 'position')
 
 		Returns
 		-------
@@ -81,19 +97,26 @@ class Dat:
 		"""
 
 		try:
-			inc_var = {'position':0, 'velocity':2*self.N}[variable]	# increment in bytes_per_element to accesss variable
-		except KeyError:											# if variable is not 'position' or 'velocity'
-			inc_var = 0												# consider variable as 'position'
+			index_var = self.v_names.index(variable)	# index of variable in variables ordered dictionary
+		except KeyError:								# if variable is not not known
+			index_var = 0								# consider variable as first variable
 
-		self.file.seek(self.bytes_per_element*(
-			4*self.N*time + inc_var + 2*particle + axis))	# set file's current position according to frame, variable, number of particles, and axis
+		axis = 0 if axis > self.v_dim[index_var] else axis	# set axis as 0 if input axis is greater than variable dimension
+
+		self.file.seek(self.bytes_per_element*(		# set file's current position
+			time*np.sum(self.v_dim)*self.N			# to desired frame
+			+ np.sum(self.v_dim[:index_var])*self.N	# to desired variable
+			+ self.v_dim[index_var]*particle		# to desired particle
+			+ axis))								# to desired axis
+
 		return struct.unpack(self.element_type,
 			self.file.read(self.bytes_per_element))[0]		# variable
 
-	def get_array(self, time, variable='position'):
+	def get_value_vec(self, time, particles=None, axes=None,
+		variable='position'):
 		"""
-		Returns the (self.N, 2) array of the variable 'variable' for each
-		particle at frame 'time'.
+		Returns the projection on axes in 'axis' of the variable 'variable' of
+		particles in 'particle' at the frame 'time'.
 
 		NOTE: self.file has to be open in 'rb' or 'r+b' mode.
 
@@ -101,26 +124,70 @@ class Dat:
 		----------
 		time : int
 			Frame index.
-		variable : string (either 'position' or 'velocity')
-			Name of the variable. (default: position)
+		particles : int array-like
+			Particles index array. (default: None)
+			None or empty tuple is equivalent to all particles (particles =
+			range(self.N)).
+			DEFAULT: None
+		axes : int array-like
+			Axes index array. (default: None)
+			None or empty tuple is equivalent to all axes (axes =
+			range(self.variables[variable]))
+		variable : string
+			Name of the variable. (default: 'position')
 
 		Returns
 		-------
-		arr : self.element_type packing format (self.N, 2) Numpy array
-			Array of variable at frame 'time'.
+		val : self.element_type packing format (len(particles), len(axes))
+		Numpy array
+			List of variable.
 		"""
+
+		if particles == None or particles == (): particles = range(self.N)
+		if axes == None or axes == ():
+			try:
+				axes = range(self.variables[variable])
+			except:			# if variable is not not known
+				axes = (0)	# return first axis value
+
 
 		return np.reshape(list(map(
 			lambda particle: list(map(
-			lambda axis: self.get_value(time, particle, axis,
+			lambda axis: self.get_value(time, particle, axis=axis,
 			variable=variable),
-			range(2))),
-			range(self.N))),
-			(self.N, 2))
+			axes)),
+			particles)),
+			(len(particles), len(axes)))
 
-	def variable(self, time, *particle, variable='position'):
+	def get_array(self, time, variable='position'):
+		"""
+		Returns the (self.N, self.variables[variable]) array of the variable
+		'variable' for each particle at frame 'time'.
+		(see active_particles.dat.Dat.get_value_vec)
+
+		NOTE: self.file has to be open in 'rb' or 'r+b' mode.
+
+		Parameters
+		----------
+		time : int
+			Frame index.
+		variable : string
+			Name of the variable. (default: 'position')
+
+		Returns
+		-------
+		arr : self.element_type packing format
+		(self.N, self.variables[variable]) Numpy array
+			Array of variable at frame 'time'.
+		"""
+
+		return self.get_value_vec(time, variable=variable)
+
+	def variable(self, time, *particles, variable='position'):
 		"""
 		Returns array of variable at frame 'time'.
+		(see active_particles.dat.Dat.get_value_vec)
+
 
 		Parameters
 		----------
@@ -129,9 +196,9 @@ class Dat:
 
 		Optional positional arguments
 		-----------------------------
-		particle : int
-			Particle index.
-			When called with particle indexes, function returns array of
+		particles : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
 			particles' variable at frame 'time' in the same order.
 
 		Returns
@@ -140,20 +207,14 @@ class Dat:
 			Array of variable at frame 'time'.
 		"""
 
-		if particle == (): return self.get_array(time, variable=variable)	# no particular indexes requested
+		return self.get_value_vec(time, particles=particles, variable=variable)
 
-		return np.reshape(list(map(
-			lambda particle: list(map(
-			lambda axis: self.get_value(time, particle, axis,
-			variable=variable),
-			range(2))),
-			particle)),
-			(len(particle), 2))	# variable at frame 'time' for particles 'particle'
-
-	def position(self, time, *particle):
+	def position(self, time, *particles):
 		"""
 		Returns array of position at frame 'time'.
-		(see dat.Dat.variable)
+		(see active_particles.dat.Dat.variable)
+
+		NOTE: 'position' has to be in self.variables
 
 		Parameters
 		----------
@@ -162,9 +223,9 @@ class Dat:
 
 		Optional positional arguments
 		-----------------------------
-		particle : int
-			Particle index.
-			When called with particle indexes, function returns array of
+		particles : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
 			particles' position at frame 'time' in the same order.
 
 		Returns
@@ -173,12 +234,14 @@ class Dat:
 			Array of position at frame 'time'.
 		"""
 
-		return self.variable(time, *particle, variable='position')
+		return self.variable(time, *particles, variable='position')
 
-	def velocity(self, time, *particle):
+	def velocity(self, time, *particles):
 		"""
 		Returns array of velocity at frame 'time'.
 		(see dat.Dat.variable)
+
+		NOTE: 'velocity' has to be in self.variables
 
 		Parameters
 		----------
@@ -187,9 +250,9 @@ class Dat:
 
 		Optional positional arguments
 		-----------------------------
-		particle : int
-			Particle index.
-			When called with particle indexes, function returns array of
+		particles : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
 			particles' velocity at frame 'time' in the same order.
 
 		Returns
@@ -198,4 +261,4 @@ class Dat:
 			Array of velocity at frame 'time'.
 		"""
 
-		return self.variable(time, *particle, variable='velocity')
+		return self.variable(time, *particles, variable='velocity')
