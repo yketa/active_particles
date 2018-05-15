@@ -41,9 +41,10 @@ class NeighboursGrid:
             for y in range(self.cases_rcut)}    # neighbours grid
 
         for index in range(len(positions)):     # for all particles
+            if (np.abs(positions[index]) > box_size).any(): continue    # do not consider particles outside the box
             self.neighbours_grid[tuple(
                 (np.array(positions[index])//self.spacing + self.cases_rcut)
-                %self.cases_rcut)] += [index]   # add index to corresponding list
+                %self.cases_rcut)] += [index]                           # add index to corresponding list
 
     def get_neighbours(self, point):
         """
