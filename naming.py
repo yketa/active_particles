@@ -12,20 +12,122 @@ from collections import OrderedDict
 from itertools import chain
 from copy import deepcopy
 
+from os import environ as envvar
+
 # GLOSSARY
 
-var_glossary = {    # definitions of variables commonly used
-    'density': 'surface packing fraction',
-    'vzero': 'self-propelling velocity',
-    'dr': 'rotational diffusion constant',
-    'N': 'number of particles',
-    'init_frame': 'initial frame',
-    'dt': 'lag time',
-    'int_max': 'maximum number of intervals',
-    'Ncases': 'number of boxes in one direction of a grid',
-    'r_cut': 'cut-off radius',
-    'sigma': 'length scale of Gaussian function'
-}
+glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
+        # | NAME | DEFINITION | SYMBOL | FORMAT |
+        ('density', 'surface packing fraction', r'$\phi', '{:1.2f}'),
+        ('vzero', 'self-propelling velocity', r'$\tilde{v}$', '{:.2e}'),
+        ('dr', 'rotational diffusion constant', r'$\tilde{\nu}_r$', '{:.2e}'),
+        ('N', 'number of particles', r'$N$', '{:.2e}'),
+        ('init_frame', 'initial frame', r'$S_{init}$', '{:.2e}'),
+        ('dt', 'lag time', r'$\Delta t$', '{:.2e}'),
+        ('int_max', 'maximum number of intervals', r'$S_{max}$', '{:.2e}'),
+        ('Ncases', 'number of boxes in one direction of a grid',
+            r'$N_{cases}$', '{:.2e}'),
+        ('r_cut', 'cut-off radius', r'$r_{cut}$', '{:.2e}'),
+        ('sigma', 'length scale of Gaussian function', r'$\sigma$', '{:.2e}'),
+        ('box_size', 'length of the box in one dimension', r'$L$', '{:.2e}')
+    )))
+
+class Glossary:
+    """
+    This class references VarInfo objects.
+    """
+
+    def __init__(self, *entries):
+        """
+        Positional arguments
+        --------------------
+        entries : active_particles.naming.VarInfo object
+            Information about a variable.
+        """
+
+        self.entries = entries
+
+    def __getitem__(self, varname):
+        """
+        Called by self[varname].
+
+        Parameters
+        ----------
+        varname : string
+            Generic name of variable.
+
+        Returns
+        -------
+        entry : active_particles.naming.VarInfo
+            Informations about variable 'varname' in glossary.
+        """
+
+        return next((entry for entry in self.entries
+            if entry.name == varname), None)
+
+    def __add__(self, entry):
+        """
+        Called by self + ...
+
+        Parameters
+        ----------
+        entry : active_particles.naming.VarInfo object
+            New entry to add to glossary.
+
+        Returns
+        -------
+        gloassry : active_particles.naming.Glossary object
+            Augmented glossary.
+        """
+
+        self.entries += (entry,)
+        return self
+
+class VarInfo:
+    """
+    This class save informations about a given variable.
+    """
+
+    def __init__(self, name, definition, symbol, format):
+        """
+        Parameters
+        ----------
+        name : string
+            Generic name.
+        definition : string
+            Brief description of the variable.
+        symbol : string
+            LaTeX symbol to use in legends.
+        format : formatting string
+            Format to use in legends.
+        """
+
+        self.name = name
+        self.definition = definition
+        self.symbol = symbol
+        self.format = format
+
+    def __str__(self):
+        """
+        Prints description of variable.
+        """
+
+        return self.definition
+
+    def legend(self, value):
+        """
+        Parameters
+        ----------
+        value : *
+            Value of variable.
+
+        Returns
+        -------
+        legend : string
+            Formatted string '{variable} = {value}'.
+        """
+
+        return self.symbol + '=' + self.format.format(value)
 
 # DEFAULT NAMES
 
@@ -173,6 +275,14 @@ class Css(_File):
             ('init_frame', '_I'), ('dt', '_T'), ('int_max', '_M'),
             ('Ncases', '_C'), ('r_cut', '_RCUT'), ('sigma', '_SIGM')
         ])                              # parameters and corresponding abbreviations (in order)
+
+        if 'BOX_SIZE' in envvar:                        # modified box size
+            self.parameters = OrderedDict(chain(self.parameters.items(),
+                {'box_size': '_L'}.items()))
+        if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:    # modified centre of the box
+            self.parameters = OrderedDict(chain(self.parameters.items(),
+                OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
+
         self.extension = '.pickle'      # file extension
 
 class Ccc(Css):
