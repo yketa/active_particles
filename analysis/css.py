@@ -99,7 +99,7 @@ from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
 from active_particles.analysis.coarse_graining import CoarseGraining
 
-from active_paeticles.plot.mpl_tools import GridCircle
+from active_particles.plot.mpl_tools import GridCircle
 
 from os import getcwd
 
