@@ -43,11 +43,11 @@ class Dat:
 		"""
 
 		self.file = data_file									# .dat file
-		self.N = N												# number of particles
+		self.N = int(N)											# number of particles
 		self.variables = variables								# variables dictionary
 		self.v_number = len(self.variables)						# number of variables
-		self.v_names = self.variables.keys()					# variable names
-		self.v_dim = self.variables.values()					# variable dimensions
+		self.v_names = list(self.variables.keys())				# variable names
+		self.v_dim = list(self.variables.values())				# variable dimensions
 		self.element_type = element_type						# data picking format
 		self.bytes_per_element = struct.calcsize(element_type)	# element_type number of bytes
 
