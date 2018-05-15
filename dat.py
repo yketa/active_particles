@@ -6,11 +6,14 @@ Module dat defines the object Dat, which allows one to write to and read from
 import numpy as np
 import struct
 from collections import OrderedDict
+from operator import itemgetter
+
+from gsd.hoomd import HOOMDTrajectory
 
 class Dat:
 	"""
 	.dat files are designed to save time-dependent variables (e.g., position
-	and velocity) data for systems of any dimensions, with constant number N of
+	and velocity) for systems of any dimensions, with constant number N of
 	particles. These are binary files, containing numbers organised according
 	to the following scheme:
 
@@ -53,7 +56,7 @@ class Dat:
 
 	def dump(self, *var_data):
 		"""
-		Dump to file following the .dat file format (trajectory file).
+		Dump a frame to file following the .dat file format.
 
 		NOTE: self.file has to be open in 'wb' or 'r+b' mode.
 
@@ -262,3 +265,85 @@ class Dat:
 		"""
 
 		return self.variable(time, *particles, variable='velocity')
+
+class Gsd(HOOMDTrajectory):
+	"""
+	This class adds methods to the gsd.hoomd.HOOMDTrajectory class which reads
+	.gsd trajectory file.
+	"""
+
+	def __init__(self, file, dimensions=2):
+		"""
+		Parameters
+		----------
+		file : gsd.pygsd.GSDFile object
+			Trajectory file. (.gsd)
+		dimensions : int
+			Dimension of space. (default: 2)
+		"""
+
+		super().__init__(file)	# initialising gsd.hoomd.HOOMDTrajectory
+		self.dimensions = dimensions
+
+	def position(self, time, *particles, **kwargs):
+		"""
+		Parameters
+		----------
+		time : int
+			Frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particles : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
+			particles' position at frame 'time' in the same order.
+
+		Optional keyword arguments
+		--------------------------
+		centre : (self.dimensions,) array
+			Define new centre position.
+
+		Returns
+		-------
+		positions : float Numpy array
+			Array of positions at frame 'time'.
+		"""
+
+		time = int(time)	# avoids crash when calling self.__getitem__
+
+		if particles == ():	particles = range(self[time].particles.N)	# returns all positions
+		positions = itemgetter(*particles)(
+			self[time].particles.position[:, :self.dimensions])			# positions at frame time
+
+		if 'centre' in kwargs:
+			box_dim = self[time].configuration.box[:self.densions]	# box dimensions
+			return (positions - np.array(kwargs['centre'])
+				+ box_dim/2)%box_dim - box_dim/2					# positions with centre as centre
+		return positions
+
+	def velocity(self, time, *particles):
+		"""
+		Parameters
+		----------
+		time : int
+			Frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particles : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
+			particles' position at frame 'time' in the same order.
+
+		Returns
+		-------
+		velocities : float Numpy array
+			Array of velocities at frame 'time'.
+		"""
+
+		time = int(time)	# avoids crash when calling self.__getitem__
+
+		if particles == ():	particles = range(self[time].particles.N)	# returns all positions
+		return itemgetter(*particles)(
+			self[time].particles.velocity[:, :self.dimensions])			# velocities at frame time
