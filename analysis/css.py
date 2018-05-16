@@ -358,8 +358,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	# GRID CIRCLE FIGURE
 
-	fig_gc, (ax_grid, ax_plot), cb_gc = GridCircle(grid,
-		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
+	fig_gc, (ax_grid, ax_plot), cb_gc = GridCircle(grid, extent=[-box_size/2,
+		box_size/2, -box_size/2, box_size/2]).get_fig_ax_cmap()
 
 	fig_gc.set_size_inches(16, 16)		# figure size
 	fig_gc.subplots_adjust(wspace=0.4)	# width space
