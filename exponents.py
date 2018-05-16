@@ -7,7 +7,9 @@ These litteral expressions work as scientific notation and are read as follows
 	      ||  |_ decimals
 	      ||____ integer part
 	      |_____ exponent
-	with a = -11 to z = 14, we then have k = -1, thus k123456 = 1.23456e-1.
+	with a = -11 to z = 14, we then have k = -1, thus k123456 = 1.23456e-1,
+	moreover, a capital letter preceding digits means the number is negative,
+	e.g., K123455 = -1.23456e-1.
 
 We set ONCE AND FOR ALL the number of significant figures with the variable
 significant_figures.
@@ -42,13 +44,13 @@ def letters_to_float(let):
 		NOTE: returns 0 if expression is incorrect.
 	"""
 
-	expr = str(let[1]				# integer part
-		+ '.' + let[2:]				# decimals
-		+ 'e' + _exponents[let[0]]	# exponent
+	expr = str(let[1]						# integer part
+		+ '.' + let[2:]						# decimals
+		+ 'e' + _exponents[let[0].lower()]	# exponent
 	)
 
 	try:
-		return float(expr)
+		return (1 - 2*let[0].isupper())*float(expr)
 	except ValueError: return 0
 
 def float_to_letters(flo):
@@ -73,7 +75,8 @@ def float_to_letters(flo):
 			'%i' % expo_int							# corresponding letter exponent
 			)]
 	except KeyError: return 'l0000'					# return 0 if exponent not attainable
+	if flo < 0: expo_let = expo_let.upper()			# make upper case if float is negative
 
-	digi = int(flo * (10**(significant_figures - expo_int - 1)))	# digits in litteral expression
+	digi = int(abs(flo) * (10**(significant_figures - expo_int - 1)))	# digits in litteral expression
 
 	return '%s%i' % (expo_let, digi)
