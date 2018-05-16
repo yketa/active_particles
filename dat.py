@@ -8,6 +8,8 @@ import struct
 from collections import OrderedDict
 from operator import itemgetter
 
+from active_particles.maths import relative_positions
+
 from gsd.hoomd import HOOMDTrajectory
 
 class Dat:
@@ -317,9 +319,8 @@ class Gsd(HOOMDTrajectory):
 			self[time].particles.position[:, :self.dimensions])			# positions at frame time
 
 		if 'centre' in kwargs:
-			box_dim = self[time].configuration.box[:self.dimensions]	# box dimensions
-			return (positions - np.array(kwargs['centre'])
-				+ box_dim/2)%box_dim - box_dim/2						# positions with centre as centre
+			box_dim = self[time].configuration.box[0]						# box dimensions
+			return relative_positions(positions, kwargs['centre'], box_dim)	# positions with centre as centre
 		return positions
 
 	def velocity(self, time, *particles):
