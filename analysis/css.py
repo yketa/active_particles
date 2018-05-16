@@ -94,7 +94,7 @@ import active_particles.naming as naming
 from active_particles.init import get_env
 from active_particles.exponents import float_to_letters
 from active_particles.dat import Dat, Gsd
-from active_particles.maths import relative_postions
+from active_particles.maths import relative_positions
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
