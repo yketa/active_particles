@@ -179,7 +179,7 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	if Nwrcut == 0:									# if there is no particles within r_cut of point
 		return 0, 0
 
-	pos_wrcut = relative_postions(
+	pos_wrcut = relative_positions(
 		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
 	pos0_wrcut = u_traj.position(time, *wrcut)								# positions at time time (without periodic boundary conditions)
 	pos1_wrcut = u_traj.position(time + dt, *wrcut)							# positions at time time + dt (without periodic boundary conditions)
