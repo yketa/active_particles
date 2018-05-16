@@ -63,6 +63,15 @@ N_CASES : int
 	displacement vorticity grid.
 	DEFAULT: smallest integer value greater than or equal to the square root of
 		the number of particles from the simulation parameters file.
+BOX_SIZE : float
+	Size of the square box to consider.
+	DEFAULT: simulation box size
+X_ZERO : float
+	1st coordinate of the centre of the square box to consider.
+	DEFAULT: 0
+Y_ZERO : float
+	2nd coordinate of the centre of the square box to consider.
+	DEFAULT: 0
 R_MAX [PLOT or SHOW mode] : float
 	Half size of the box showed for 2D correlation.
 	NOTE: R_MAX < 0 will be interpreted as the box shown being the actual
@@ -127,7 +136,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.gridspec import GridSpec
 
 def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	box_size, neighbours_grid):
