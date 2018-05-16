@@ -94,6 +94,7 @@ import active_particles.naming as naming
 from active_particles.init import get_env
 from active_particles.exponents import float_to_letters
 from active_particles.dat import Dat, Gsd
+from active_particles.maths import relative_postions
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
@@ -178,11 +179,11 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	if Nwrcut == 0:									# if there is no particles within r_cut of point
 		return 0, 0
 
-	pos_wrcut = (np.array(itemgetter(*wrcut)(positions), ndmin=2)
-		- point + box_size/2)%box_size - box_size/2 # position at time time (with boundary conditions) with point as the centre of the frame
-	pos0_wrcut = u_traj.position(time, *wrcut)		# positions at time time (without periodic boundary conditions)
-	pos1_wrcut = u_traj.position(time + dt, *wrcut)	# positions at time time + dt (without periodic boundary conditions)
-	dis_wrcut = pos1_wrcut - pos0_wrcut				# displacements of the particles between time and time + dt
+	pos_wrcut = relative_postions(
+		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
+	pos0_wrcut = u_traj.position(time, *wrcut)								# positions at time time (without periodic boundary conditions)
+	pos1_wrcut = u_traj.position(time + dt, *wrcut)							# positions at time time + dt (without periodic boundary conditions)
+	dis_wrcut = pos1_wrcut - pos0_wrcut										# displacements of the particles between time and time + dt
 
 	coarse_graining = CoarseGraining(np.sqrt(np.sum(pos_wrcut**2, axis=-1)),
 		sigma, r_cut)														# coarse graining object
@@ -249,8 +250,8 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 	startTime0 = datetime.now()	# start time for neighbours grid computation
 
 	positions = w_traj.position(prep_frames + time +
-		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)		# array of wrapped particle positions
-	neighbours_grid = NeighboursGrid(positions, box_size, r_cut)				# neighbours grid
+		dt*get_env('ENDPOINT', default=False, vartype=bool))		# array of wrapped particle positions
+	neighbours_grid = NeighboursGrid(positions, box_size, r_cut)	# neighbours grid
 
 	print("Neighbours grid computation time (time = %e): %s" %
 		(time, datetime.now() - startTime0))	# neighbours grid computation time
@@ -266,7 +267,7 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 		np.reshape(Grid, (Ncases, Ncases)))[::-1]	# get grids with the same orientation as positions
 	return correct_grid(Sgrid), correct_grid(Cgrid)	# shear strain and displacement vorticity grids
 
-def plot(grid, corr, var, naming_standard):
+def plot(grid, corr, box_size, var, naming_standard):
 	"""
 	Plots variable grid and correlations.
 
@@ -276,6 +277,8 @@ def plot(grid, corr, var, naming_standard):
 		Variable grid.
 	corr : 2D array-like
 		Variable correlation grid.
+	box_size : float
+		Length of the box in one dimension.
 	var : string
 		Name of variable.
 	naming_standard : active_particles.naming standard
@@ -354,6 +357,29 @@ def plot(grid, corr, var, naming_standard):
 
 	# GRID CIRCLE FIGURE
 
+	fig_gc, (ax_grid, ax_plot), cmap = GridCircle(grid,
+		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
+
+	fig_gc.set_size_inches(16, 16)		# figure size
+	fig_gc.subplots_adjust(wspace=0.4)	# width space
+	fig_gc.subplots_adjust(hspace=0.3)	# height space
+
+	fig_gc.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+		% (parameters['N'], parameters['density'], parameters['vzero'],
+		parameters['dr']) + '\n' +
+		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
+		dt*parameters['period_dump']*parameters['time_step']) +
+		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases) +
+		r'$, r_{cut}=%.2e, \sigma=%.2e$' % (r_cut, sigma))
+
+	ax_grid.set_xlabel(r'$x$')
+	ax_grid.set_ylabel(r'$y$')
+	ax_grid.set_title('2D ' + r'$%s$' % C)
+	cmap.set_label(r'$%s$' % C, labelpad=20, rotation=270)
+
+	ax_plot.set_xlabel(r'$\theta$')
+	ax_plot.set_ylabel(r'$%s(r, \theta)$' % C)
+
 if __name__ == '__main__':	# executing as script
 
 	# VARIABLE DEFINITIONS
@@ -419,11 +445,13 @@ if __name__ == '__main__':	# executing as script
 			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
 
 		grid_points = np.array([(x, y) for x in\
-			np.linspace(- box_size*(1 - 1./Ncases)/2,
-			box_size*(1 - 1./Ncases)/2, Ncases, endpoint=True)\
+			relative_positions(np.linspace(- box_size*(1 - 1./Ncases)/2,
+			box_size*(1 - 1./Ncases)/2, Ncases, endpoint=True) + centre[0],
+			0, parameters['box_size'])\
 			for y in\
-			np.linspace(- box_size*(1 - 1./Ncases)/2,
-			box_size*(1 - 1./Ncases)/2, Ncases, endpoint=True)
+			relative_positions(np.linspace(- box_size*(1 - 1./Ncases)/2,
+			box_size*(1 - 1./Ncases)/2, Ncases, endpoint=True) + centre[1],
+			0, parameters['box_size'])\
 			])	# grid points at which shear strain will be evaluated
 
 		times = np.array(list(OrderedDict.fromkeys(map(
@@ -439,8 +467,9 @@ if __name__ == '__main__':	# executing as script
 			w_traj = Gsd(wrap_file);						# wrapped trajectory object
 			u_traj = Dat(unwrap_file, parameters['N'])		# unwrapped trajectory object
 			Sgrid, Cgrid = tuple(np.transpose(list(map(lambda time:
-				strain_vorticity_grid(box_size, Ncases, grid_points,
-				time, dt, prep_frames, w_traj, u_traj, sigma, r_cut)
+				strain_vorticity_grid(parameters['box_size'], Ncases,
+				grid_points, time, dt, prep_frames, w_traj, u_traj, sigma,
+				r_cut)
 				, times)), (1, 0, 2, 3)))					# lists of shear strain and displacement vorticity correlations
 
 		Css2D, Ccc2D = tuple(map(corField2D_scalar_average, [Sgrid, Cgrid]))	# shear strain and displacement vorticity fields correlations
@@ -470,8 +499,8 @@ if __name__ == '__main__':	# executing as script
 
 		# PLOT
 
-		plot(Sgrid[display_grid], Css2D, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
-		plot(Cgrid[display_grid], Ccc2D, '\omega', naming_Ccc)			# plotting displacement vorticity map and correlation
+		plot(Sgrid[display_grid], Css2D, box_size, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
+		plot(Cgrid[display_grid], Ccc2D, box_size, '\omega', naming_Ccc)		# plotting displacement vorticity map and correlation
 
 		if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
 			plt.show()
