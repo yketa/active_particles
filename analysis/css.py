@@ -128,7 +128,6 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.gridspec import GridSpec
-cmap = plt.cm.jet
 
 def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	box_size, neighbours_grid):
@@ -287,6 +286,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	# GRID AND CORRELATION FIGURE
 
+	cmap = plt.cm.jet
+
 	fig, ax = plt.subplots(1, 2)	# 1 x 2 figure
 
 	fig.set_size_inches(16, 16)		# figure size
@@ -357,7 +358,7 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	# GRID CIRCLE FIGURE
 
-	fig_gc, (ax_grid, ax_plot), cmap = GridCircle(grid,
+	fig_gc, (ax_grid, ax_plot), cb_gc = GridCircle(grid,
 		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
 
 	fig_gc.set_size_inches(16, 16)		# figure size
@@ -375,7 +376,7 @@ def plot(grid, corr, box_size, var, naming_standard):
 	ax_grid.set_xlabel(r'$x$')
 	ax_grid.set_ylabel(r'$y$')
 	ax_grid.set_title('2D ' + r'$%s$' % C)
-	cmap.set_label(r'$%s$' % C, labelpad=20, rotation=270)
+	cb_gc.set_label(r'$%s$' % C, labelpad=20, rotation=270)
 
 	ax_plot.set_xlabel(r'$\theta$')
 	ax_plot.set_ylabel(r'$%s(r, \theta)$' % C)
