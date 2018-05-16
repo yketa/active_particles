@@ -351,7 +351,7 @@ class GridCircle:
         """
 
         position = self.circle_centre + radius*np.array(
-            [np.cos(angle), - np.sin(angle)])   # position in the grid at which we want the value
+            [- np.sin(angle), np.cos(angle)])   # position in the grid at which we want the value
 
         if not((position[0] >= self.extent[0]
             and position[0] <= self.extent[1]) and (position[1] >=
