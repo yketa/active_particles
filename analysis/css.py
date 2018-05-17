@@ -54,7 +54,7 @@ R_CUT : float
 	Cut-off radius for coarse graining function.
 	NOTE: Value of R_CUT is then multiplied by average particle diameter from
 	simulation parameters file.
-	DEFAULT: 2
+	DEFAULT: active_particles.analysis.css._r_cut
 SIGMA : float
 	Length scale of the spatial extent of the coarse graining function.
 	DEFAULT: R_CUT
@@ -76,7 +76,7 @@ R_MAX [PLOT or SHOW mode] : float
 	Half size of the box showed for 2D correlation.
 	NOTE: R_MAX < 0 will be interpreted as the box shown being the actual
 	simulation box.
-	DEFAULT: 20
+	DEFAULT: active_particles.analysis.css._r_max
 DISPLAY_GRID [PLOT or SHOW mode] : int
 	Index of map in list of variable maps to display.
 	DEFAULT : 0
@@ -101,13 +101,13 @@ vorticity.
 import active_particles.naming as naming
 
 from active_particles.init import get_env
-from active_particles.exponents import float_to_letters
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
-from active_particles.analysis.coarse_graining import CoarseGraining
+from active_particles.analysis.coarse_graining import GaussianCG,\
+	CoarseGraining
 
 from active_particles.plot.mpl_tools import GridCircle
 
@@ -192,8 +192,8 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	pos1_wrcut = u_traj.position(time + dt, *wrcut)							# positions at time time + dt (without periodic boundary conditions)
 	dis_wrcut = pos1_wrcut - pos0_wrcut										# displacements of the particles between time and time + dt
 
-	coarse_graining = CoarseGraining(np.sqrt(np.sum(pos_wrcut**2, axis=-1)),
-		sigma, r_cut)														# coarse graining object
+	coarse_graining = CoarseGraining(GaussianCG(sigma, r_cut).factors,
+		pos_wrcut)															# coarse graining object
 	rho = coarse_graining.average(np.full(len(pos_wrcut), fill_value=1))	# averaged density
 	if rho == 0: return 0, 0												# if there is no particles within r_cut
 
@@ -390,6 +390,9 @@ def plot(grid, corr, box_size, var, naming_standard):
 	ax_plot.set_xlabel(r'$\theta$')
 	ax_plot.set_ylabel(r'$%s(r, \theta)$' % C)
 
+_r_cut = 2	# default cut-off radius for coarse graining function
+_r_max = 20	# default half size of the box showed for 2D correlation
+
 if __name__ == '__main__':	# executing as script
 
 	# VARIABLE DEFINITIONS
@@ -401,22 +404,18 @@ if __name__ == '__main__':	# executing as script
 	init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)	# frame to consider as initial
 	int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)	# maximum number of intervals of length dt considered in correlations calculations
 
-	r_max = get_env('R_MAX', default=20, vartype=float)	# half size of the box showed for 2D correlation
-
 	parameters_file = get_env('PARAMETERS_FILE',
 		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
 	with open(parameters_file, 'rb') as param_file:
 		parameters = pickle.load(param_file)				# parameters hash table
 
-	r_cut = parameters['a']*get_env('R_CUT', default=2, vartype=float)	# cut-off radius for coarse graining function
-	sigma = get_env('SIGMA', default=r_cut, vartype=float)				# length scale of the spatial extent of the coarse graining function
+	r_cut = parameters['a']*get_env('R_CUT', default=_r_cut, vartype=float)	# cut-off radius for coarse graining function
+	sigma = get_env('SIGMA', default=r_cut, vartype=float)			# length scale of the spatial extent of the coarse graining function
 
 	box_size = get_env('BOX_SIZE', default=parameters['box_size'],
 		vartype=float)									# size of the square box to consider
 	centre = (get_env('X_ZERO', default=0, vartype=float),
 		get_env('Y_ZERO', default=0, vartype=float))	# centre of the box
-
-	r_max = box_size/2 if r_max < 0 else r_max	# half size of the box showed for 2D correlation
 
 	prep_frames = ceil(parameters['prep_steps']/parameters['period_dump'])	# number of preparation frames (FIRE energy minimisation)
 
@@ -508,6 +507,9 @@ if __name__ == '__main__':	# executing as script
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
 
 		# PLOT
+
+		r_max = get_env('R_MAX', default=_r_max, vartype=float)	# half size of the box showed for 2D correlation
+		r_max = box_size/2 if r_max < 0 else r_max
 
 		plot(Sgrid[display_grid], Css2D, box_size, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
 		plot(Cgrid[display_grid], Ccc2D, box_size, '\omega', naming_Ccc)		# plotting displacement vorticity map and correlation
