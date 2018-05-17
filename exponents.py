@@ -15,7 +15,8 @@ We set ONCE AND FOR ALL the number of significant figures with the variable
 significant_figures.
 """
 
-from numpy import floor, log10, abs
+from numpy import floor, log10, abs, seterr
+seterr(divide='ignore')	# ignore division by 0
 
 # SIGNIFICANT FIGURES
 
@@ -69,13 +70,13 @@ def float_to_letters(flo):
 		NOTE: returns l0000 (= 0) if expression is incorrect.
 	"""
 
-	expo_int = int(floor(log10(abs(flo))))	# integer exponent
 	try:
+		expo_int = int(floor(log10(abs(flo))))			# integer exponent
 		expo_let = list(_exponents.keys())[list(_exponents.values()).index(
-			'%i' % expo_int							# corresponding letter exponent
+			'%i' % expo_int								# corresponding letter exponent
 			)]
-	except KeyError: return 'l0000'					# return 0 if exponent not attainable
-	if flo < 0: expo_let = expo_let.upper()			# make upper case if float is negative
+	except (OverflowError, KeyError): return 'l0000'	# return 0 if exponent not attainable or zero
+	if flo < 0: expo_let = expo_let.upper()				# make upper case if float is negative
 
 	digi = int(abs(flo) * (10**(significant_figures - expo_int - 1)))	# digits in litteral expression
 
