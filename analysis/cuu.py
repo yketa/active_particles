@@ -103,11 +103,11 @@ def displacement(point, time, dt, positions, u_traj, dL, box_size,
     density = (displacement != 0).any()*1                       # coarse-grained density
     norm_displacement = np.sqrt(np.sum(displacement**2))        # coarse-grained displacement norm
     try:
-        displacement_direction = displacement/norm_displacemet  # coarse-grained displacement direction
+        displacement_direction = displacement/norm_displacement # coarse-grained displacement direction
     except:
         displacement_direction = [0, 0]
 
-    return [density, norm_displacemet], displacement, relative_displacement,\
+    return [density, norm_displacement], displacement, relative_displacement,\
         displacement_direction
 
 def displacement_grid(box_size, Ncases, grid_points, time, dt,
