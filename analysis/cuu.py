@@ -221,7 +221,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     axs[0, 0].set_ylabel(r'$y$')
     axs[0, 0].set_title('2D ' + r'$%s$' % C + ' ' +
         (r'$(%s^T/%s^L(\frac{r}{a} = %.3e) = %.3e)$'
-        % (C, C, (box_size/Ncases)/a,
+        % (C, C, (box_size/Ncases)/parameters['a'],
         directional_correlations['CT']/directional_correlations['CL'])
         if 'CL' in directional_correlations
         and 'CT' in directional_correlations else ''))
