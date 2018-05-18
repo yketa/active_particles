@@ -16,6 +16,31 @@ from active_particles.analysis.correlations import corField2D_scalar_average,\
 from active_particles.analysis.coarse_graining import SquareUniformCG,\
 	CoarseGraining
 
+from os import getcwd
+
+from math import ceil
+
+import gsd
+import gsd.pygsd
+
+import numpy as np
+
+import pickle
+
+from operator import itemgetter
+
+from collections import OrderedDict
+
+from datetime import datetime
+
+import matplotlib as mpl
+if not(get_env('SHOW', default=False, vartype=bool)):
+	mpl.use('Agg')	# avoids crash if launching without display
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 def displacement(point, time, dt, positions, u_traj, dL, box_size,
     neighbours_grid):
     """
@@ -160,6 +185,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     """
 
     """
+    cmap = plt.cm.jet
 
     fig, axs = plt.subplots(2, 2)
 
