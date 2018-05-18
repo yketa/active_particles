@@ -44,8 +44,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def displacement(point, time, dt, positions, u_traj, dL, box_size,
     neighbours_grid):
     """
-    Calculates coarse-grained displacement, density, relative displacement,
-    displacement norm and displacement direction.
+    Calculates coarse-grained displacement and relative displacement.
 
     Resorts to neighbours grids.
 
@@ -72,22 +71,16 @@ def displacement(point, time, dt, positions, u_traj, dL, box_size,
 
     Returns
     -------
-    [density, norm_displacement] : float list
-        Concatenated density and displacement.
-        NOTE: These are concatenated for dimension reasons.
-        NOTE: density = 1 if there are particles, 0 otherwise.
     displacement : float array
         Displacement.
     relative_displacement : float array
         Relative displacement.
-    displacement_direction : float array
-        Displacement direction.
     """
 
     wrcut = neighbours_grid.get_neighbours(point)	# particles indexes in a square box of size dL around point
     Nwrcut = len(wrcut)                             # number of neighbouring particles
     if Nwrcut == 0:
-        return [0, 0], [0, 0], [0, 0], [0, 0]       # if there is no neighbouring particles
+        return [0, 0], [0, 0]                       # if there is no neighbouring particles
 
     pos_wrcut = relative_positions(
 		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
@@ -100,15 +93,8 @@ def displacement(point, time, dt, positions, u_traj, dL, box_size,
 		pos_wrcut)                                              # coarse graining object
     displacement = coarse_graining.average(dis_wrcut)           # coarse-grained displacement
     relative_displacement = coarse_graining.average(rdis_wrcut) # coarse-grained relative displacement
-    density = (displacement != 0).any()*1                       # coarse-grained density
-    norm_displacement = np.sqrt(np.sum(displacement**2))        # coarse-grained displacement norm
-    if norm_displacement != 0:
-        displacement_direction = displacement/norm_displacement # coarse-grained displacement direction
-    else:
-        displacement_direction = [0, 0]
 
-    return [density, norm_displacement], displacement, relative_displacement,\
-        displacement_direction
+    return displacement, relative_displacement
 
 def displacement_grid(box_size, Ncases, grid_points, time, dt,
 	prep_frames, w_traj, u_traj, dL):
@@ -171,14 +157,24 @@ def displacement_grid(box_size, Ncases, grid_points, time, dt,
 
     # DISPLACEMENT GRIDS CALCULATION
 
-    ndgrid, ugrid, wgrid, egrid = tuple(np.transpose(list(map(
+    ugrid, wgrid = tuple(np.transpose(list(map(
 		lambda point: displacement(point, time, dt, positions, u_traj, dL,
         box_size, neighbours_grid),
 		grid_points)), (1, 0, 2)))	# displacement variables lists
 
     correct_grid = lambda grid: np.transpose(
         np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1]     # get grids with the same orientation as positions
-    return tuple(map(correct_grid, [ndgrid, ugrid, wgrid, egrid]))  # displacement variable grid
+    ugrid, wgrid = tuple(map(correct_grid, [ugrid, wgrid]))
+
+    ngrid = (ugrid != 0).any(axis=-1)*1         # density grid
+    ngridr = np.reshape(ngrid, ngrid.shape + (1,))
+	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1))  # displacement norm grid
+	dgridr = np.reshape(dgrid, dgrid.shape + (1,))
+
+    egrid = np.divide(ugrid, dgridr, out=np.zeros(ugrid.shape),
+        where=dgridr!=0) # displacement direction
+
+    return np.concatenate((ngridr, dgridr), axis=-1), ugrid, wgrid, egrid  # displacement variable grid
 
 def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     **directional_correlations):
