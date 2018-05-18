@@ -144,25 +144,22 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 
     positions = relative_positions(w_traj.position(prep_frames + time +
 		dt*get_env('ENDPOINT', default=False, vartype=bool)),
-        centre, box_size)               # array of wrapped particle positions
+        centre, box_size)       # array of wrapped particle positions
+    dL = new_box_size/Ncases    # box separation
+
     pos0 = u_traj.position(time)        # positions at time time (without periodic boundary conditions)
     pos1 = u_traj.position(time + dt)   # positions at time time + dt (without periodic boundary conditions)
 
     # DISPLACEMENT GRIDS CALCULATION
 
     ugrid = np.zeros((Ncases, Ncases, 3))
-    dL = new_box_size/Ncases
     for particle in range(len(positions)):
         position = positions[particle]
         if (np.abs(position) <= new_box_size/2).all():
-            ugrid[tuple(np.array((position + new_box_size/2)/dL, dtype=int))]\
+            ugrid[tuple(np.array((position + new_box_size/2)//dL, dtype=int))]\
                 += np.concatenate(([1], pos1[particle] - pos0[particle]))
     ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
         out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
-
-    correct_grid = lambda grid: np.transpose(
-        np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1] # get grids with the same orientation as positions
-    ugrid = correct_grid(ugrid)
 
     wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
 
