@@ -77,7 +77,7 @@ R_MAX [PLOT or SHOW mode] : float
 	NOTE: R_MAX < 0 will be interpreted as the box shown being the actual
 	simulation box.
 	DEFAULT: active_particles.analysis.css._r_max
-DISPLAY_GRID [PLOT or SHOW mode] : int
+DISPLAY_GRID [COMPUTE mode] : int
 	Index of map in list of variable maps to display.
 	DEFAULT : 0
 
@@ -218,7 +218,7 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 	Parameters
 	----------
 	box_size : float
-		Length of the system's square box.
+		Length of the considered system's square box.
 	Ncases : int
 		Number of boxes in each direction to compute the shear strain and
 		displacement vorticity grid.
@@ -242,9 +242,9 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 
 	Returns
 	-------
-	Sgrid : 2D array like
+	sgrid : 2D array like
 		Shear strain grid.
-	Cgrid : 2D array like
+	cgrid : 2D array like
 		Displacement vorticity grid.
 
 	Output
@@ -265,14 +265,14 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 
 	# SHEAR STRAIN AND DISPLACEMENT VORTICITY GRIDS CALCULATION
 
-	Sgrid, Cgrid = tuple(np.transpose(list(map(
+	sgrid, cgrid = tuple(np.transpose(list(map(
 		lambda point: strain_vorticity(point, time, dt, positions,
 		u_traj, sigma, r_cut, box_size, neighbours_grid),
 		grid_points))))	# shear strain and displacement vorticity lists
 
-	correct_grid = lambda Grid: np.transpose(
-		np.reshape(Grid, (Ncases, Ncases)))[::-1]	# get grids with the same orientation as positions
-	return correct_grid(Sgrid), correct_grid(Cgrid)	# shear strain and displacement vorticity grids
+	correct_grid = lambda grid: np.transpose(
+		np.reshape(grid, (Ncases, Ncases)))[::-1]	# get grids with the same orientation as positions
+	return correct_grid(sgrid), correct_grid(cgrid)	# shear strain and displacement vorticity grids
 
 def plot(grid, corr, box_size, var, naming_standard):
 	"""
@@ -360,6 +360,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 		orientation='vertical')
 	cb1.set_label(r'$%s$' % C, labelpad=20, rotation=270)
 
+	# SAVING
+
 	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
 		image_name, = naming_standard.image().filename(**attributes)
 		fig.savefig(data_dir + '/' + image_name)
@@ -422,7 +424,7 @@ if __name__ == '__main__':	# executing as script
 	Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
 		vartype=int)	# number of boxes in each direction to compute the shear strain and displacement vorticity grid
 
-	Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in velocity and position files
+	Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in unwrapped trajectory file
 	init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
 	Nframes = Nentries - init_frame									# number of frames available for the calculation
 
@@ -437,8 +439,6 @@ if __name__ == '__main__':	# executing as script
 	Css_filename, = naming_Css.filename(**attributes)							# Css filename
 	naming_Ccc = naming.Ccc()													# Ccc naming object
 	Ccc_filename, = naming_Ccc.filename(**attributes)							# Css filename
-
-	display_grid = get_env('DISPLAY_GRID', default=0, vartype=int)	# index of map in list of variable maps to display
 
 	# MODE SELECTION
 
@@ -468,6 +468,8 @@ if __name__ == '__main__':	# executing as script
 			np.linspace(init_frame, Nentries - dt - 1, int_max)
 			))))	# frames at which shear strain will be calculated
 
+		display_grid = get_env('DISPLAY_GRID', default=0, vartype=int)	# index of map in list of variable maps to display
+
 		# SHEAR STRAIN, DISPLACEMENT VORTICITY AND THEIR CORRELATIONS
 
 		with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file,\
@@ -485,10 +487,13 @@ if __name__ == '__main__':	# executing as script
 
 		# SAVING
 
+		sgrid = Sgrid[display_grid]
+		cgrid = Cgrid[display_grid]
+
 		with open(data_dir + '/' + Css_filename, 'wb') as Css_dump_file,\
 			open(data_dir + '/' + Ccc_filename, 'wb') as Ccc_dump_file:
-			pickle.dump([Sgrid, Css2D], Css_dump_file)
-			pickle.dump([Cgrid, Ccc2D], Ccc_dump_file)
+			pickle.dump([sgrid, Css2D], Css_dump_file)
+			pickle.dump([cgrid, Ccc2D], Ccc_dump_file)
 
 		# EXECUTION TIME
 
@@ -500,8 +505,8 @@ if __name__ == '__main__':	# executing as script
 
 		with open(data_dir + '/' + Css_filename, 'rb') as Css_dump_file,\
 			open(data_dir + '/' + Ccc_filename, 'rb') as Ccc_dump_file:
-			Sgrid, Css2D = pickle.load(Css_dump_file)
-			Cgrid, Ccc2D = pickle.load(Ccc_dump_file)
+			sgrid, Css2D = pickle.load(Css_dump_file)
+			cgrid, Ccc2D = pickle.load(Ccc_dump_file)
 
 	if get_env('PLOT', default=False, vartype=bool) or\
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
@@ -511,8 +516,8 @@ if __name__ == '__main__':	# executing as script
 		r_max = get_env('R_MAX', default=_r_max, vartype=float)	# half size of the box showed for 2D correlation
 		r_max = box_size/2 if r_max < 0 else r_max
 
-		plot(Sgrid[display_grid], Css2D, box_size, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
-		plot(Cgrid[display_grid], Ccc2D, box_size, '\omega', naming_Ccc)		# plotting displacement vorticity map and correlation
+		plot(sgrid, Css2D, box_size, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
+		plot(cgrid, Ccc2D, box_size, '\omega', naming_Ccc)			# plotting displacement vorticity map and correlation
 
 		if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
 			plt.show()
