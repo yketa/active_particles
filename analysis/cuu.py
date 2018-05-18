@@ -92,7 +92,7 @@ def displacement(point, time, dt, positions, u_traj, dL, box_size,
 
     return displacement
 
-def displacement_grid(box_size, Ncases, grid_points, time, dt,
+def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 	prep_frames, w_traj, u_traj, dL):
     """
     Calculates grids of displacement, density, relative displacement,
@@ -103,11 +103,13 @@ def displacement_grid(box_size, Ncases, grid_points, time, dt,
     Parameters
 	----------
 	box_size : float
+		Length of the system's square box.
+    new_box_size : float
 		Length of the considered system's square box.
+    centre : float array
+        Centre f the box.
 	Ncases : int
 		Number of boxes in each direction to compute the displacements.
-    grid_points : array like of coordinates
-		Grid points at which displacements will be evaluated.
 	time : int
 		Frame at which displacements will be calculated.
 	dt : int
@@ -140,23 +142,22 @@ def displacement_grid(box_size, Ncases, grid_points, time, dt,
 	Prints neighbours grid computation time.
     """
 
-    # NEIGHBOURS GRID
-
-    startTime0 = datetime.now()	# start time for neighbours grid computation
-
-    positions = w_traj.position(prep_frames + time +
-		dt*get_env('ENDPOINT', default=False, vartype=bool))       # array of wrapped particle positions
-    neighbours_grid = NeighboursGrid(positions, box_size, dL/2)    # neighbours grid
-
-    print("Neighbours grid computation time (time = %e): %s" %
-		(time, datetime.now() - startTime0))	# neighbours grid computation time
+    positions = relative_positions(w_traj.position(prep_frames + time +
+		dt*get_env('ENDPOINT', default=False, vartype=bool)),
+        centre, box_size)               # array of wrapped particle positions
+    pos0 = u_traj.position(time)        # positions at time time (without periodic boundary conditions)
+    pos1 = u_traj.position(time + dt)   # positions at time time + dt (without periodic boundary conditions)
 
     # DISPLACEMENT GRIDS CALCULATION
 
-    ugrid = list(map(
-		lambda point: displacement(point, time, dt, positions, u_traj, dL,
-        box_size, neighbours_grid),
-		grid_points)) # displacement list
+    ugrid = np.zeros((Ncases, Ncases, 3))
+    dL = new_box_size/Ncases
+    for particle in range(len(positions)):
+        if (np.abs(positions[particle]) <= new_box_size/2).all():
+            ugrid[tuple(np.array((position + new_box_size/2)/dL, dtype=int))]\
+                += np.concatenate(([1], pos1[particle] - pos0[particle]))
+    ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
+        out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, 0]!=0) # displacement grid
 
     correct_grid = lambda grid: np.transpose(
         np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1] # get grids with the same orientation as positions
@@ -371,8 +372,9 @@ if __name__ == '__main__':  # executing as script
             w_traj = Gsd(wrap_file);						# wrapped trajectory object
             u_traj = Dat(unwrap_file, parameters['N'])		# unwrapped trajectory object
             NDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
-                lambda time: displacement_grid(parameters['box_size'], Ncases,
-                grid_points, time, dt, prep_frames, w_traj, u_traj, dL)
+                lambda time: displacement_grid(parameters['box_size'],
+                box_size, centre, Ncases, time, dt, prep_frames, w_traj,
+                u_traj, dL)
                 , times)), (1, 0, 2, 3, 4)))                # lists of displacement variables
 
         Ngrid = NDgrid[:, :, :, 0]  # list of density grids
