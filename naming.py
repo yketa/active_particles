@@ -257,7 +257,46 @@ class _File:
 
         return self.add_ext(OrderedDict(), _image_extension)
 
-class Css(_File):
+class _CorFile(_File):
+    """
+    Naming correlation files.
+    """
+
+    def __init__(self, name, **kwargs):
+        """
+        Architecture of file name.
+
+        Parameters
+        ----------
+        name : string
+            Generic name of correlation file.
+
+        Optional keyword arguments
+        --------------------------
+        ext_parameters : ordered dictionary
+            Hash table of additional parameters and their abbreviations.
+        """
+
+        self.name = name + endpoint()   # generic name
+        self.parameters = OrderedDict([
+            ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
+            ('init_frame', '_I'), ('dt', '_T'), ('int_max', '_M'),
+            ('Ncases', '_C')
+        ])                              # parameters and corresponding abbreviations (in order)
+        self.extension = '.pickle'      # file extension
+
+        if 'ext_parameters' in kwargs:
+            self.parameters = self.add_ext(kwargs['ext_parameters'],
+                self.extension).parameters  # add additional parameters
+
+        if 'BOX_SIZE' in envvar:                        # modified box size
+            self.parameters = OrderedDict(chain(self.parameters.items(),
+                {'box_size': '_B'}.items()))
+        if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:    # modified centre of the box
+            self.parameters = OrderedDict(chain(self.parameters.items(),
+                OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
+
+class Css(_CorFile):
     """
     Naming shear strain maps and shear strain correlation files.
     """
@@ -267,25 +306,10 @@ class Css(_File):
         Architecture of file name.
         """
 
-        super().__init__()  # initialise with superclass
+        super().__init__('Css', ext_parameters=OrderedDict([('r_cut', '_RCUT'),
+            ('sigma', '_SIGM')]))   # initialise with superclass
 
-        self.name = 'Css' + endpoint()  # generic name
-        self.parameters = OrderedDict([
-            ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
-            ('init_frame', '_I'), ('dt', '_T'), ('int_max', '_M'),
-            ('Ncases', '_C'), ('r_cut', '_RCUT'), ('sigma', '_SIGM')
-        ])                              # parameters and corresponding abbreviations (in order)
-
-        if 'BOX_SIZE' in envvar:                        # modified box size
-            self.parameters = OrderedDict(chain(self.parameters.items(),
-                {'box_size': '_B'}.items()))
-        if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:    # modified centre of the box
-            self.parameters = OrderedDict(chain(self.parameters.items(),
-                OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
-
-        self.extension = '.pickle'      # file extension
-
-class Ccc(Css):
+class Ccc(_CorFile):
     """
     Naming displacement vorticity maps and displacement vorticity correlation
     files.
@@ -296,9 +320,69 @@ class Ccc(Css):
         Architecture of file name.
         """
 
-        super().__init__()  # initialise with superclass
+        super().__init__('Ccc', ext_parameters=OrderedDict([('r_cut', '_RCUT'),
+            ('sigma', '_SIGM')]))   # initialise with superclass
 
-        self.name = 'Ccc' + endpoint()
+class Cuu(_CorFile):
+    """
+    Naming displacmeent correlation files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Cuu')  # initialise with superclass
+
+class Cnn(_CorFile):
+    """
+    Naming density correlation files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Cnn')  # initialise with superclass
+
+class Cww(_CorFile):
+    """
+    Naming displacement relative to centre of mass displacement correlation
+    files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Cww')  # initialise with superclass
+
+class Cdd(_CorFile):
+    """
+    Naming displacement norm correlation files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Cdd')  # initialise with superclass
+
+class Cee(_CorFile):
+    """
+    Naming displacement direction correlation files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Cee')  # initialise with superclass
 
 def endpoint():
     """
