@@ -394,7 +394,8 @@ if __name__ == '__main__':  # executing as script
             (Cee1D, Cee1Dcor) = tuple(map(
             lambda C2D:
             tuple(map(lambda C: g2Dto1D(C, box_size),
-            [C2D, np.divide(C2D, Cnn, out=np.zeros(C2D.shape), where=Cnn!=0)]
+            [C2D, np.divide(C2D, Cnn2D, out=np.zeros(C2D.shape),
+            where=Cnn2D!=0)]
             )), [Cuu2D, Cww2D, Cdd2D, Cee2D]))  # 1D displacement variables correlations
 
         # SAVING
