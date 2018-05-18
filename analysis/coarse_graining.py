@@ -89,8 +89,8 @@ class SquareUniformCG:
             Coarse-graining factor at position position.
         """
 
-        if (np.abs(np.array(position)) > dL/2).any(): return 0  # coarse-graining function is zero outside square
-        return 1                                                # is one in
+        if (np.abs(np.array(position)) > self.dL/2).any(): return 0 # coarse-graining function is zero outside square
+        return 1                                                    # is one in
 
     def factors(self, positions):
         """
