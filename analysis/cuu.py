@@ -153,10 +153,10 @@ def displacement_grid(box_size, Ncases, grid_points, time, dt,
 
     # DISPLACEMENT GRIDS CALCULATION
 
-    ugrid = tuple(np.transpose(list(map(
+    ugrid = list(map(
 		lambda point: displacement(point, time, dt, positions, u_traj, dL,
         box_size, neighbours_grid),
-		grid_points)), (1, 0, 2)))	# displacement list
+		grid_points)) # displacement list
 
     correct_grid = lambda grid: np.transpose(
         np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1] # get grids with the same orientation as positions
