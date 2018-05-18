@@ -105,12 +105,14 @@ class SquareUniformCG:
             Coarse-graining factors at positions.
         """
 
-        if len(positions) == 0: return np.array([])
-        return np.array(list(map(
+        CGfactors = np.array(list(map(
             lambda position:
             self.function(position),
             positions
-            )))/len(positions)  # coarse graining factors at positions
+            )))
+        sumCGfactors = np.sum(CGfactors)
+        if np.sum(CGfactors) == 0: return 0
+        return CGfactors/sumCGfactors   # coarse graining factors at positions
 
 class CoarseGraining:
     """
@@ -147,4 +149,7 @@ class CoarseGraining:
             Coarse-grained variable.
         """
 
-        return np.sum(self.CGfactors*np.array(var)) # coarse-grained variable
+        return np.sum(
+            np.transpose(np.array(self.CGfactors,
+            ndmin=len(np.array(var).shape)))
+            *np.array(var), axis=0) # coarse-grained variable
