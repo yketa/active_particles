@@ -158,7 +158,7 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
             ugrid[tuple(np.array((position + new_box_size/2)/dL, dtype=int))]\
                 += np.concatenate(([1], pos1[particle] - pos0[particle]))
     ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
-        out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, 0]!=0) # displacement grid
+        out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
 
     correct_grid = lambda grid: np.transpose(
         np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1] # get grids with the same orientation as positions
