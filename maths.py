@@ -56,7 +56,7 @@ class DictList(dict):
         except KeyError:
             return []
 
-def g2Dto1D(C2D, L):
+def g2Dto1D(g2D, L):
     """
     Returns cylindrical average of 2D grid.
 
