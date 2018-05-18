@@ -85,11 +85,11 @@ def corField2D_vector(field):
         Norm of correlation field.
     """
 
-    xfield = field[:, :, 0]        # projection of field on the first direction of space
-    xC, xNorm = corField(xfield)   # unnormalised correlation field and its norm associated to field projection on the first direction of space
+    xfield = field[:, :, 0]                 # projection of field on the first direction of space
+    xC, xNorm = corField2D_scalar(xfield)   # unnormalised correlation field and its norm associated to field projection on the first direction of space
 
-    yfield = field[:, :, 1]        # projection of field on the second direction of space
-    yC, yNorm = corField(yfield)   # unnormalised correlation field and its norm associated to field projection on the second direction of space
+    yfield = field[:, :, 1]                 # projection of field on the second direction of space
+    yC, yNorm = corField2D_scalar(yfield)   # unnormalised correlation field and its norm associated to field projection on the second direction of space
 
     C = xC + yC                    # correlation field of field
     xCL, yCL = xC[0, 1], yC[1, 0]  # longitudinal correlations in first and second directions of space
