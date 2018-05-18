@@ -102,9 +102,9 @@ def displacement(point, time, dt, positions, u_traj, dL, box_size,
     relative_displacement = coarse_graining.average(rdis_wrcut) # coarse-grained relative displacement
     density = (displacement != 0).any()*1                       # coarse-grained density
     norm_displacement = np.sqrt(np.sum(displacement**2))        # coarse-grained displacement norm
-    try:
+    if norm_displacement != 0:
         displacement_direction = displacement/norm_displacement # coarse-grained displacement direction
-    except:
+    else:
         displacement_direction = [0, 0]
 
     return [density, norm_displacement], displacement, relative_displacement,\
