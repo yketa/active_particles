@@ -168,8 +168,8 @@ def displacement_grid(box_size, Ncases, grid_points, time, dt,
 
     ngrid = (ugrid != 0).any(axis=-1)*1         # density grid
     ngridr = np.reshape(ngrid, ngrid.shape + (1,))
-	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1))  # displacement norm grid
-	dgridr = np.reshape(dgrid, dgrid.shape + (1,))
+    dgrid = np.sqrt(np.sum(ugrid**2, axis=-1))  # displacement norm grid
+    dgridr = np.reshape(dgrid, dgrid.shape + (1,))
 
     egrid = np.divide(ugrid, dgridr, out=np.zeros(ugrid.shape),
         where=dgridr!=0) # displacement direction
