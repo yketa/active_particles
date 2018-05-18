@@ -116,7 +116,6 @@ from os import getcwd
 from math import ceil
 
 import gsd
-import gsd.hoomd
 import gsd.pygsd
 
 import numpy as np
