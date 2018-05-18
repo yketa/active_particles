@@ -44,7 +44,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def displacement(point, time, dt, positions, u_traj, dL, box_size,
     neighbours_grid):
     """
-    Calculates coarse-grained displacement and relative displacement.
+    Calculates coarse-grained displacement.
 
     Resorts to neighbours grids.
 
@@ -73,28 +73,24 @@ def displacement(point, time, dt, positions, u_traj, dL, box_size,
     -------
     displacement : float array
         Displacement.
-    relative_displacement : float array
-        Relative displacement.
     """
 
     wrcut = neighbours_grid.get_neighbours(point)	# particles indexes in a square box of size dL around point
     Nwrcut = len(wrcut)                             # number of neighbouring particles
     if Nwrcut == 0:
-        return [0, 0], [0, 0]                       # if there is no neighbouring particles
+        return [0, 0]                               # if there is no neighbouring particles
 
     pos_wrcut = relative_positions(
 		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
     pos0_wrcut = u_traj.position(time, *wrcut)								# positions at time time (without periodic boundary conditions)
     pos1_wrcut = u_traj.position(time + dt, *wrcut)							# positions at time time + dt (without periodic boundary conditions)
     dis_wrcut = pos1_wrcut - pos0_wrcut										# displacements of the particles between time and time + dt
-    rdis_wrcut = wo_mean(pos1_wrcut) - wo_mean(pos0_wrcut)                  # displacements of the particles between time and time + dt
 
     coarse_graining = CoarseGraining(SquareUniformCG(dL).factors,
 		pos_wrcut)                                              # coarse graining object
     displacement = coarse_graining.average(dis_wrcut)           # coarse-grained displacement
-    relative_displacement = coarse_graining.average(rdis_wrcut) # coarse-grained relative displacement
 
-    return displacement, relative_displacement
+    return displacement
 
 def displacement_grid(box_size, Ncases, grid_points, time, dt,
 	prep_frames, w_traj, u_traj, dL):
@@ -157,14 +153,16 @@ def displacement_grid(box_size, Ncases, grid_points, time, dt,
 
     # DISPLACEMENT GRIDS CALCULATION
 
-    ugrid, wgrid = tuple(np.transpose(list(map(
+    ugrid = tuple(np.transpose(list(map(
 		lambda point: displacement(point, time, dt, positions, u_traj, dL,
         box_size, neighbours_grid),
-		grid_points)), (1, 0, 2)))	# displacement variables lists
+		grid_points)), (1, 0, 2)))	# displacement list
 
     correct_grid = lambda grid: np.transpose(
-        np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1]     # get grids with the same orientation as positions
-    ugrid, wgrid = tuple(map(correct_grid, [ugrid, wgrid]))
+        np.reshape(grid, (Ncases, Ncases, 2)), (1, 0, 2))[::-1] # get grids with the same orientation as positions
+    ugrid = correct_grid(ugrid)
+
+    wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
 
     ngrid = (ugrid != 0).any(axis=-1)*1         # density grid
     ngridr = np.reshape(ngrid, ngrid.shape + (1,))
