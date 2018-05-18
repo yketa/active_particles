@@ -165,6 +165,6 @@ def corField2D_vector_average_Cnn(field_list, Cnn):
 
     C, CL, CT = (lambda c, xCL, yCL, xCT, yCT, Norm: (
         c/Norm,
-        (xCL/Cnn2D[0, 1] + yCL/Cnn2D[1, 0])/(2*Norm),
-        (xCT/Cnn2D[1, 0] + yCT/Cnn2D[0, 1])/(2*Norm)
+        (xCL/Cnn[0, 1] + yCL/Cnn[1, 0])/(2*Norm),
+        (xCT/Cnn[1, 0] + yCT/Cnn[0, 1])/(2*Norm)
         ))(*tuple(np.sum(list(map(corField2D_vector, field_list)), axis=0)))    # normalised averaged correlation field, longitudinal and transversal correlations
