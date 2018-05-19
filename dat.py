@@ -40,6 +40,7 @@ class Dat:
 		self.N = int(N)											# number of particles
 		self.element_type = element_type						# data picking format
 		self.bytes_per_element = struct.calcsize(element_type)	# element_type number of bytes
+		self.inv_var = {'position':0, 'velocity':2*self.N}		# increment in bytes_per_element to accesss variable
 
 	def dump(self, positions, velocities):
 		"""
@@ -61,7 +62,7 @@ class Dat:
 						self.file.write(struct.pack(self.element_type,	# dump to file
 							data[particle][coord]))
 
-	def get_value(self, time, particle, axis, variable='position'):
+	def get_value(self, time, particle, axis, inc_var):
 		"""
 		Returns the projection on axis 'axis' of the variable 'variable' of
 		particle 'particle' at the frame 'time'.
@@ -78,6 +79,8 @@ class Dat:
 			Axis index.
 		variable : string (either 'position' or 'velocity')
 			Name of the variable. (default: position)
+		inc_var : int
+			Increment in bytes_per_element to accesss variable.
 
 		Returns
 		-------
@@ -85,40 +88,10 @@ class Dat:
 			Variable.
 		"""
 
-		inc_var = {'position':0, 'velocity':2*self.N}[variable]	# increment in bytes_per_element to accesss variable
-
 		self.file.seek(self.bytes_per_element*(
 			4*self.N*time + inc_var + 2*particle + axis))	# set file's current position according to frame, variable, number of particles, and axis
 		return struct.unpack(self.element_type,
 			self.file.read(self.bytes_per_element))[0]		# variable
-
-	def get_array(self, time, variable='position'):
-		"""
-		Returns the (self.N, 2) array of the variable 'variable' for each
-		particle at frame 'time'.
-
-		NOTE: self.file has to be open in 'rb' or 'r+b' mode.
-
-		Parameters
-		----------
-		time : int
-			Frame index.
-		variable : string (either 'position' or 'velocity')
-			Name of the variable. (default: position)
-
-		Returns
-		-------
-		arr : self.element_type packing format (self.N, 2) Numpy array
-			Array of variable at frame 'time'.
-		"""
-
-		return np.reshape(list(map(
-			lambda particle: list(map(
-			lambda axis: self.get_value(time, particle, axis,
-			variable=variable),
-			range(2))),
-			range(self.N))),
-			(self.N, 2))
 
 	def variable(self, time, *particle, variable='position'):
 		"""
@@ -142,12 +115,13 @@ class Dat:
 			Array of variable at frame 'time'.
 		"""
 
-		if particle == (): return self.get_array(time, variable=variable)	# no particular indexes requested
+		if particle == (): particle = range(self.N)	# no particular indexes requested
+
+		inc_var = self.inc_var[variable]	# increment in bytes_per_element to accesss variable
 
 		return np.reshape(list(map(
 			lambda particle: list(map(
-			lambda axis: self.get_value(time, particle, axis,
-			variable=variable),
+			lambda axis: self.get_value(time, particle, axis, inc_var),
 			range(2))),
 			particle)),
 			(len(particle), 2))	# variable at frame 'time' for particles 'particle'
