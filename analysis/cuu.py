@@ -1,7 +1,128 @@
 """
 Module cuu calculates or plots displacements and their correlations.
 
-Files are saved according to active_particles.naming.Cuu standard.
+Files are saved according to active_particles.naming.Cuu (displacement
+correlation), active_particles.naming.Cww (relative displacement correlation),
+active_particles.naming.Cdd (displacement norm correlation),
+active_particles.naming.Cee (displacement direction correlation) and
+active_particles.naming.Cnn (density correlation).
+
+Environment modes
+-----------------
+COMPUTE : bool
+	Compute shear strain and displacement vorticity.
+	DEFAULT : False
+PLOT : bool
+	Plot saved shear strain and displacement vorticity as well as their
+	correlations.
+	DEFAULT : False
+SHOW [COMPUTE or PLOT mode] : bool
+	Show graphs.
+	DEFAULT : False
+SAVE [COMPUTE or PLOT mode] : bool
+	Save graphs.
+	DEFAULT : False
+
+Environment parameters
+----------------------
+DATA_DIRECTORY : string
+	Data directory.
+	DEFAULT: current working directory
+PARAMETERS_FILE : string
+	Simulation parameters file.
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
+WRAPPED_FILE : string
+	Wrapped trajectory file. (.gsd)
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.wrapped_trajectory_file
+UNWRAPPED_FILE : string
+	Unwrapped trajectory file. (.dat)
+	NOTE: .dat files defined with active_particles.dat
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.unwrapped_trajectory_file
+INITIAL_FRAME : int
+	Frame to consider as initial.
+	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
+	the middle frame of the simulation.
+	DEFAULT: -1
+TIME : int
+	Lag time for displacement.
+	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
+	number of simulation frames - INITIAL_FRAME + TIME.
+	DEFAULT: -1
+INTERVAL_MAXIMUM : int
+	Maximum number of intervals of length dt considered in correlations
+	calculations.
+	DEFAULT: 1
+N_CASES : int
+	Number of boxes in each direction to compute the shear strain and
+	displacement vorticity grid.
+	DEFAULT: smallest integer value greater than or equal to the square root of
+		the number of particles from the simulation parameters file.
+BOX_SIZE : float
+	Size of the square box to consider.
+	DEFAULT: simulation box size
+X_ZERO : float
+	1st coordinate of the centre of the square box to consider.
+	DEFAULT: 0
+Y_ZERO : float
+	2nd coordinate of the centre of the square box to consider.
+	DEFAULT: 0
+R_MIN [PLOT or SHOW mode] : float
+	Minimum radius for correlations plots.
+	DEFAULT: active_particles.analysis.cuu._r_min
+R_MAX [PLOT or SHOW mode] : float
+	Maximum radius for correlations plots.
+	DEFAULT: active_particles.analysis.cuu._r_max
+CUU_MIN [PLOT or SHOW mode] : float
+    Minimum displacement correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cuu_min
+CUU_MAX [PLOT or SHOW mode] : float
+    Maximum displacement correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cuu_max
+CWW_MIN [PLOT or SHOW mode] : float
+    Minimum relative displacement correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cww_min
+CWW_MAX [PLOT or SHOW mode] : float
+    Maximum relative displacement correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cww_max
+CDD_MIN [PLOT or SHOW mode] : float
+    Minimum displacement norm correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cdd_min
+CDD_MAX [PLOT or SHOW mode] : float
+    Maximum displacement norm correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cdd_max
+CEE_MIN [PLOT or SHOW mode] : float
+    Minimum displacement direction correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cee_min
+CEE_MAX [PLOT or SHOW mode] : float
+    Maximum displacement direction correlation for correlation plots.
+    DEFAULT: active_particles.analysis.cuu._Cee_max
+AXIS [PLOT or SHOW mode] : string
+    Axis scale for correlation plots.
+    NOTE: 'LINLIN', 'LOGLIN', 'LINLOG' or 'LOGLOG'.
+    DEFAULT: 'LOGLOG'
+
+Output
+------
+[COMPUTE MODE]
+> Prints execution time.
+> Saves 2D and 1D density correlations according to active_particles.naming.Cnn
+standards in DATA_DIRECTORY.
+> Saves 2D, 1D, longitudinal and transversal displacement correlations and
+1D correlations corrected with density correlations according to
+active_particles.naming.Cuu standards in DATA_DIRECTORY.
+> Saves 2D, 1D, longitudinal and transversal relative displacement correlations
+and 1D correlations corrected with density correlations according to
+active_particles.naming.Cww standards in DATA_DIRECTORY.
+> Saves 2D and 1D displacement norm correlations and 1D correlations corrected
+with density correlations according to active_particles.naming.Cdd standards in
+DATA_DIRECTORY.
+> Saves 2D, 1D, longitudinal and transversal displacement norm correlations and
+1D correlations corrected with density correlations according to
+active_particles.naming.Cee standards in DATA_DIRECTORY.
+[SHOW or PLOT mode]
+> Plots correlations for all variables.
+[SAVE mode]
+> Saves correlation figures in DATA_DIRECTORY.
 """
 
 import active_particles.naming as naming
@@ -40,57 +161,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-def displacement(point, time, dt, positions, u_traj, dL, box_size,
-    neighbours_grid):
-    """
-    Calculates coarse-grained displacement.
-
-    Resorts to neighbours grids.
-
-    Parameters
-    ----------
-    point : array like
-		Coordinates of point at which to calculate shear strain and
-		displacement vorticity.
-	time : int
-		Frame at which shear strain will be calculated.
-	dt : int
-		Length of the interval of time for which the displacements are
-		calculated.
-	positions : (N, 2) shaped array like
-		Array of wrapped particle positions.
-	u_traj : active_particles.dat.Dat
-		Unwrapped trajectory object.
-	dL : float
-        Grid boxes separation.
-	box_size : float
-		Length of the system's square box.
-	neighbours_grid : active_particles.analysis.neighbours.NeighboursGrid
-		Neighbours grid.
-
-    Returns
-    -------
-    displacement : float array
-        Displacement.
-    """
-
-    wrcut = neighbours_grid.get_neighbours(point)	# particles indexes in a square box of size dL around point
-    Nwrcut = len(wrcut)                             # number of neighbouring particles
-    if Nwrcut == 0:
-        return [0, 0]                               # if there is no neighbouring particles
-
-    pos_wrcut = relative_positions(
-		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
-    pos0_wrcut = u_traj.position(time, *wrcut)								# positions at time time (without periodic boundary conditions)
-    pos1_wrcut = u_traj.position(time + dt, *wrcut)							# positions at time time + dt (without periodic boundary conditions)
-    dis_wrcut = pos1_wrcut - pos0_wrcut										# displacements of the particles between time and time + dt
-
-    coarse_graining = CoarseGraining(SquareUniformCG(dL).factors,
-		pos_wrcut)                                              # coarse graining object
-    displacement = coarse_graining.average(dis_wrcut)           # coarse-grained displacement
-
-    return displacement
 
 def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 	prep_frames, w_traj, u_traj, dL):
@@ -142,10 +212,9 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 	Prints neighbours grid computation time.
     """
 
-    positions = relative_positions(w_traj.position(prep_frames + time +
-		dt*get_env('ENDPOINT', default=False, vartype=bool)),
-        centre, box_size)       # array of wrapped particle positions
-    dL = new_box_size/Ncases    # box separation
+    positions = w_traj.position(prep_frames + time +
+		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)   # array of wrapped particle positions
+    dL = new_box_size/Ncases                                                  # box separation
 
     pos0 = u_traj.position(time)        # positions at time time (without periodic boundary conditions)
     pos1 = u_traj.position(time + dt)   # positions at time time + dt (without periodic boundary conditions)
@@ -176,7 +245,36 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     **directional_correlations):
     """
+    Plot correlations.
 
+    Parameters
+    ----------
+    C : string
+        Correlation name.
+    C2D : 2D array
+        Correlation 2D grid.
+    C1D : 1D array
+        Correlation 1D average.
+        NOTE: This has to be of the form (r, C1D(r)) with C1D(r) the averaged
+        2D grid at radius r.
+    C1Dcor : 1D array
+        Correlation 1D average, correction with density correlation.
+        NOTE: This has to be of the form (r, C1D(r)) with C1D(r) the averaged
+        2D grid at radius r.
+    C_min : float
+        Correlation minimum for plot.
+    C_max : float
+        Correlation maximum for plot.
+    naming_standard : active_particles.naming standard
+		Standard naming object.
+
+    Optional keyword arguments
+    --------------------------
+    CL : float
+        Longitudinal correlation.
+    CT : float
+        Transversal correlation.
+    NOTE: These two variables have to be provided together.
     """
     cmap = plt.cm.jet
 
@@ -346,16 +444,6 @@ if __name__ == '__main__':  # executing as script
 			default=data_dir + '/' + naming.wrapped_trajectory_file)	# wrapped trajectory file (.gsd)
         unwrap_file_name = get_env('UNWRAPPED_FILE',
 			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
-
-        grid_points = np.array([(x, y) for x in\
-			relative_positions(np.linspace(- box_size*(1 - 1./Ncases)/2,
-			box_size*(1 - 1./Ncases)/2, Ncases, endpoint=True) + centre[0],
-			0, parameters['box_size'])\
-			for y in\
-			relative_positions(np.linspace(- box_size*(1 - 1./Ncases)/2,
-			box_size*(1 - 1./Ncases)/2, Ncases, endpoint=True) + centre[1],
-			0, parameters['box_size'])\
-			])	# grid points at which displacements will be evaluated
 
         times = np.array(list(OrderedDict.fromkeys(map(
 			lambda x: int(x),
