@@ -85,12 +85,12 @@ Output
 ------
 [COMPUTE MODE]
 > Prints neigbours grid computation time and execution time.
-> Saves the list of computed shear strain maps and the averaged shear strain
+> Saves a computed map of shear strain and the averaged shear strain
 correlation according to active_particles.naming.Css standards in
 DATA_DIRECTORY.
-> Saves the list of computed displacement vorticity maps and the averaged
-displacement vorticity correlations according to active_particles.naming.Ccc
-standards in DATA_DIRECTORY.
+> Saves a computed map of displacement vorticity and the averaged displacement
+vorticity correlations according to active_particles.naming.Ccc standards
+in DATA_DIRECTORY.
 [SHOW or PLOT mode]
 > Plots data map and correlation for both shear strain and displacement
 vorticity.
