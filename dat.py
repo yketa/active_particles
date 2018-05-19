@@ -40,7 +40,7 @@ class Dat:
 		self.N = int(N)											# number of particles
 		self.element_type = element_type						# data picking format
 		self.bytes_per_element = struct.calcsize(element_type)	# element_type number of bytes
-		self.inv_var = {'position':0, 'velocity':2*self.N}		# increment in bytes_per_element to accesss variable
+		self.inc_var = {'position':0, 'velocity':2*self.N}		# increment in bytes_per_element to accesss variable
 
 	def dump(self, positions, velocities):
 		"""
