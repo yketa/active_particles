@@ -255,6 +255,6 @@ class Gsd(HOOMDTrajectory):
 
 		time = int(time)	# avoids crash when calling self.__getitem__
 
-		velocities = self[time].particles.velocity[:, :self.dimensions])	# velocities at frame time
+		velocities = self[time].particles.velocity[:, :self.dimensions]		# velocities at frame time
 		if particles == ():	return velocities								# returns all positions
 		return np.array(itemgetter(*particles)(velocities))					# velocities at frame time
