@@ -1,6 +1,7 @@
 """
 Module exponents defines functions which enable translations between floats
-and litteral expressions which are used to name files and directories.
+and litteral expressions which are used to name files and directories
+throughout this project.
 These litteral expressions work as scientific notation and are read as follows
 	e.g., k123456
 	      ||`---'
