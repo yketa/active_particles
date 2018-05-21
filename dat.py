@@ -9,6 +9,7 @@ from operator import itemgetter
 
 from active_particles.maths import relative_positions
 
+from gsd.pygsd import GSDFile
 from gsd.hoomd import HOOMDTrajectory
 
 class Dat:
@@ -192,7 +193,8 @@ class Gsd(HOOMDTrajectory):
 			Dimension of space. (default: 2)
 		"""
 
-		super().__init__(file)	# initialising gsd.hoomd.HOOMDTrajectory
+		self.file = GSDFile(file)	# gsd file
+		super().__init__(self.file)	# initialising gsd.hoomd.HOOMDTrajectory
 		self.dimensions = dimensions
 
 	def position(self, time, *particles, **kwargs):
