@@ -126,5 +126,5 @@ def g2Dto1Dsquare(g2D, L):
                     g2D[-i, -j]]
 
     return np.array(list(map(
-        lambda sqradius: [dL*np.sqrt(sqradius), np.mean(g1D_dic[radius])],
+        lambda sqradius: [dL*np.sqrt(sqradius), np.mean(g1D_dic[sqradius])],
         sorted(g1D_dic))))
