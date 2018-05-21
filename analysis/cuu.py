@@ -129,7 +129,7 @@ import active_particles.naming as naming
 
 from active_particles.init import get_env
 from active_particles.dat import Dat, Gsd
-from active_particles.maths import relative_positions, wo_mean, g2Dto1D
+from active_particles.maths import relative_positions, wo_mean, g2Dto1Dsquare
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average,\
