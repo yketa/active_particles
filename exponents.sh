@@ -1,27 +1,22 @@
 #! /bin/bash
+#
+# This bash shell script enables one to use functions
+# active_particles.exponents.float_to_letters and
+# active_particles.exponents.letters_to_float from the command line.
+#
+# Information about litteral notation of floats used in this project can be
+# found in active_particles/exponents.py.
 
-# Letters expressions and floats conversion hash tables and conversion functions.
-
-declare -A exponents # declares the hash table exponents
-export exponents=(["a"]="-11" ["b"]="-10" ["c"]="-9" ["d"]="-8" ["e"]="-7" ["f"]="-6" ["g"]="-5" ["h"]="-4" ["i"]="-3" ["j"]="-2" ["k"]="-1" ["l"]="0" ["m"]="1" ["n"]="2" ["o"]="3" ["p"]="4" ["q"]="5" ["r"]="6" ["s"]="7" ["t"]="8" ["u"]="9" ["v"]="10" ["w"]="11" ["x"]="12" ["y"]="13" ["z"]="14") # hash table of the exponents
-
-declare -A letters # declares the hash table letters
-export letters=(["-11"]="a" ["-10"]="b" ["-09"]="c" ["-08"]="d" ["-07"]="e" ["-06"]="f" ["-05"]="g" ["-04"]="h" ["-03"]="i" ["-02"]="j" ["-01"]="k" ["+00"]="l" ["+01"]="m" ["+02"]="n" ["+03"]="o" ["+04"]="p" ["+05"]="q" ["+06"]="r" ["+07"]="s" ["+08"]="t" ["+09"]="u" ["+10"]="v" ["+11"]="w" ["+12"]="x" ["+13"]="y" ["+14"]="z") # hash table of the letters
-
-letters_to_float () {
-	# Returns the float associated to a letters expression.
-	echo ${1:1:1}.${1:2:3}e${exponents[${1::1}]}
+letters_to_float(){
+	# Converts litteral expression to float expression.
+	python -c "from active_particles.exponents import letters_to_float;\
+	print(letters_to_float('$1'))"
 }
 export -f letters_to_float
 
-float_to_letters () {
-	# Returns the letters expression associated to a float.
-	float=`FLOAT=$1 /home/yketa/miniconda3/bin/python3.6 << 'EOF'
-import os
-print("%.3e" % float(eval(os.environ['FLOAT'])))
-EOF
-`
-	echo ${letters[${float:6}]}${float:0:1}${float:2:3}
+float_to_letters(){
+	# Converts float expression to litteral expression.
+	python -c "from active_particles.exponents import float_to_letters;\
+	print(float_to_letters($1))"
 }
 export -f float_to_letters
-
