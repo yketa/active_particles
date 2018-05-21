@@ -10,6 +10,7 @@ $ python param.py [DIRECTORY NAME] [PARAMETER NAME]
 """
 
 import sys
+import pickle
 from active_particles.naming import sim_directory, parameters_file
 
 try:
