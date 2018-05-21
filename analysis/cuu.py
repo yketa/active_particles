@@ -141,9 +141,6 @@ from os import getcwd
 
 from math import ceil
 
-import gsd
-import gsd.pygsd
-
 import numpy as np
 
 import pickle
@@ -452,7 +449,7 @@ if __name__ == '__main__':  # executing as script
 
         # DISPLACEMENT CORRELATIONS
 
-        with gsd.pygsd.GSDFile(open(wrap_file_name, 'rb')) as wrap_file,\
+        with open(wrap_file_name, 'rb') as wrap_file,\
 			open(unwrap_file_name, 'rb') as unwrap_file:	# opens wrapped and unwrapped trajectory files
 
             w_traj = Gsd(wrap_file);						# wrapped trajectory object
