@@ -471,11 +471,11 @@ if __name__ == '__main__':  # executing as script
             map(lambda Grid: corField2D_vector_average_Cnn(Grid, Cnn2D),
             [Ugrid, Wgrid, Egrid]))                                             # displacement, relative displacement and displacement direction correlation grids
 
-        Cnn1D = g2Dto1D(Cnn2D, box_size)        # 1D density correlation
+        Cnn1D = g2Dto1Dsquare(Cnn2D, box_size)  # 1D density correlation
         (Cuu1D, Cuu1Dcor), (Cww1D, Cww1Dcor), (Cdd1D, Cdd1Dcor),\
             (Cee1D, Cee1Dcor) = tuple(map(
             lambda C2D:
-            tuple(map(lambda C: g2Dto1D(C, box_size),
+            tuple(map(lambda C: g2Dto1Dsquare(C, box_size),
             [C2D, np.divide(C2D, Cnn2D, out=np.zeros(C2D.shape),
             where=Cnn2D!=0)]
             )), [Cuu2D, Cww2D, Cdd2D, Cee2D]))  # 1D displacement variables correlations
