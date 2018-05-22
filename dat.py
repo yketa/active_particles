@@ -17,7 +17,7 @@ class Dat:
 	.dat files are designed to save trajectory (position and velocity) data for
 	simulations in 2D, with constant number N of particles. These are binary
 	files, containing numbers organised according to the following scheme:
-	|                    FRAME (= CALL TO Dat.dump) 0                   | ...
+	|         FRAME (= CALL TO active_particles.dat.Dat.dump) 0         | ...
 	|           POSITIONS             |           VELOCITIES            | ...
 	| PARTICLE 0 | ... | PARTICLE N-1 | PARTICLE 0 | ... | PARTICLE N-1 | ...
 	|   x  |  y  | ... |   x   |  y   |   x  |  y  | ... |   x   |  y   | ...
@@ -102,6 +102,8 @@ class Dat:
 		----------
 		time : int
 			Frame index.
+		variable : string
+			Name of variable.
 
 		Optional positional arguments
 		-----------------------------
@@ -130,7 +132,7 @@ class Dat:
 	def position(self, time, *particle):
 		"""
 		Returns array of position at frame 'time'.
-		(see dat.Dat.variable)
+		(see active_particles.dat.Dat.variable)
 
 		Parameters
 		----------
@@ -155,7 +157,7 @@ class Dat:
 	def velocity(self, time, *particle):
 		"""
 		Returns array of velocity at frame 'time'.
-		(see dat.Dat.variable)
+		(see active_particles.dat.Dat.variable)
 
 		Parameters
 		----------
@@ -177,27 +179,85 @@ class Dat:
 
 		return self.variable(time, *particle, variable='velocity')
 
+	def displacement(self, time0, time1, *particle):
+		"""
+		Returns array of displacement between time 'time0' and 'time1'.
+		(see active_particles.dat.Dat.position)
+
+		Returns array of velocity at frame 'time'.
+		(see active_particles.dat.Dat.variable)
+
+		Parameters
+		----------
+		time0 : int
+			Initial frame index.
+		time1 : int
+			Final frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particle index.
+			When called with particle indexes, function returns array of
+			particles' displacement between frames 'time0' and 'time1' in the
+			same order.
+
+		Returns
+		-------
+		arr : self.element_type packing format Numpy array
+			Array of displacement between frames 'time0' and 'time1'.
+		"""
+
+		return self.position(time1, *particle)\
+			- self.position(time0, *particle)
+
 class Gsd(HOOMDTrajectory):
 	"""
 	This class adds methods to the gsd.hoomd.HOOMDTrajectory class which reads
 	.gsd trajectory file.
 	"""
 
-	def __init__(self, file, dimensions=2):
+	def __init__(self, file, prep_frames=0, dimensions=2):
 		"""
 		Parameters
 		----------
-		file : gsd.pygsd.GSDFile object
+		file : file object
 			Trajectory file. (.gsd)
+		prep_frames : int
+			Number of frames to ignore at beginning of .gsd file. (default: 0)
 		dimensions : int
 			Dimension of space. (default: 2)
 		"""
 
 		self.file = GSDFile(file)	# gsd file
 		super().__init__(self.file)	# initialising gsd.hoomd.HOOMDTrajectory
+
+		self.prep_frames = prep_frames
 		self.dimensions = dimensions
 
-	def position(self, time, *particles, **kwargs):
+	def __getitem__(self, key):
+		"""
+		Parameters
+		----------
+		key : int or slice
+			Index of trajectory frame.
+			NOTE: To time is added the number of preparation frames
+			self.prep_frames.
+
+		Returns
+		-------
+		snapshot : gsd.hoomd.Snapshot object
+			Snapshot(s) at time(s) key.
+		"""
+
+		if isinstance(key, slice):
+			return super().__getitem__(slice(
+				int(key.start + self.prep_frames) if key.start!=None else None,
+				int(key.stop + self.prep_frames) if key.stop!=None else None,
+				key.step))
+		return super().__getitem__(int(key + self.prep_frames))
+
+	def position(self, time, *particle, **kwargs):
 		"""
 		Parameters
 		----------
@@ -206,7 +266,7 @@ class Gsd(HOOMDTrajectory):
 
 		Optional positional arguments
 		-----------------------------
-		particles : int
+		particle : int
 			Particles indexes.
 			When called with particles indexes, function returns array of
 			particles' position at frame 'time' in the same order.
@@ -222,18 +282,16 @@ class Gsd(HOOMDTrajectory):
 			Array of positions at frame 'time'.
 		"""
 
-		time = int(time)	# avoids crash when calling self.__getitem__
-
 		positions = self[time].particles.position[:, :self.dimensions]	# positions at frame time
-		if particles != ():												# consider only particles in particles
-			positions = np.array(itemgetter(*particles)(positions))
+		if particle != ():												# consider only particles in particles
+			positions = np.array(itemgetter(*particle)(positions))
 
 		if 'centre' in kwargs:
 			box_dim = self[time].configuration.box[0]						# box dimensions
 			return relative_positions(positions, kwargs['centre'], box_dim)	# positions with centre as centre
 		return positions
 
-	def velocity(self, time, *particles):
+	def velocity(self, time, *particle):
 		"""
 		Parameters
 		----------
@@ -242,7 +300,7 @@ class Gsd(HOOMDTrajectory):
 
 		Optional positional arguments
 		-----------------------------
-		particles : int
+		particle : int
 			Particles indexes.
 			When called with particles indexes, function returns array of
 			particles' position at frame 'time' in the same order.
@@ -253,8 +311,30 @@ class Gsd(HOOMDTrajectory):
 			Array of velocities at frame 'time'.
 		"""
 
-		time = int(time)	# avoids crash when calling self.__getitem__
-
 		velocities = self[time].particles.velocity[:, :self.dimensions]		# velocities at frame time
-		if particles == ():	return velocities								# returns all positions
-		return np.array(itemgetter(*particles)(velocities))					# velocities at frame time
+		if particle == ():	return velocities								# returns all velocities
+		return np.array(itemgetter(*particle)(velocities))					# velocities at frame time
+
+	def diameter(self, time, *particle):
+		"""
+		Parameters
+		----------
+		time : int
+			Frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
+			particles' diameters at frame 'time' in the same order.
+
+		Returns
+		-------
+		diameters : float Numpy array
+			Array of diameters at frame 'time'.
+		"""
+
+		diameters = self[time].particles.diameter			# diameters at frame time
+		if particle == ():	return diameters				# returns all diameters
+		return np.array(itemgetter(*particle)(diameters))	# diameters at frame time
