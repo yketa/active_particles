@@ -184,9 +184,7 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 
 	pos_wrcut = relative_positions(
 		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
-	pos0_wrcut = u_traj.position(time, *wrcut)								# positions at time time (without periodic boundary conditions)
-	pos1_wrcut = u_traj.position(time + dt, *wrcut)							# positions at time time + dt (without periodic boundary conditions)
-	dis_wrcut = pos1_wrcut - pos0_wrcut										# displacements of the particles between time and time + dt
+	dis_wrcut = u_traj.displacement(time, time + dt, *wrcut)				# displacements of the particles between time and time + dt
 
 	coarse_graining = CoarseGraining(GaussianCG(sigma, r_cut).factors,
 		pos_wrcut)															# coarse graining object
@@ -203,8 +201,8 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 
 	return strain, vorticity
 
-def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
-	prep_frames, w_traj, u_traj, sigma, r_cut):
+def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt, w_traj,
+	u_traj, sigma, r_cut):
 	"""
 	Calculates grids of (linearised) shear strain and displacement vorticity
 	from coarse-grained displacement field.
@@ -225,8 +223,6 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 	dt : int
 		Length of the interval of time for which the displacements are
 		calculated.
-	prep_frames : int
-		Number of preparation frames.
 	w_traj : active_particles.dat.Gsd
 		Wrapped trajectory object.
 	u_traj : active_particles.dat.Dat
@@ -252,7 +248,7 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt,
 
 	startTime0 = datetime.now()	# start time for neighbours grid computation
 
-	positions = w_traj.position(prep_frames + time +
+	positions = w_traj.position(time +
 		dt*get_env('ENDPOINT', default=False, vartype=bool))		# array of wrapped particle positions
 	neighbours_grid = NeighboursGrid(positions, box_size, r_cut)	# neighbours grid
 
@@ -388,6 +384,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 	ax_plot.set_xlabel(r'$\theta$')
 	ax_plot.set_ylabel(r'$%s(r, \theta)$' % C)
 
+# DEFAULT VARIABLES
+
 _r_cut = 2	# default cut-off radius for coarse graining function
 _r_max = 20	# default half size of the box showed for 2D correlation
 
@@ -425,6 +423,8 @@ if __name__ == '__main__':	# executing as script
 	Nframes = Nentries - init_frame									# number of frames available for the calculation
 
 	dt = Nframes + dt if dt <= 0 else dt	# length of the interval of time for which displacements are calculated
+
+	# NAMING
 
 	attributes = {'density': parameters['density'],
 		'vzero': parameters['vzero'], 'dr': parameters['dr'],
@@ -471,12 +471,11 @@ if __name__ == '__main__':	# executing as script
 		with open(wrap_file_name, 'rb') as wrap_file,\
 			open(unwrap_file_name, 'rb') as unwrap_file:	# opens wrapped and unwrapped trajectory files
 
-			w_traj = Gsd(wrap_file);						# wrapped trajectory object
-			u_traj = Dat(unwrap_file, parameters['N'])		# unwrapped trajectory object
+			w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
+			u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
 			Sgrid, Cgrid = tuple(np.transpose(list(map(lambda time:
 				strain_vorticity_grid(parameters['box_size'], Ncases,
-				grid_points, time, dt, prep_frames, w_traj, u_traj, sigma,
-				r_cut)
+				grid_points, time, dt w_traj, u_traj, sigma, r_cut)
 				, times)), (1, 0, 2, 3)))					# lists of shear strain and displacement vorticity correlations
 
 		Css2D, Ccc2D = tuple(map(corField2D_scalar_average, [Sgrid, Cgrid]))	# shear strain and displacement vorticity fields correlations

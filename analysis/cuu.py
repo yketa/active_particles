@@ -159,8 +159,8 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
-	prep_frames, w_traj, u_traj, dL):
+def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
+	u_traj, dL):
     """
     Calculates grids of displacement, density, relative displacement,
     displacement norm and displacement direction grids.
@@ -182,8 +182,6 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 	dt : int
 		Length of the interval of time for which the displacements are
 		calculated.
-	prep_frames : int
-		Number of preparation frames.
 	w_traj : active_particles.dat.Gsd
 		Wrapped trajectory object.
 	u_traj : active_particles.dat.Dat
@@ -209,12 +207,11 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
 	Prints neighbours grid computation time.
     """
 
-    positions = w_traj.position(prep_frames + time +
+    positions = w_traj.position(time +
 		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)   # array of wrapped particle positions
     dL = new_box_size/Ncases                                                  # box separation
 
-    pos0 = u_traj.position(time)        # positions at time time (without periodic boundary conditions)
-    pos1 = u_traj.position(time + dt)   # positions at time time + dt (without periodic boundary conditions)
+	displacements = u_traj.displacement(time, time + dt)	# displacements between times time and time + dt
 
     # DISPLACEMENT GRIDS CALCULATION
 
@@ -223,7 +220,7 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
         position = positions[particle]
         if (np.abs(position) <= new_box_size/2).all():
             ugrid[tuple(np.array((position + new_box_size/2)//dL, dtype=int))]\
-                += np.concatenate(([1], pos1[particle] - pos0[particle]))
+                += np.concatenate(([1], displacements[particle]))
     ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
         out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
 
@@ -365,6 +362,8 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
         image_name, = naming_standard.image().filename(**attributes)
         fig.savefig(data_dir + '/' + image_name)
 
+# DEFAULT VARIABLES
+
 _r_min = 1  # default minimum radius for correlations plots
 _r_max = 20	# default maximum radius for correlations plots
 
@@ -452,12 +451,11 @@ if __name__ == '__main__':  # executing as script
         with open(wrap_file_name, 'rb') as wrap_file,\
 			open(unwrap_file_name, 'rb') as unwrap_file:	# opens wrapped and unwrapped trajectory files
 
-            w_traj = Gsd(wrap_file);						# wrapped trajectory object
-            u_traj = Dat(unwrap_file, parameters['N'])		# unwrapped trajectory object
+            w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
+            u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
             NDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
                 lambda time: displacement_grid(parameters['box_size'],
-                box_size, centre, Ncases, time, dt, prep_frames, w_traj,
-                u_traj, dL)
+                box_size, centre, Ncases, time, dt, w_traj, u_traj, dL)
                 , times)), (1, 0, 2, 3, 4)))                # lists of displacement variables
 
         Ngrid = NDgrid[:, :, :, 0]  # list of density grids
