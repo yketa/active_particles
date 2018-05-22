@@ -120,13 +120,14 @@ glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
         ('dr', 'rotational diffusion constant', r'$\tilde{\nu}_r$', '{:.2e}'),
         ('N', 'number of particles', r'$N$', '{:.2e}'),
         ('init_frame', 'initial frame', r'$S_{init}$', '{:.2e}'),
+        ('frame', 'time frame', r'$T$', '{:.2e}'),
         ('dt', 'lag time', r'$\Delta t$', '{:.2e}'),
         ('int_max', 'maximum number of intervals', r'$S_{max}$', '{:.2e}'),
         ('Ncases', 'number of boxes in one direction of a grid',
             r'$N_{cases}$', '{:.2e}'),
         ('r_cut', 'cut-off radius', r'$r_{cut}$', '{:.2e}'),
         ('sigma', 'length scale of Gaussian function', r'$\sigma$', '{:.2e}'),
-        ('box_size', 'length of the box in one dimension', r'$L$', '{:.2e}')
+        ('box_size', 'length of the box in one dimension', r'$L$', '{:.3e}')
     )))
 
 # DEFAULT NAMES
@@ -383,6 +384,80 @@ class Cee(_CorFile):
         """
 
         super().__init__('Cee')  # initialise with superclass
+
+class _FrameFile(_File):
+    """
+    Naming system image files.
+    """
+
+    def __init__(self, name, **kwargs):
+        """
+        Architecture of file name.
+
+        Parameters
+        ----------
+        name : string
+            Generic name of image file.
+
+        Optional keyword arguments
+        --------------------------
+        ext_parameters : ordered dictionary
+            Hash table of additional parameters and their abbreviations.
+        """
+
+        self.name = name + endpoint()   # generic name
+        self.parameters = OrderedDict([
+            ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
+            ('frame', '_F')
+        ])                      # parameters and corresponding abbreviations (in order)
+        self.extension = '.eps' # file extension
+
+        if 'ext_parameters' in kwargs:
+            self.parameters = self.add_ext(kwargs['ext_parameters'],
+                self.extension).parameters  # add additional parameters
+
+        if 'BOX_SIZE' in envvar:                        # modified box size
+            self.parameters = OrderedDict(chain(self.parameters.items(),
+                {'box_size': '_B'}.items()))
+        if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:    # modified centre of the box
+            self.parameters = OrderedDict(chain(self.parameters.items(),
+                OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
+
+class Velocity(_FrameFile):
+    """
+    Naming system images with arrows along velocity directions files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('v')   # initialise with superclass
+
+class Trajectory(_FrameFile):
+    """
+    Naming system images with displacements shown as arrows files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('t', ext_parameters=OrderedDict([('dt', '_T')]))   # initialise with superclass
+
+class Displacement(_FrameFile):
+    """
+    Naming system images with arrows along displacement directions files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('u', ext_parameters=OrderedDict([('dt', '_T')]))   # initialise with superclass
 
 def endpoint():
     """
