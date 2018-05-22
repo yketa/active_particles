@@ -128,3 +128,22 @@ def g2Dto1Dsquare(g2D, L):
     return np.array(list(map(
         lambda sqradius: [dL*np.sqrt(sqradius), np.mean(g1D_dic[sqradius])],
         sorted(g1D_dic))))
+
+def normalise1D(vector):
+    """
+    Returs 1D vector of unitary norm with same direction.
+
+    Parameters
+    ----------
+    vector : 1D array-like
+        Vector to normalise.
+
+    Returns
+    -------
+    u_vector : 1D Numpy array
+        Unitary vector with same direction.
+    """
+
+    norm = np.linalg.norm(vector)           # vector norm
+    if norm == 0: return np.array(vector)   # vector is 0
+    return np.array(vector)/norm
