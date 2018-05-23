@@ -9,17 +9,17 @@ Environment modes
 -----------------
 COMPUTE : bool
 	Compute shear strain and displacement vorticity.
-	DEFAULT : False
+	DEFAULT: False
 PLOT : bool
 	Plot saved shear strain and displacement vorticity as well as their
 	correlations.
-	DEFAULT : False
+	DEFAULT: False
 SHOW [COMPUTE or PLOT mode] : bool
 	Show graphs.
-	DEFAULT : False
+	DEFAULT: False
 SAVE [COMPUTE or PLOT mode] : bool
 	Save graphs.
-	DEFAULT : False
+	DEFAULT: False
 
 Environment parameters
 ----------------------
