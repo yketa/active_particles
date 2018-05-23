@@ -405,7 +405,7 @@ class _FrameFile(_File):
             Hash table of additional parameters and their abbreviations.
         """
 
-        self.name = name + endpoint()   # generic name
+        self.name = name        # generic name
         self.parameters = OrderedDict([
             ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
             ('frame', '_F')
