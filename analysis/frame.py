@@ -16,8 +16,8 @@ MODE : string
     | 'velocity'     | Instantaneous velocity | Relative to  | Amplitude of   |
     |                | direction              | diameter     | velocity       |
     |________________|________________________|______________|________________|
-    | 'trajectory'   | Displacement direction | Displacement | No             |
-    |                |                        | amplitude    |                |
+    | 'trajectory'   | Displacement direction | Displacement | Only tracer    |
+    |                |                        | amplitude    | particle       |
     |________________|________________________|______________|________________|
     | 'displacement' | Displacement direction | Relative to  | Amplitude of   |
     |                |                        | diameter     | displacement   |
@@ -372,10 +372,39 @@ class Trajectory(_Frame):
         super().__init__(w_traj, frame, box_size, centre,
             arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
 
+        global trajectory_tracer_particle                           # index of tracer particle
+        try:
+            if not(trajectory_tracer_particle in self.particles):   # tracer particle not in frame
+                raise NameError                                     # do as if tracer particle were not defined
+        except NameError:                                           # tracer particle not defined
+            trajectory_tracer_particle = np.argmin(
+                np.sum(self.positions**2, axis=-1))                 # tracer particle at centre of frame
+
         self.displacements = u_traj.displacement(frame, frame + dt,
             *self.particles)   # particles' displacements between time and time + dt
 
         self.draw()
+
+    def draw_circle(self, particle, color='black', fill=False):
+        """
+        Draws circle at particle's position with particle's diameter.
+
+        Tracer particle is filled.
+
+        Parameters
+        ----------
+        particle : int
+            Particle index.
+        color : any matplotlib color
+            Circle color. (default: 'black')
+        fill : bool
+            Filling the circle with same color. (default: False)
+        """
+
+        if particle == trajectory_tracer_particle:
+            super().draw_circle(particle, color=color, fill=True)   # fill circle if drawn particle is tracer particle
+        else:
+            super().draw_circle(particle, color=color, fill=fill)
 
     def draw(self):
         """
@@ -639,6 +668,7 @@ if __name__ == '__main__':  # executing as script
                 figure.fig.suptitle(suptitle(frame))
                 figure.fig.savefig(movie_dir + '/frames/'
                     + '%010d' % frames.tolist().index(frame) + '.png')  # save frame
+                plt.close(figure.fig)                                   # close frame
 
         subprocess.call([
             'ffmpeg', '-r', '5', '-f', 'image2', '-s', '1280x960', '-i',
