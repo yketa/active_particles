@@ -147,3 +147,30 @@ def normalise1D(vector):
     norm = np.linalg.norm(vector)           # vector norm
     if norm == 0: return np.array(vector)   # vector is 0
     return np.array(vector)/norm
+
+def amplogwidth(arr, factor=2):
+    """
+    Calculates the amplitudes of elements in array arr and, excluding the
+    zeros, returns the mean of the logarithms of these amplitudes plus and
+    minus factor times their standard deviation.
+
+    Parameters
+    ----------
+    arr : array like
+        Array.
+    factor : float
+        Width factor. (default: 2)
+
+    Returns
+    -------
+    min : float
+        E(log(||arr||)) - factor*V(log(||arr||))
+    max : float
+        E(log(||arr||)) + factor*V(log(||arr||))
+    """
+
+    log = np.ma.log10(np.sqrt(np.sum(arr**2, axis=-1))) # logarithms of amplitudes
+    mean = log.mean()                                   # means of logarithms of amplitudes
+    std = log.std()                                     # standard deviation of logarithms of amplitudes
+
+    return mean - factor*std, mean + factor*std
