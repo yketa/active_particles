@@ -435,12 +435,20 @@ class _FrameFile(_File):
         """
 
         if folder:
-            extension = ''
-        else: extension = _movie_extension
-        return self.add_ext(
-            OrderedDict([('frame_fin', '_F'), ('frame_per', '_P'),
-            ('frame_max', '_M')]),
-            extension)
+            ext_extension = ''
+        else: ext_extension = _movie_extension
+
+        ext_parameters = OrderedDict()
+        if 'FINAL_FRAME' in envvar:
+            ext_parameters = OrderedDict(chain(ext_parameters.item(),
+                OrderedDict([('frame_fin', '_F')]).items()))
+        if 'FRAME_PERIOD' in envvar:
+            ext_parameters = OrderedDict(chain(ext_parameters.item(),
+                OrderedDict([('frame_per', '_P')]).items()))
+        if 'FRAME_MAXIMUM' in envvar:
+            ext_parameters = OrderedDict(chain(ext_parameters.item(),
+                OrderedDict([('frame_max', '_M')]).items()))
+        return self.add_ext(ext_parameters, ext_extension)
 
 class Velocity(_FrameFile):
     """
