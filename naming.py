@@ -141,7 +141,8 @@ unwrapped_trajectory_file = 'trajectory.dat'    # unwrapped trajectory file (wit
 
 # FILES NAMING
 
-_image_extension = '.eps'  # default image extension
+_image_extension = '.eps'   # default image extension
+_movie_extension = '.mp4'   # default movie extension
 
 class _File:
     """
@@ -408,7 +409,7 @@ class _FrameFile(_File):
         self.name = name        # generic name
         self.parameters = OrderedDict([
             ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
-            ('frame', '_F')
+            ('init_frame', '_I')
         ])                      # parameters and corresponding abbreviations (in order)
         self.extension = '.eps' # file extension
 
@@ -422,6 +423,24 @@ class _FrameFile(_File):
         if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:    # modified centre of the box
             self.parameters = OrderedDict(chain(self.parameters.items(),
                 OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
+
+    def movie(self, folder=False):
+        """
+        Movie name generator.
+
+        Parameters
+        ----------
+        folder : bool
+            Generate folder name.
+        """
+
+        if folder:
+            extension = ''
+        else: extension = _movie_extension
+        return self.add_ext(
+            OrderedDict([('frame_fin', '_F'), ('frame_per', '_P'),
+            ('frame_max', '_M')]),
+            extension)
 
 class Velocity(_FrameFile):
     """
