@@ -23,10 +23,16 @@ MODE : string
     |                |                        | diameter     | displacement   |
     |________________|________________________|______________|________________|
     DEFAULT: velocity
-SHOW : bool
+PLOT : bool
+    Plot single frame.
+    DEFAULT: False
+MOVIE : bool
+    Make movie out of several plotted frames.
+    DEFAULT: False
+SHOW [PLOT mode] : bool
 	Show figure.
 	DEFAULT: False
-SAVE : bool
+SAVE [PLOT mode] : bool
 	Save figure.
 	DEFAULT: False
 
@@ -45,15 +51,27 @@ UNWRAPPED_FILE : string
 	Unwrapped trajectory file. (.dat)
 	NOTE: .dat files defined with active_particles.dat
 	DEFAULT: DATA_DIRECTORY/active_particles.naming.unwrapped_trajectory_file
-FRAME : int
-	Frame to render.
+INITIAL_FRAME : int
+	[PLOT mode] Frame to render.
+    [MOVIE mode] Initial frame to render.
 	NOTE: FRAME < 0 will be interpreted as the frame to render being the middle
 	frame of the simulation.
 	DEFAULT: -1
+FINAL_FRAME [MOVIE mode] : int
+    Final movie frame.
+    DEFAULT: Final simulation frame.
+FRAME_PERIOD [MOVIE mode] : int
+    Frame rendering period.
+    DEFAULT: active_particles.analysis.frame._frame_per
+FRAME_MAXIMUM : int
+    Maximum number of frames.
+    DEFAULT: active_particles.analysis.frame._frame_max
 DT : int
 	Lag time for displacement.
-	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
-	number of simulation frames - FRAME + TIME.
+	NOTE: [PLOT mode] TIME < 0 will be interpreted as a lag time corresponding
+                      to the total number of simulation frames - FRAME + TIME.
+          [MOVIE mode] TIME < 0 will be interpreted as a lag time
+                       corresponding to the minimum distance between frames.
 	DEFAULT: -1
 BOX_SIZE : float
 	Length of the square box to render.
@@ -66,38 +84,43 @@ Y_ZERO : float
 	DEFAULT: 0
 V_MIN : float
     Minimum value of the colorbar.
-    DEFAULT: ['velocity' mode] 1e-2 times the self-propulsion velocity
-             [other modes] 1e-2 times the self-propulsion velocity times the
-                           lag time
+    DEFAULT: ['velocity' mode] 10^{E(log(||\\vec{v}||))-2*V(log(||\\vec{v}||))}
+             [other modes] 10^{E(log(||\\vec{u}||))-2*V(log(||\\vec{u}||))}
     NOTE: Colorbar is represented in logarithmic scale so V_MIN > 0.
 V_MAX : float
     Maximum value of the colorbar.
-    DEFAULT: ['velocity' mode] self-propulsion velocity
-             [other modes] self-propulsion velocity times the lag time
+    DEFAULT: ['velocity' mode] 10^{E(log(||\\vec{v}||))+2*V(log(||\\vec{v}||))}
+             [other modes] 10^{E(log(||\\vec{u}||))+2*V(log(||\\vec{u}||))}
     NOTE: Colorbar is represented in logarithmic scale so V_MAX > 0.
 ARROW_WIDTH : float
     Width of the arrows.
-    DEFAULT: active_articles.analysis.frame._arrow_width
+    DEFAULT: active_particles.analysis.frame._arrow_width
 HEAD_WIDTH : float
     Width of the arrows' head.
-    DEFAULT: active_articles.analysis.frame._arrow_head_width
+    DEFAULT: active_particles.analysis.frame._arrow_head_width
 HEAD_LENGTH : float
     Length of the arrows' head.
-    DEFAULT: active_articles.analysis.frame._arrow_head_length
+    DEFAULT: active_particles.analysis.frame._arrow_head_length
 FRAME_VERTICAL_SIZE : float
     Vertical size of the frame (in inches).
-    DEFAULT: active_articles.analysis.frame._frame_ver
+    DEFAULT: active_particles.analysis.frame._frame_ver
 FRAME_HORIZONTAL_SIZE : float
     Horizontal size of the frame (in inches).
-    DEFAULT: active_articles.analysis.frame._frame_hor
+    DEFAULT: active_particles.analysis.frame._frame_hor
 FRAME_DEFINITION [SAVE mode] : float
     Definition of image (in dots per inches (dpi)).
-    DEFAULT: active_articles.analysis.frame._frame_def
+    DEFAULT: active_particles.analysis.frame._frame_def
+FIGURE_NAME [SAVE mode] : string
+    Custom figure name.
+    DEFAULT: according to naming standard
 
 Output
 ------
 > Prints execution time.
+[PLOT mode]
 > Plots system according to plotting mode.
+[MOVIE mode]
+> Creates movie from frame concatenation according to plotting mode.
 [SHOW mode]
 > Displays figure.
 [SAVE mode]
@@ -108,10 +131,12 @@ import active_particles.naming as naming
 
 from active_particles.init import get_env
 from active_particles.dat import Dat, Gsd
-from active_particles.maths import normalise1D
+from active_particles.maths import normalise1D, amplogwidth
 
 from os import getcwd
 from os import environ as envvar
+
+import sys
 
 from math import ceil
 
@@ -129,6 +154,10 @@ from matplotlib.cm import ScalarMappable
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from datetime import datetime
+
+from collections import OrderedDict
+
+import subprocess
 
 class _Frame:
     """
@@ -213,6 +242,7 @@ class _Frame:
         """
 
         length = np.sqrt(dx**2 + dy**2) # length of arrow
+        if length == 0: return
         self.ax.arrow(*self.positions[particle], dx, dy, color=color,
             width=length*self.arrow_width,
             head_width=length*self.arrow_head_width,
@@ -244,8 +274,8 @@ class Velocity(_Frame):
     Plotting class specific to 'velocity' mode.
     """
 
-    def __init__(self, u_traj, w_traj, frame, box_size, centre, vmin, vmax,
-        arrow_width, arrow_head_width, arrow_head_length):
+    def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
+        arrow_head_width, arrow_head_length, **kwargs):
         """
         Initialises and plots figure.
 
@@ -261,23 +291,38 @@ class Velocity(_Frame):
             Length of the square box to render.
         centre : 2-uple like
             Centre of the box to render.
-        vmin : float
-            Minimum value of the colorbar.
-        vmax : float
-            Maximum value of the colorbar.
         arrow_width : float
             Width of the arrows.
         arrow_head_width : float
             Width of the arrows' head.
         arrow_head_length : float
             Length of the arrows' head.
+
+        Optional keyword parameters
+        ---------------------------
+        vmin : float
+            Minimum value of the colorbar.
+        vmax : float
+            Maximum value of the colorbar.
         """
 
         super().__init__(w_traj, frame, box_size, centre,
             arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
-        self.colorbar(vmin, vmax)                               # add colorbar to figure
 
-        self.velocities = u_traj.velocity(frame)    # particles' velocities at frame frame
+        self.velocities = u_traj.velocity(frame, *self.particles)   # particles' velocities at frame frame
+
+        self.vmin, self.vmax = amplogwidth(self.velocities)
+        try:
+            self.vmin = np.log10(kwargs['vmin'])
+        except (KeyError, AttributeError): pass # 'vmin' not in keyword arguments or None
+        try:
+            self.vmax = np.log10(kwargs['vmax'])
+        except (KeyError, AttributeError): pass # 'vmax' not in keyword arguments or None
+
+
+        self.colorbar(self.vmin, self.vmax)                     # add colorbar to figure
+        self.colormap.set_label(r'$\log||\vec{v}(t)||$',
+            labelpad=30, rotation=270)                          # colorbar legend
 
         self.draw()
 
@@ -286,21 +331,19 @@ class Velocity(_Frame):
         Plots figure.
         """
 
-        for particle in self.particles:         # for particle in rendered box
+        for particle, velocity in zip(self.particles, self.velocities): # for particle and particle's velocity in rendered box
             self.draw_circle(particle, color=self.scalarMap.to_rgba(
-            np.log10(np.linalg.norm(self.velocities[particle]))),
-                fill=True)                      # draw particle circle with color corresponding to velocity
-            self.draw_arrow(particle,
-                *normalise1D(self.velocities[particle])
-                *0.75*self.diameters[particle]) # draw velocity direction arrow
+                np.log10(np.linalg.norm(velocity))), fill=True)         # draw particle circle with color corresponding to velocity
+            self.draw_arrow(particle, *normalise1D(velocity)
+                *0.75*self.diameters[particle])                         # draw velocity direction arrow
 
 class Trajectory(_Frame):
     """
     Plotting class specific to 'trajectory' mode.
     """
 
-    def __init__(self, u_traj, w_traj, frame, dt, box_size, centre,
-        arrow_width, arrow_head_width, arrow_head_length):
+    def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
+        arrow_head_width, arrow_head_length, dt=0, **kwargs):
         """
         Initialises and plots figure.
 
@@ -312,8 +355,6 @@ class Trajectory(_Frame):
     		Wrapped trajectory object.
         frame : int
             Frame to render.
-        dt : int
-            Lag time for displacement.
         box_size : float
             Length of the square box to render.
         centre : 2-uple like
@@ -324,12 +365,15 @@ class Trajectory(_Frame):
             Width of the arrows' head.
         arrow_head_length : float
             Length of the arrows' head.
+        dt : int
+            Lag time for displacement. (default: 0)
         """
 
         super().__init__(w_traj, frame, box_size, centre,
             arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
 
-        self.displacements = u_traj.displacement(frame, frame + dt)   # particles' displacements between time and time + dt
+        self.displacements = u_traj.displacement(frame, frame + dt,
+            *self.particles)   # particles' displacements between time and time + dt
 
         self.draw()
 
@@ -338,17 +382,18 @@ class Trajectory(_Frame):
         Plots figure.
         """
 
-        for particle in self.particles:                                 # for particle in rendered box
-            self.draw_circle(particle)                                  # draw particle circle
-            self.draw_arrow(particle, *self.displacements[particle])    # draw particle dispalcement between frame and frame + dt
+        for particle, displacement in zip(self.particles,
+            self.displacements):                        # for particle and particle's displacement in rendered box
+            self.draw_circle(particle)                  # draw particle circle
+            self.draw_arrow(particle, *displacement)    # draw particle dispalcement between frame and frame + dt
 
 class Displacement(_Frame):
     """
     Plotting class specific to 'displacement' mode.
     """
 
-    def __init__(self, u_traj, w_traj, frame, dt, box_size, centre, vmin, vmax,
-        arrow_width, arrow_head_width, arrow_head_length):
+    def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
+        arrow_head_width, arrow_head_length, dt=0, **kwargs):
         """
         Initialises and plots figure.
 
@@ -360,8 +405,6 @@ class Displacement(_Frame):
     		Wrapped trajectory object.
         frame : int
             Frame to render.
-        dt : int
-            Lag time for displacement.
         box_size : float
             Length of the square box to render.
         centre : 2-uple like
@@ -376,13 +419,34 @@ class Displacement(_Frame):
             Width of the arrows' head.
         arrow_head_length : float
             Length of the arrows' head.
+        dt : int
+            Lag time for displacement. (default=0)
+
+        Optional keyword parameters
+        ---------------------------
+        vmin : float
+            Minimum value of the colorbar.
+        vmax : float
+            Maximum value of the colorbar.
         """
 
         super().__init__(w_traj, frame, box_size, centre,
             arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
-        self.colorbar(vmin, vmax)                               # add colorbar to figure
 
-        self.displacements = u_traj.displacement(frame, frame + dt)   # particles' displacements between frame and frame + dt
+        self.displacements = u_traj.displacement(frame, frame + dt,
+            *self.particles)    # particles' displacements between frame and frame + dt
+
+        self.vmin, self.vmax = amplogwidth(self.displacements)
+        try:
+            self.vmin = np.log10(kwargs['vmin'])
+        except (KeyError, AttributeError): pass # 'vmin' not in keyword arguments or None
+        try:
+            self.vmax = np.log10(kwargs['vmax'])
+        except (KeyError, AttributeError): pass # 'vmax' not in keyword arguments or None
+
+        self.colorbar(self.vmin, self.vmax)                     # add colorbar to figure
+        self.colormap.set_label(r'$\log||\vec{u}(t, t+\Delta t)||$',
+            labelpad=30, rotation=270)                          # colorbar legend
 
         self.draw()
 
@@ -391,15 +455,17 @@ class Displacement(_Frame):
         Plots figure.
         """
 
-        for particle in self.particles:         # for particle in rendered box
+        for particle, displacement in zip(self.particles,
+            self.displacements):                                    # for particle and particle's displacement in rendered box
             self.draw_circle(particle, color=self.scalarMap.to_rgba(
-            np.log10(np.linalg.norm(self.displacements[particle]))),
-            fill=True)                          # draw particle circle with color corresponding to displacement amplitude
-            self.draw_arrow(particle,
-                *normalise1D(self.displacements[particle])
-                *0.75*self.diameters[particle]) # draw displacement direction arrow
+                np.log10(np.linalg.norm(displacement))), fill=True) # draw particle circle with color corresponding to displacement amplitude
+            self.draw_arrow(particle, *normalise1D(displacement)
+                *0.75*self.diameters[particle])                     # draw displacement direction arrow
 
 # DEFAULT VARIABLES
+
+_frame_per = 1      # default frame rendering period
+_frame_max = 1000   # default maximum number of frames
 
 _frame_ver = 12 # default vertical size of the frames (in inches)
 _frame_hor = 16 # default horizontal size of the frames (in inches)
@@ -415,6 +481,18 @@ if __name__ == '__main__':  # executing as script
 
     # VARIABLE DEFINITIONS
 
+    mode = get_env('MODE', default='velocity')              # plotting mode
+    if mode == 'velocity':
+        plotting_object = Velocity
+        naming_standard = naming.Velocity()
+    elif mode == 'trajectory':
+        plotting_object = Trajectory
+        naming_standard = naming.Trajectory()
+    elif mode == 'displacement':
+        plotting_object = Displacement
+        naming_standard = naming.Displacement()
+    else: raise ValueError('Mode %s is not known.' % mode)  # mode is not known
+
     data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
     wrap_file_name = get_env('WRAPPED_FILE',
@@ -422,8 +500,8 @@ if __name__ == '__main__':  # executing as script
     unwrap_file_name = get_env('UNWRAPPED_FILE',
         default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
 
-    frame = get_env('FRAME', default=-1, vartype=int)   # frame to render
-    dt = get_env('DT', default=-1, vartype=int)         # displacement lag time
+    init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)  # initial frame to render
+    dt = get_env('DT', default=-1, vartype=int)                     # displacement lag time
 
     parameters_file = get_env('PARAMETERS_FILE',
 		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
@@ -438,18 +516,22 @@ if __name__ == '__main__':  # executing as script
         get_env('Y_ZERO', default=0, vartype=float))	# centre of the box
 
     Nentries = parameters['N_steps']//parameters['period_dump'] # number of time snapshots in unwrapped trajectory file
-    frame = int(Nentries/2) if frame < 0 else frame
-    Nframes = Nentries - frame                                  # number of frames available for the calculation
-    dt = Nframes + dt if dt < 0 else dt
+    init_frame = int(Nentries/2) if init_frame < 0 else init_frame
 
     # FIGURE PARAMETERS
 
-    frame_ver = get_env('FRAME_VERTICAL_SIZE', default=_frame_ver,
-        vartype=float)  # vertical size of the frame (in inches)
+    vmin = get_env('V_MIN', vartype=float) # minimum value of the colorbar
+    vmax = get_env('V_MAX', vartype=float) # maximum value of the colorbar
+
     frame_hor = get_env('FRAME_HORIZONTAL_SIZE', default=_frame_hor,
         vartype=float)  # horizontal size of the frame (in inches)
+    frame_ver = get_env('FRAME_VERTICAL_SIZE', default=_frame_ver,
+        vartype=float)  # vertical size of the frame (in inches)
+    mpl.rcParams['figure.figsize'] = (frame_hor, frame_ver)
+
     frame_def = get_env('FRAME_DEFINITION', default=_frame_def,
         vartype=float)  # definition of image (in dots per inches (dpi))
+    mpl.rcParams['savefig.dpi'] = frame_def
 
     arrow_width = get_env('ARROW_WIDTH', default=_arrow_width,
         vartype=float)  # width of the arrows
@@ -462,86 +544,111 @@ if __name__ == '__main__':  # executing as script
 
     attributes = {'density': parameters['density'],
 		'vzero': parameters['vzero'], 'dr': parameters['dr'],
-		'N': parameters['N'], 'frame': frame, 'dt': dt, 'box_size': box_size,
-        'x_zero': centre[0], 'y_zero': centre[1]}   # attributes displayed in filenames
+		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
+        'box_size': box_size, 'x_zero': centre[0], 'y_zero': centre[1]} # attributes displayed in filenames
+
+    # LEGEND SUPTITLE
+
+    def suptitle(frame):
+        """
+        Returns figure suptitle.
+
+        Parameters
+        ----------
+        frame : int
+            Index of rendered frame.
+        """
+
+        suptitle = str(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+    		% (parameters['N'], parameters['density'], parameters['vzero'],
+    		parameters['dr']))
+        suptitle += str(r'$, L=%.3e$' % parameters['box_size'])
+        if 'BOX_SIZE' in envvar: suptitle += str(r'$, L_{new}=%.3e$' % box_size)
+        suptitle += '\n'
+        if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:
+            suptitle += str(r'$x_0 = %.3e, y_0 = %.3e$' % centre) + '\n'
+        suptitle += str(r'$t = %.5e$'
+            % (frame*parameters['period_dump']*parameters['time_step']))
+        if mode == 'trajectory' or mode == 'displacement':
+            suptitle += str(r'$, \Delta t = %.5e$'
+                % (dt*parameters['period_dump']*parameters['time_step']))
+
+        return suptitle
 
     # MODE SELECTION
 
-    mode = get_env('MODE', default='velocity')  # plotting mode
+    if get_env('PLOT', default=False, vartype=bool):    # PLOT mode
 
-    with open(wrap_file_name, 'rb') as wrap_file,\
-        open(unwrap_file_name, 'rb') as unwrap_file:    # opens wrapped and unwrapped trajectory files
+        Nframes = Nentries - init_frame  # number of frames available for the calculation
+        dt = Nframes + dt if dt < 0 else dt
 
-        w_traj = Gsd(wrap_file, prep_frames=prep_frames)    # wrapped trajectory object
-        u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
+        with open(wrap_file_name, 'rb') as wrap_file,\
+            open(unwrap_file_name, 'rb') as unwrap_file:    # opens wrapped and unwrapped trajectory files
 
-        if mode == 'velocity':
+            w_traj = Gsd(wrap_file, prep_frames=prep_frames)    # wrapped trajectory object
+            u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
 
-            vmin = np.log10(get_env('V_MIN', default=1e-2*parameters['vzero'],
-                vartype=float)) # minimum velocity for the colorbar
-            vmax = np.log10(get_env('V_MAX', default=parameters['vzero'],
-                vartype=float)) # maximum velocity for the colorbar
+            figure = plotting_object(u_traj, w_traj, init_frame, box_size,
+                centre, arrow_width, arrow_head_width, arrow_head_length,
+                dt=dt, vmin=vmin, vmax=vmax)
+            figure.fig.suptitle(suptitle(init_frame))
 
-            figure = Velocity(u_traj, w_traj, frame, box_size, centre, vmin,
-                vmax, arrow_width, arrow_head_width, arrow_head_length)
-            figure.colormap.set_label(r'$\log||\vec{v}(t)||$',
-                labelpad=30, rotation=270)
+            if get_env('SAVE', default=False, vartype=bool):    # SAVE mode
+                figure_name, = naming_standard.filename(**attributes)
+                figure.fig.savefig(data_dir + '/' +
+                    get_env('FIGURE_NAME', default=figure_name))
 
-            naming_standard = naming.Velocity()
+    if get_env('MOVIE', default=False, vartype=bool):   # MOVIE mode
 
-        elif mode == 'trajectory':
+        frame_fin = get_env('FINAL_FRAME', default=Nentries, vartype=int)       # final movie frame
+        frame_per = get_env('FRAME_PERIOD', default=_frame_per, vartype=int)    # frame rendering period
+        frame_max = get_env('FRAME_MAXIMUM', default=_frame_max, vartype=int)   # maximum number of frames
 
-            figure = Trajectory(u_traj, w_traj, frame, dt, box_size, centre,
-                arrow_width, arrow_head_width, arrow_head_length)
+        attributes = {**attributes,
+            **{'frame_fin': frame_fin, 'frame_per': frame_per,
+            'frame_max': frame_max}}
+        movie_dir = str(data_dir + '/'
+            + naming_standard.movie(folder=True).filename(**attributes)[0]) # movie directory name
+        subprocess.call(['mkdir', '-p', movie_dir])                         # create movie directory
+        subprocess.call(['rm', '-rf', movie_dir + '/frames'])               # remove frames directory if existing
+        subprocess.call(['mkdir', '-p', movie_dir + '/frames'])             # create frames directory
 
-            naming_standard = naming.Trajectory()
+        Nframes = np.min([Nentries, frame_fin]) - init_frame                    # number of frames available for the movie
+        Ntimes = Nframes//frame_per                                             # maximum number of rendered frames
+        frames = np.array(list(OrderedDict.fromkeys(map(int, init_frame +
+            np.linspace(0, Nframes - 1, Ntimes, endpoint=False, dtype=int)))))  # usable frames
 
-        elif mode == 'displacement':
+        if dt < 0: dt = np.min(np.abs(frames - np.roll(frames, shift=1)))
 
-            vmin = np.log10(get_env('V_MIN',
-                default=1e-2*parameters['vzero']*
-                dt*parameters['period_dump']*parameters['time_step'],
-                vartype=float)) # minimum velocity for the colorbar
-            vmax = np.log10(get_env('V_MAX',
-                default=parameters['vzero']*
-                dt*parameters['period_dump']*parameters['time_step'],
-                vartype=float)) # maximum velocity for the colorbar
+        frames = frames[frames + dt < Nentries - 1][:frame_max] # rendered frames
 
-            figure = Displacement(u_traj, w_traj, frame, dt, box_size, centre,
-                vmin, vmax, arrow_width, arrow_head_width, arrow_head_length)
-            figure.colormap.set_label(r'$\log||\vec{u}(t, t+\Delta t)||$',
-                labelpad=30, rotation=270)
+        with open(wrap_file_name, 'rb') as wrap_file,\
+            open(unwrap_file_name, 'rb') as unwrap_file:    # opens wrapped and unwrapped trajectory files
 
-            naming_standard = naming.Displacement()
+            w_traj = Gsd(wrap_file, prep_frames=prep_frames)    # wrapped trajectory object
+            u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
 
-        else: raise ValueError('Mode %s is not known.' % mode)  # mode is not known
+            for frame in frames:    # for rendered frames
+                sys.stdout.write(
+                    'Frame: %d' % (frames.tolist().index(frame) + 1)
+                    + "/%d \r" % len(frames))
 
-    # FIGURE DIMENSIONS
-    figure.fig.set_size_inches(frame_hor, frame_ver)
+                figure = plotting_object(u_traj, w_traj, frame, box_size,
+                    centre, arrow_width, arrow_head_width, arrow_head_length,
+                    dt=dt, vmin=vmin, vmax=vmax)                        # plot frame
+                figure.fig.suptitle(suptitle(frame))
+                figure.fig.savefig(movie_dir + '/frames/'
+                    + '%010d' % frames.tolist().index(frame) + '.png')  # save frame
 
-    # LEGEND SUPTITLE
-    suptitle = str(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']))
-    suptitle += str(r'$, L=%.3e$' % parameters['box_size'])
-    if 'BOX_SIZE' in envvar: suptitle += str(r'$, L_{new}=%.3e$' % box_size)
-    suptitle += '\n'
-    if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:
-        suptitle += str(r'$x_0 = %.3e, y_0 = %.3e$' % centre) + '\n'
-    suptitle += str(r'$t = %.5e$'
-        % (frame*parameters['period_dump']*parameters['time_step']))
-    if mode == 'trajectory' or mode == 'displacement':
-        suptitle += str(r'$, \Delta t = %.5e$'
-            % (dt*parameters['period_dump']*parameters['time_step']))
-    figure.fig.suptitle(suptitle)
+        subprocess.call([
+            'ffmpeg', '-r', '5', '-f', 'image2', '-s', '1280x960', '-i',
+            movie_dir + '/frames/%10d.png',
+            '-pix_fmt', 'yuv420p', '-y',
+            movie_dir + '/' + naming_standard.movie().filename(**attributes)[0]
+            ])  # generate movie from frames
 
     # EXECUTION TIME
     print("Execution time: %s" % (datetime.now() - startTime))
-
-    if get_env('SAVE', default=False, vartype=bool):    # SAVE mode
-        figure_name, = naming_standard.filename(**attributes)
-        figure.fig.savefig(data_dir + '/' +
-            get_env('FIGURE_NAME', default=figure_name), dpi=frame_def)
 
     if get_env('SHOW', default=False, vartype=bool):    # SHOW mode
         plt.show()
