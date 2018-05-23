@@ -440,13 +440,13 @@ class _FrameFile(_File):
 
         ext_parameters = OrderedDict()
         if 'FINAL_FRAME' in envvar:
-            ext_parameters = OrderedDict(chain(ext_parameters.item(),
+            ext_parameters = OrderedDict(chain(ext_parameters.items(),
                 OrderedDict([('frame_fin', '_F')]).items()))
         if 'FRAME_PERIOD' in envvar:
-            ext_parameters = OrderedDict(chain(ext_parameters.item(),
+            ext_parameters = OrderedDict(chain(ext_parameters.items(),
                 OrderedDict([('frame_per', '_P')]).items()))
         if 'FRAME_MAXIMUM' in envvar:
-            ext_parameters = OrderedDict(chain(ext_parameters.item(),
+            ext_parameters = OrderedDict(chain(ext_parameters.items(),
                 OrderedDict([('frame_max', '_M')]).items()))
         return self.add_ext(ext_parameters, ext_extension)
 
