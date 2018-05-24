@@ -27,24 +27,27 @@
 #   Maximum ntasks to be invoked on each core.
 #   DEFAULT: 1
 
-OUT_DIR=${OUT_DIR-
-$(python -c 'from active_particles.naming import out_directory;
-print(out_directory)')} # output directory
-mkdir -p $OUT_DIR       # create if not existing
+OUT_DIR=${OUT_DIR-$(python -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
+mkdir -p $OUT_DIR                                                                                         # create if not existing
 
 COMMAND=$1  # command to execute script
-if [[ $COMMAND == '' ]]; then
+if [[ -z "$COMMAND" ]]; then
   echo 'No command submitted.'
   exit 0
 fi
 shift
 SCRIPT=$1   # script
-if [[ $SCRIPT == '' ]]; then
+if [[ -z "$SCRIPT" ]]; then
   echo 'No script submitted.'
   exit 0
 fi
 shift
 ENVVAR=$@   # environment variables for script execution
+
+if [[ ! -z "$DATA" ]]; then # data directory name submitted
+  SIM_DIR=$(python -c 'from active_particles.naming import sim_directory; print(sim_directory)')
+  ENVVAR+=" DATA_DIRECTORY=${SIM_DIR}/${DATA}"
+fi
 
 # SUBMIT JOB
 sbatch --job-name=${JOB_NAME-${SCRIPT##*/}} ${CHAIN:+-d afterok:$CHAIN} <<EOF
