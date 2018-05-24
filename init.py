@@ -3,7 +3,9 @@ Module init provides functions useful when initialising simulations or
 analysis.
 """
 
-from os import environ as environment
+from os import environ as envvar
+import sys
+import atexit
 
 def get_env(var_name, default=None, vartype=str):
     """
@@ -25,11 +27,52 @@ def get_env(var_name, default=None, vartype=str):
     """
 
     try:
-        return vartype(environment[var_name])
-    except ValueError:
         try:
-            return vartype(eval(environment[var_name]))
-        except:
-            return default
+            return vartype(envvar[var_name])
+        except ValueError:
+            try:
+                return vartype(eval(envvar[var_name]))
+            except ValueError: raise
     except:
         return default
+
+class StdOut:
+    """
+    Enables to set output stream to file and revert this setting.
+    """
+
+    def __init__(self):
+        """
+        Saves original standard output as attribute.
+        """
+
+        self.stdout = sys.stdout    # original standard output
+
+    def set(self, output_file):
+        """
+        Sets output to file.
+
+        Parameters
+        ----------
+        output_file : file object
+            Output file.
+        """
+
+        try:
+            self.output_file.close()    # if output file already set, close it
+        except AttributeError: pass
+
+        self.output_file = output_file  # output file
+        sys.stdout = self.output_file   # new output stream
+
+        atexit.register(self.revert)    # close file when exiting script
+
+    def revert(self):
+        """
+        Revers to original standard output.
+        """
+
+        try:
+            self.output_file.close()
+            sys.stdout = self.stdout    # revert to original standart output
+        except AttributeError: pass     # no custom output was set
