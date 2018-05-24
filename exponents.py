@@ -76,6 +76,7 @@ def float_to_letters(flo):
 		expo_let = list(_exponents.keys())[list(_exponents.values()).index(
 			'%i' % expo_int								# corresponding letter exponent
 			)]
+	except TypeError: return ''							# return empty string if input type is not recognisable
 	except (OverflowError, KeyError): return 'l0000'	# return 0 if exponent not attainable or zero
 	if flo < 0: expo_let = expo_let.upper()				# make upper case if float is negative
 
