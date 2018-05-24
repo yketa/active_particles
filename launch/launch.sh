@@ -46,7 +46,7 @@ ENVVAR=$@   # environment variables for script execution
 
 if [[ ! -z "$DATA" ]]; then # data directory name submitted
   SIM_DIR=$(python -c 'from active_particles.naming import sim_directory; print(sim_directory)')
-  ENVVAR+=" DATA_DIRECTORY=${SIM_DIR}/${DATA}"
+  ENVVAR="DATA_DIRECTORY=${SIM_DIR}/${DATA} $ENVVAR"
 fi
 
 # SUBMIT JOB
