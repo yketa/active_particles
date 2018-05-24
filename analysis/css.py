@@ -109,8 +109,6 @@ from active_particles.analysis.correlations import corField2D_scalar_average
 from active_particles.analysis.coarse_graining import GaussianCG,\
 	CoarseGraining
 
-from active_particles.plot.mpl_tools import GridCircle
-
 from os import getcwd
 from os import environ as envvar
 
@@ -135,6 +133,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from active_particles.plot.mpl_tools import GridCircle
 
 def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 	box_size, neighbours_grid):
