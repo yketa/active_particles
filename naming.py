@@ -14,6 +14,16 @@ from copy import deepcopy
 
 from os import environ as envvar
 
+# DEFAULT NAMES
+
+sim_directory = get_env('HOME') + '/active_particles_data'  # simulation data directory
+out_directory = sim_directory + '/out'                      # launch output directory
+
+parameters_file = 'param.p'                     # simulation parameters file
+log_file = 'log-output.log'                     # simulation log output file
+wrapped_trajectory_file = 'trajectory.gsd'      # wrapped trajectory file (with periodic boundary conditions)
+unwrapped_trajectory_file = 'trajectory.dat'    # unwrapped trajectory file (without periodic boundary conditions)
+
 # GLOSSARY
 
 class Glossary:
@@ -130,15 +140,6 @@ glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
         ('box_size', 'length of the box in one dimension', r'$L$', '{:.3e}')
     )))
 
-# DEFAULT NAMES
-
-sim_directory = get_env('HOME') + '/active_particles_data'  # simulation data directory
-
-parameters_file = 'param.p'                     # simulation parameters file
-log_file = 'log-output.log'                     # simulation log output file
-wrapped_trajectory_file = 'trajectory.gsd'      # wrapped trajectory file (with periodic boundary conditions)
-unwrapped_trajectory_file = 'trajectory.dat'    # unwrapped trajectory file (without periodic boundary conditions)
-
 # FILES NAMING
 
 _image_extension = '.eps'   # default image extension
@@ -169,7 +170,7 @@ class _File:
         Optional keyword arguments
         --------------------------
         definitions : float, int or bool
-            Defined parameters.
+            Defined parameters (e.g., density=0.1).
 
         Returns
         -------
@@ -181,12 +182,13 @@ class _File:
         buffer = self.name              # consecutive defined attributes
         for param in self.parameters:   # looping through file name parameters
 
-            if param in definitions:                        # if parameter is defined
+            try:
+                if definitions[param] == None: raise KeyError
                 buffer += str(
                     self.parameters[param] +                # parameter abbreviation
                     float_to_letters(definitions[param]))   # defined value of parameter
 
-            else:
+            except KeyError:                            # if parameter is not defined
                 if buffer != '': name_parts += [buffer] # add buffer to defined name parts
                 buffer = ''
 
@@ -258,6 +260,14 @@ class _File:
         """
 
         return self.add_ext(OrderedDict(), _image_extension)
+
+    def out(self):
+        """
+        This function is the default output file name generator, which only
+        changes file extension with '.out'.
+        """
+
+        return self.add_ext(OrderedDict(), '.out')
 
 class _CorFile(_File):
     """
