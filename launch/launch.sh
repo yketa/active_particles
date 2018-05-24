@@ -6,15 +6,15 @@
 # Jobs are launched as follows:
 # [SLURM PARAMETERS] bash launch.sh [COMMAND] [SCRIPT] [ENVIRONMENT VARIABLES]
 
-OUT_DIR = $(python -c 'from active_particles.naming import out_directory;
+OUT_DIR=$(python -c 'from active_particles.naming import out_directory;
 print(out_directory)')  # output directory
 mkdir -p $OUT_DIR       # create if not existing
 
-COMMAND = $1  # command to execute script
+COMMAND=$1  # command to execute script
 shift
-SCRIPT = $1   # script
+SCRIPT=$1   # script
 shift
-ENVVAR = $@   # environment variables for script execution
+ENVVAR=$@   # environment variables for script execution
 
 # SUBMIT JOB
 sbatch --job-name=${SCRIPT##*/} ${CHAIN:+-d afterok:$CHAIN} <<EOF
