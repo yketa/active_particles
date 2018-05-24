@@ -5,9 +5,31 @@
 #
 # Jobs are launched as follows:
 # [SLURM PARAMETERS] bash launch.sh [COMMAND] [SCRIPT] [ENVIRONMENT VARIABLES]
+#
+# Slurm parameters
+# ----------------
+# OUT_DIR : string
+#   Error output directory.
+#   DEFAULT: active_particles.naming.out_directory
+# JOB_NAME : string
+#   Job name on Slurm scheduler
+#   DEFAULT: script name
+# CHAIN : int
+#   Begin execution after job with job ID CHAIN has succesfully executed.
+#   DEFAULT: None
+# PARTITION : string
+#   Partition for the resource allocation.
+#   DEFAULT: gpu
+# GRES : string
+#   Generic consumable resources.
+#   DEFAULT: gpu:k80:1
+# NTASKS : int
+#   Maximum ntasks to be invoked on each core.
+#   DEFAULT: 1
 
-OUT_DIR=$(python -c 'from active_particles.naming import out_directory;
-print(out_directory)')  # output directory
+OUT_DIR=${OUT_DIR-
+$(python -c 'from active_particles.naming import out_directory;
+print(out_directory)')} # output directory
 mkdir -p $OUT_DIR       # create if not existing
 
 COMMAND=$1  # command to execute script
@@ -17,7 +39,7 @@ shift
 ENVVAR=$@   # environment variables for script execution
 
 # SUBMIT JOB
-sbatch --job-name=${SCRIPT##*/} ${CHAIN:+-d afterok:$CHAIN} <<EOF
+sbatch --job-name=${JOB_NAME-${SCRIPT##*/}} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #! /bin/bash
 #SBATCH --partition=${PARTITION-gpu}  # partition for the resource allocation
 #SBATCH --gres=${GRES-gpu:k80:1}      # generic consumable resources
