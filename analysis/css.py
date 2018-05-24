@@ -100,7 +100,7 @@ vorticity.
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env
+from active_particles.init import get_env, StdOut
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions
 
@@ -112,6 +112,9 @@ from active_particles.analysis.coarse_graining import GaussianCG,\
 from active_particles.plot.mpl_tools import GridCircle
 
 from os import getcwd
+from os import environ as envvar
+
+import subprocess
 
 from math import ceil
 
@@ -435,6 +438,20 @@ if __name__ == '__main__':	# executing as script
 	Css_filename, = naming_Css.filename(**attributes)							# Css filename
 	naming_Ccc = naming.Ccc()													# Ccc naming object
 	Ccc_filename, = naming_Ccc.filename(**attributes)							# Css filename
+
+	# STANDARD OUTPUT
+
+	if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
+
+		output_dir = data_dir + '/out/'								# output directory
+		subprocess.call(['mkdir', '-p', output_dir])				# create output directory if not existing
+		output_filename, = naming_Css.out().filename(**attributes)	# output file name
+		output_file = open(output_dir + output_filename, 'w')		# output file
+		output_file.write('Job ID: %i\n\n'
+			% get_env('SLURM_JOB_ID', vartype=int))					# write job ID to output file
+
+		stdout = StdOut()
+		stdout.set(output_file)	# set output file as standard output
 
 	# MODE SELECTION
 
