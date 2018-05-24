@@ -363,9 +363,9 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	# GRID CIRCLE FIGURE
 
-	fig_gc, (ax_grid, ax_plot), cb_gc = GridCircle(C2D_display,
-		extent=[-box_size/2, box_size/2, -box_size/2,
-		box_size/2]).get_fig_ax_cmap()
+	gridcircle = GridCircle(C2D_display,
+		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
+	fig_gc, (ax_grid, ax_plot), cb_gc = gridcircle.get_fig_ax_cmap()
 
 	fig_gc.set_size_inches(16, 16)		# figure size
 	fig_gc.subplots_adjust(wspace=0.4)	# width space
@@ -386,6 +386,10 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	ax_plot.set_xlabel(r'$\theta$')
 	ax_plot.set_ylabel(r'$%s(r, \theta)$' % C)
+
+	# RETURN
+
+	return fig, ax, gridcircle
 
 # DEFAULT VARIABLES
 
@@ -528,8 +532,10 @@ if __name__ == '__main__':	# executing as script
 		r_max = get_env('R_MAX', default=_r_max, vartype=float)	# half size of the box showed for 2D correlation
 		r_max = box_size/2 if r_max < 0 else r_max
 
-		plot(sgrid, Css2D, box_size, '\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
-		plot(cgrid, Ccc2D, box_size, '\omega', naming_Ccc)			# plotting displacement vorticity map and correlation
+		fig_Css, ax_Css, gridcircle_Css = plot(sgrid, Css2D, box_size,
+			'\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
+		fig_Ccc, ax_Ccc, gridcircle_Ccc = plot(cgrid, Ccc2D, box_size,
+			'\omega', naming_Ccc)			# plotting displacement vorticity map and correlation
 
 		if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
 			plt.show()
