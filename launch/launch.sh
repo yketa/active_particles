@@ -33,8 +33,16 @@ print(out_directory)')} # output directory
 mkdir -p $OUT_DIR       # create if not existing
 
 COMMAND=$1  # command to execute script
+if [[ $COMMAND == '' ]]; then
+  echo 'No command submitted.'
+  exit 0
+fi
 shift
 SCRIPT=$1   # script
+if [[ $SCRIPT == '' ]]; then
+  echo 'No script submitted.'
+  exit 0
+fi
 shift
 ENVVAR=$@   # environment variables for script execution
 
