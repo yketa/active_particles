@@ -24,10 +24,11 @@ sbatch --job-name=${SCRIPT##*/} ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #SBATCH --error=${OUT_DIR}/%j.out     # standard error output file
 #SBATCH --ntasks-per-node=${NTASKS-1} # maximum ntasks to be invoked on each core
 
-export $ENVVAR                            # setting environment variables
-(>&2 echo COMMAND: $COMMAND)              # COMMAND in error output file
-(>&2 echo SCRIPT: $SCRIPT)                # SCRIPT in error output file
-(>&2 echo ENVIRONMENT VARIABLES: $ENVVAR) # ENVVAR in error output file
+export $ENVVAR                                  # setting environment variables
+(>&2 printf '%-8s: %s\n' 'COMMAND' '$COMMAND')  # COMMAND in error output file
+(>&2 printf '%-8s: %s\n' 'SCRIPT' '$SCRIPT')    # SCRIPT in error output file
+(>&2 printf '%-8s: %s\n' 'ENVIRON' '$ENVVAR')   # ENVVAR in error output file
+(>&2 echo)
 
 $COMMAND $SCRIPT  # launching script
 EOF
