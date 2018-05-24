@@ -492,7 +492,7 @@ if __name__ == '__main__':	# executing as script
 			u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
 			Sgrid, Cgrid = tuple(np.transpose(list(map(lambda time:
 				strain_vorticity_grid(parameters['box_size'], Ncases,
-				grid_points, time, dt w_traj, u_traj, sigma, r_cut)
+				grid_points, time, dt, w_traj, u_traj, sigma, r_cut)
 				, times)), (1, 0, 2, 3)))					# lists of shear strain and displacement vorticity correlations
 
 		Css2D, Ccc2D = tuple(map(corField2D_scalar_average, [Sgrid, Cgrid]))	# shear strain and displacement vorticity fields correlations
