@@ -129,7 +129,7 @@ Output
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env
+from active_particles.init import get_env, StdOut
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import normalise1D, amplogwidth
 
@@ -547,6 +547,27 @@ if __name__ == '__main__':  # executing as script
     Nentries = parameters['N_steps']//parameters['period_dump'] # number of time snapshots in unwrapped trajectory file
     init_frame = int(Nentries/2) if init_frame < 0 else init_frame
 
+    # NAMING
+
+    attributes = {'density': parameters['density'],
+		'vzero': parameters['vzero'], 'dr': parameters['dr'],
+		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
+        'box_size': box_size, 'x_zero': centre[0], 'y_zero': centre[1]} # attributes displayed in filenames
+
+    # STANDARD OUTPUT
+
+	if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
+
+		output_dir = data_dir + '/out/'                                   # output directory
+		subprocess.call(['mkdir', '-p', output_dir])				      # create output directory if not existing
+		output_filename, = naming_standard.out().filename(**attributes)   # output file name
+		output_file = open(output_dir + output_filename, 'w')             # output file
+		output_file.write('Job ID: %i\n\n'
+			% get_env('SLURM_JOB_ID', vartype=int))                       # write job ID to output file
+
+		stdout = StdOut()
+		stdout.set(output_file)	# set output file as standard output
+
     # FIGURE PARAMETERS
 
     vmin = get_env('V_MIN', vartype=float) # minimum value of the colorbar
@@ -568,13 +589,6 @@ if __name__ == '__main__':  # executing as script
         vartype=float)  # width of the arrows' head
     arrow_head_length = get_env('HEAD_LENGTH', default=_arrow_head_length,
         vartype=float)  # length of the arrows' head
-
-    # NAMING
-
-    attributes = {'density': parameters['density'],
-		'vzero': parameters['vzero'], 'dr': parameters['dr'],
-		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
-        'box_size': box_size, 'x_zero': centre[0], 'y_zero': centre[1]} # attributes displayed in filenames
 
     # LEGEND SUPTITLE
 
