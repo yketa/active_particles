@@ -3,9 +3,12 @@ Module init provides functions useful when initialising simulations or
 analysis.
 """
 
+from os.path import join as joinpath
 from os import environ as envvar
 import sys
 import atexit
+import subprocess
+import get_env
 
 def get_env(var_name, default=None, vartype=str):
     """
@@ -76,3 +79,28 @@ class StdOut:
             self.output_file.close()
             sys.stdout = self.stdout    # revert to original standart output
         except AttributeError: pass     # no custom output was set
+
+def slurm_output(output_dir, naming_standard, attributes):
+    """
+    Sets standard output to file when launching from Slurm job scheduler.
+    Writes job ID to output file.
+
+    Parameters
+    ----------
+    output_dir : string
+        Output file directory.
+    naming_standard : active_particles.naming standard
+        Naming standard to name output file.
+    attributes : hash table
+        Attributes which define ENTIRELY output file name.
+    """
+
+    subprocess.call(['mkdir', '-p', output_dir])				    # create output directory if not existing
+
+    output_filename, = naming_standard.out().filename(**attributes) # output file name
+    output_file = open(joinpath(output_dir, output_filename), 'w')  # output file
+    output_file.write('Job ID: %i\n\n'
+        % get_env('SLURM_JOB_ID', vartype=int))					    # write job ID to output file
+
+    stdout = StdOut()
+    stdout.set(output_file)	# set output file as standard output
