@@ -9,7 +9,7 @@ export AP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # path to acti
 export PYTHONPATH=$PYTHONPATH:${AP_DIR}/..  # for python to find active_particles
 
 # COMMANDS
-alias ap_param='python /home/yketa/packages/active_particles/param.py'
+alias ap_param="python ${AP_DIR}/param.py"
 alias ap_launch="bash ${AP_DIR}/launch/launch.sh"
 
 # SCRIPTS (defined as variables so they can be used with ap_launch)
