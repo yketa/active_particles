@@ -133,6 +133,7 @@ glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
         ('frame', 'time frame', r'$T$', '{:.2e}'),
         ('dt', 'lag time', r'$\Delta t$', '{:.2e}'),
         ('int_max', 'maximum number of intervals', r'$S_{max}$', '{:.2e}'),
+        ('int_period', 'period of intervals', r'$S_{period}$', '{:.2e}'),
         ('Ncases', 'number of boxes in one direction of a grid',
             r'$N_{cases}$', '{:.2e}'),
         ('r_cut', 'cut-off radius', r'$r_{cut}$', '{:.2e}'),
@@ -495,6 +496,23 @@ class Displacement(_FrameFile):
         """
 
         super().__init__('u', ext_parameters=OrderedDict([('dt', '_T')]))   # initialise with superclass
+
+class Msd(_File):
+    """
+    Naming mean square displacement files.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        self.name = 'msd_sterr' # generic name
+        self.parameters = OrderedDict([
+            ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
+            ('init_frame', '_I'), ('int_max', '_M'), ('int_period', '_P')
+        ])                      # parameters and corresponding abbreviations (in order)
+        self.extension = '.csv' # file extension
 
 def endpoint():
     """
