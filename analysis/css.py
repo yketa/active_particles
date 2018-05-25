@@ -100,7 +100,7 @@ vorticity.
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, StdOut
+from active_particles.init import get_env, slurm_output
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions
 
@@ -111,6 +111,7 @@ from active_particles.analysis.coarse_graining import GaussianCG,\
 
 from os import getcwd
 from os import environ as envvar
+from os.path import join as joinpath
 
 import subprocess
 
@@ -359,7 +360,7 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
 		image_name, = naming_standard.image().filename(**attributes)
-		fig.savefig(data_dir + '/' + image_name)
+		fig.savefig(joinpath(data_dir, image_name))
 
 	# GRID CIRCLE FIGURE
 
@@ -408,7 +409,7 @@ if __name__ == '__main__':	# executing as script
 	int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)	# maximum number of intervals of length dt considered in correlations calculations
 
 	parameters_file = get_env('PARAMETERS_FILE',
-		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
+		default=joinpath(data_dir, naming.parameters_file))	# simulation parameters file
 	with open(parameters_file, 'rb') as param_file:
 		parameters = pickle.load(param_file)				# parameters hash table
 
@@ -446,16 +447,7 @@ if __name__ == '__main__':	# executing as script
 	# STANDARD OUTPUT
 
 	if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
-
-		output_dir = data_dir + '/out/'								# output directory
-		subprocess.call(['mkdir', '-p', output_dir])				# create output directory if not existing
-		output_filename, = naming_Css.out().filename(**attributes)	# output file name
-		output_file = open(output_dir + output_filename, 'w')		# output file
-		output_file.write('Job ID: %i\n\n'
-			% get_env('SLURM_JOB_ID', vartype=int))					# write job ID to output file
-
-		stdout = StdOut()
-		stdout.set(output_file)	# set output file as standard output
+		slurm_output(joinpath(data_dir, 'out'), naming_Css, attributes)
 
 	# MODE SELECTION
 
@@ -466,9 +458,9 @@ if __name__ == '__main__':	# executing as script
 		# VARIABLE DEFINITIONS
 
 		wrap_file_name = get_env('WRAPPED_FILE',
-			default=data_dir + '/' + naming.wrapped_trajectory_file)	# wrapped trajectory file (.gsd)
+			default=joinpath(data_dir, naming.wrapped_trajectory_file))		# wrapped trajectory file (.gsd)
 		unwrap_file_name = get_env('UNWRAPPED_FILE',
-			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
 		grid_points = np.array([(x, y) for x in\
 			relative_positions(np.linspace(- box_size*(1 - 1./Ncases)/2,
@@ -506,8 +498,8 @@ if __name__ == '__main__':	# executing as script
 		sgrid = Sgrid[display_grid]
 		cgrid = Cgrid[display_grid]
 
-		with open(data_dir + '/' + Css_filename, 'wb') as Css_dump_file,\
-			open(data_dir + '/' + Ccc_filename, 'wb') as Ccc_dump_file:
+		with open(joinpath(data_dir, Css_filename), 'wb') as Css_dump_file,\
+			open(joinpath(data_dir, Ccc_filename), 'wb') as Ccc_dump_file:
 			pickle.dump([sgrid, Css2D], Css_dump_file)
 			pickle.dump([cgrid, Ccc2D], Ccc_dump_file)
 
@@ -519,8 +511,8 @@ if __name__ == '__main__':	# executing as script
 
 		# DATA
 
-		with open(data_dir + '/' + Css_filename, 'rb') as Css_dump_file,\
-			open(data_dir + '/' + Ccc_filename, 'rb') as Ccc_dump_file:
+		with open(joinpath(data_dir, Css_filename), 'rb') as Css_dump_file,\
+			open(joinpath(data_dir, Ccc_filename), 'rb') as Ccc_dump_file:
 			sgrid, Css2D = pickle.load(Css_dump_file)
 			cgrid, Ccc2D = pickle.load(Ccc_dump_file)
 

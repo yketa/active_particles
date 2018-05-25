@@ -64,12 +64,13 @@ according to the active_particles.naming.Msd standard in DATA_DIRECTORY.
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, StdOut
+from active_particles.init import get_env, slurm_output
 from active_particles.dat import Dat
 from active_particles.maths import wo_mean, mean_sterr
 
 from os import getcwd
 from os import environ as envvar
+from os.path import join as joinpath
 
 import numpy as np
 
@@ -128,7 +129,7 @@ if __name__ == '__main__':  # executing as script
     int_period = get_env('INTERVAL_PERIOD', default=1, vartype=int) # mean square displacement will be calculated for each int_period dumps period of time
 
     parameters_file = get_env('PARAMETERS_FILE',
-		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
+		default=joinpath(data_dir, naming.parameters_file))	# simulation parameters file
     with open(parameters_file, 'rb') as param_file:
         parameters = pickle.load(param_file)				# parameters hash table
 
@@ -147,16 +148,7 @@ if __name__ == '__main__':  # executing as script
     # STANDARD OUTPUT
 
     if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
-
-        output_dir = data_dir + '/out/'								# output directory
-        subprocess.call(['mkdir', '-p', output_dir])				# create output directory if not existing
-        output_filename, = naming_msd.out().filename(**attributes)	# output file name
-        output_file = open(output_dir + output_filename, 'w')		# output file
-        output_file.write('Job ID: %i\n\n'
-            % get_env('SLURM_JOB_ID', vartype=int))					# write job ID to output file
-
-        stdout = StdOut()
-        stdout.set(output_file)	# set output file as standard output
+		slurm_output(joinpath(data_dir, 'out'), naming_msd, attributes)
 
     # MODE SELECTION
 
@@ -167,7 +159,7 @@ if __name__ == '__main__':  # executing as script
 		# VARIABLE DEFINITIONS
 
         unwrap_file_name = get_env('UNWRAPPED_FILE',
-			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
         Nframes = Nentries - init_frame # number of frames available for the calculation
         Ntimes = Nframes//int_period    # number of time intervals considered in the calculation
@@ -180,7 +172,7 @@ if __name__ == '__main__':  # executing as script
         # MEAN SQUARE DISPLACEMENT
 
         with open(unwrap_file_name, 'rb') as unwrap_file,\
-            open(data_dir + '/' + msd_filename, 'w') as msd_file:   # opens unwrapped trajectory file and mean square displacement output file
+            open(joinpath(data_dir, msd_filename), 'w') as msd_file:   # opens unwrapped trajectory file and mean square displacement output file
             msd_file.write('time, MSD, sterr\n')                    # output file header
 
             u_traj = Dat(unwrap_file, parameters['N'])  # unwrapped trajectory object
@@ -210,7 +202,7 @@ if __name__ == '__main__':  # executing as script
         # DATA
 
         dt, msd, sterr = np.transpose(np.genfromtxt(
-            fname=data_dir + '/' + msd_filename,
+            fname=joinpath(data_dir, msd_filename),
             delimiter=',', skip_header=True))   # lag times, mean square displacements and corresponding standard errors
 
         # PLOT
@@ -231,7 +223,7 @@ if __name__ == '__main__':  # executing as script
 
         if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
             image_name, = naming_msd.image().filename(**attributes)
-            fig.savefig(data_dir + '/' + image_name)
+            fig.savefig(joinpath(data_dir, image_name))
 
         if get_env('FITTING_LINE', default=False, vartype=bool):    # FITTING LINE mode
 

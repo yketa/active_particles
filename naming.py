@@ -13,11 +13,12 @@ from itertools import chain
 from copy import deepcopy
 
 from os import environ as envvar
+from os.path import join as joinpath
 
 # DEFAULT NAMES
 
-sim_directory = get_env('HOME') + '/active_particles_data'  # simulation data directory
-out_directory = sim_directory + '/out'                      # launch output directory
+sim_directory = joinpath(get_env('HOME'), 'active_particles_data')  # simulation data directory
+out_directory = joinpath(sim_directory, 'out')                      # launch output directory
 
 parameters_file = 'param.p'                     # simulation parameters file
 log_file = 'log-output.log'                     # simulation log output file

@@ -129,12 +129,13 @@ Output
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, StdOut
+from active_particles.init import get_env, slurm_output
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import normalise1D, amplogwidth
 
 from os import getcwd
 from os import environ as envvar
+from os.path import join as joinpath
 
 import sys
 
@@ -525,15 +526,15 @@ if __name__ == '__main__':  # executing as script
     data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
     wrap_file_name = get_env('WRAPPED_FILE',
-        default=data_dir + '/' + naming.wrapped_trajectory_file)	# wrapped trajectory file (.gsd)
+        default=joinpath(data_dir, naming.wrapped_trajectory_file))	    # wrapped trajectory file (.gsd)
     unwrap_file_name = get_env('UNWRAPPED_FILE',
-        default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+        default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
     init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)  # initial frame to render
     dt = get_env('DT', default=-1, vartype=int)                     # displacement lag time
 
     parameters_file = get_env('PARAMETERS_FILE',
-		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
+		default=joinpath(data_dir, naming.parameters_file))	# simulation parameters file
     with open(parameters_file, 'rb') as param_file:
         parameters = pickle.load(param_file)				# parameters hash table
 
@@ -557,16 +558,7 @@ if __name__ == '__main__':  # executing as script
     # STANDARD OUTPUT
 
 	if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
-
-		output_dir = data_dir + '/out/'                                   # output directory
-		subprocess.call(['mkdir', '-p', output_dir])				      # create output directory if not existing
-		output_filename, = naming_standard.out().filename(**attributes)   # output file name
-		output_file = open(output_dir + output_filename, 'w')             # output file
-		output_file.write('Job ID: %i\n\n'
-			% get_env('SLURM_JOB_ID', vartype=int))                       # write job ID to output file
-
-		stdout = StdOut()
-		stdout.set(output_file)	# set output file as standard output
+        slurm_output(joinpath(data_dir, 'out'), naming_standard, attributes)
 
     # FIGURE PARAMETERS
 
@@ -638,8 +630,8 @@ if __name__ == '__main__':  # executing as script
 
             if get_env('SAVE', default=False, vartype=bool):    # SAVE mode
                 figure_name, = naming_standard.filename(**attributes)
-                figure.fig.savefig(data_dir + '/' +
-                    get_env('FIGURE_NAME', default=figure_name))
+                figure.fig.savefig(joinpath(data_dir,
+                    get_env('FIGURE_NAME', default=figure_name)))
 
     if get_env('MOVIE', default=False, vartype=bool):   # MOVIE mode
 
@@ -650,11 +642,11 @@ if __name__ == '__main__':  # executing as script
         attributes = {**attributes,
             **{'frame_fin': frame_fin, 'frame_per': frame_per,
             'frame_max': frame_max}}
-        movie_dir = str(data_dir + '/'
-            + naming_standard.movie(folder=True).filename(**attributes)[0]) # movie directory name
+        movie_dir = joinpath(data_dir,
+            naming_standard.movie(folder=True).filename(**attributes)[0])   # movie directory name
         subprocess.call(['mkdir', '-p', movie_dir])                         # create movie directory
-        subprocess.call(['rm', '-rf', movie_dir + '/frames'])               # remove frames directory if existing
-        subprocess.call(['mkdir', '-p', movie_dir + '/frames'])             # create frames directory
+        subprocess.call(['rm', '-rf', joinpath(movie_dir, 'frames')])       # remove frames directory if existing
+        subprocess.call(['mkdir', '-p', joinpath(movie_dir, 'frames')])     # create frames directory
 
         Nframes = np.min([Nentries, frame_fin]) - init_frame                    # number of frames available for the movie
         Ntimes = Nframes//frame_per                                             # maximum number of rendered frames
@@ -680,15 +672,16 @@ if __name__ == '__main__':  # executing as script
                     centre, arrow_width, arrow_head_width, arrow_head_length,
                     dt=dt, vmin=vmin, vmax=vmax)                        # plot frame
                 figure.fig.suptitle(suptitle(frame))
-                figure.fig.savefig(movie_dir + '/frames/'
-                    + '%010d' % frames.tolist().index(frame) + '.png')  # save frame
+                figure.fig.savefig(joinpath(movie_dir, 'frames',
+                    '%010d' % frames.tolist().index(frame) + '.png'))   # save frame
                 plt.close(figure.fig)                                   # close frame
 
         subprocess.call([
             'ffmpeg', '-r', '5', '-f', 'image2', '-s', '1280x960', '-i',
-            movie_dir + '/frames/%10d.png',
+            joinpath(movie_dir , 'frames', '%10d.png'),
             '-pix_fmt', 'yuv420p', '-y',
-            movie_dir + '/' + naming_standard.movie().filename(**attributes)[0]
+            joinpath(movie_dir,
+            naming_standard.movie().filename(**attributes)[0])
             ])  # generate movie from frames
 
     # EXECUTION TIME

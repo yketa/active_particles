@@ -12,9 +12,11 @@ $ python param.py [DIRECTORY NAME] [PARAMETER NAME]
 import sys
 import pickle
 from active_particles.naming import sim_directory, parameters_file
+from os.path import join as joinpath
+
 
 try:
-    with open(sim_directory + '/' + sys.argv[1] + '/' + parameters_file,
+    with open(joinpath(sim_directory, sys.argv[1], parameters_file),
         'rb') as param_file:
         param = pickle.load(param_file)
 except IndexError:          # sys.argv[1] does not exist
