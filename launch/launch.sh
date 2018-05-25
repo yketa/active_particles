@@ -11,18 +11,21 @@
 # OUT_DIR : string
 #   Error output directory.
 #   DEFAULT: active_particles.naming.out_directory
-# JOB_NAME : string
-#   Job name on Slurm scheduler
-#   DEFAULT: script name
 # CHAIN : int
 #   Begin execution after job with job ID CHAIN has succesfully executed.
 #   DEFAULT: None
+# JOB_NAME : string
+#   Job name on Slurm scheduler
+#   DEFAULT: script name
 # PARTITION : string
 #   Partition for the resource allocation.
 #   DEFAULT: gpu
 # GRES : string
 #   Generic consumable resources.
 #   DEFAULT: gpu:k80:1
+# OUT_FILE : string
+#   Standard output file.
+#   DEFAULT: /dev/null (output file is supposed to be managed in script itself)
 # NTASKS : int
 #   Maximum ntasks to be invoked on each core.
 #   DEFAULT: 1
@@ -50,12 +53,14 @@ if [[ ! -z "$DATA" ]]; then # data directory name submitted
 fi
 
 # SUBMIT JOB
-sbatch --job-name=${JOB_NAME-${SCRIPT##*/}} ${CHAIN:+-d afterok:$CHAIN} <<EOF
+sbatch ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #! /bin/bash
-#SBATCH --partition=${PARTITION-gpu}  # partition for the resource allocation
-#SBATCH --gres=${GRES-gpu:k80:1}      # generic consumable resources
-#SBATCH --error=${OUT_DIR}/%j.out     # standard error output file
-#SBATCH --ntasks-per-node=${NTASKS-1} # maximum ntasks to be invoked on each core
+#SBATCH --job-name=${JOB_NAME-${SCRIPT##*/}}  # job name
+#SBATCH --partition=${PARTITION-gpu}          # partition for the resource allocation
+#SBATCH --gres=${GRES-gpu:k80:1}              # generic consumable resources
+#SBATCH --output=${OUT_FILE-/dev/null}        # standard output file
+#SBATCH --error=${OUT_DIR}/%j.out             # standard error output file
+#SBATCH --ntasks-per-node=${NTASKS-1}         # maximum ntasks to be invoked on each core
 
 export $ENVVAR  # setting environment variables
 
