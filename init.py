@@ -8,7 +8,6 @@ from os import environ as envvar
 import sys
 import atexit
 import subprocess
-import get_env
 
 def get_env(var_name, default=None, vartype=str):
     """
