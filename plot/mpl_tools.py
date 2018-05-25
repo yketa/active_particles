@@ -95,8 +95,8 @@ class FittingLine:
         self.color = color                      # color of fitting line
         self.linestyle = linestyle              # linestyle of fitting line
 
-        self.x0 = np.exp(np.mean(np.log(self.ax.get_xlim())))   # x coordinate of clicked point
-        self.y0 = np.exp(np.mean(np.log(self.ax.get_ylim())))   # y coordinate of clicked point
+        self.x0 = np.exp(np.ma.log(self.ax.get_xlim()).mean())  # x coordinate of clicked point
+        self.y0 = np.exp(np.ma.log(self.ax.get_ylim()).mean())  # y coordinate of clicked point
         self.slope = slope                                      # slope of fitting line
 
         self.line, = self.ax.plot([], [], label=' ',
@@ -211,10 +211,10 @@ class FittingLine:
         Updates fitting line legend.
         """
 
-        if self.law == 'Powerlaw':
+        if self.law == 'powerlaw':
             self.line.set_label(r'$%s \propto %s^{%.2e}$' % (self.y_fit,
                 self.x_fit, self.slope)) # fitting line label
-        elif self.law == 'Exponential':
+        elif self.law == 'exponential':
             self.line.set_label(r'$%s \propto e^{%.2e%s}$' % (self.y_fit,
                 self.slope, self.x_fit)) # fitting line label
 
