@@ -174,3 +174,25 @@ def amplogwidth(arr, factor=2):
     std = log.std()                                     # standard deviation of logarithms of amplitudes
 
     return mean - factor*std, mean + factor*std
+
+def mean_sterr(values):
+    """
+    Returns mean and standard error of values.
+
+    Parameters
+    ----------
+    values : float array
+        Values.
+
+    Returns
+    -------
+    mean : float
+        Mean of values.
+    sterr : float
+        Standard error of values.
+    """
+
+    values = np.array(values)
+    if values.size == 0: return None, None
+
+    return np.mean(values), np.std(values)/np.sqrt(np.prod(values.shape))
