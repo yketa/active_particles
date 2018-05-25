@@ -10,7 +10,7 @@ export PYTHONPATH=$PYTHONPATH:${AP_DIR}/..  # for python to find active_particle
 
 # COMMANDS
 alias ap_param='python /home/yketa/packages/active_particles/param.py'
-alias ap_launch="bash ${ACTIVE_PARTICLES}/"
+alias ap_launch="bash ${AP_DIR}/launch/launch.sh"
 
 # SCRIPTS (defined as variables so they can be used with ap_launch)
 export AP_CSS="python ${AP_DIR}/analysis/css.py"
