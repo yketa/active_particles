@@ -1,69 +1,245 @@
-#! /home/yketa/miniconda3/bin/python3.6
+"""
+Module msd calculates or plots mean square displacements.
+
+Files are saved according to the active_particles.naming.Msd standard.
+
+Environment modes
+-----------------
+COMPUTE : bool
+	Compute mean square displacements.
+	DEFAULT: False
+PLOT : bool
+	Plot saved mean square displacements.
+	DEFAULT: False
+SHOW [COMPUTE or PLOT mode] : bool
+	Show graphs.
+	DEFAULT: False
+SAVE [COMPUTE or PLOT mode] : bool
+	Save graphs.
+	DEFAULT: False
+FITTING_LINE [COMPUTE or PLOT mode] : bool
+	Display fitting line on plot.
+	NOTE: see active_particles.plot.mpl_tools.FittingLine
+	DEFAULT: False
+
+Environment parameters
+----------------------
+DATA_DIRECTORY : string
+	Data directory.
+	DEFAULT: current working directory
+PARAMETERS_FILE : string
+	Simulation parameters file.
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
+UNWRAPPED_FILE : string
+	Unwrapped trajectory file. (.dat)
+	NOTE: .dat files defined with active_particles.dat
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.unwrapped_trajectory_file
+INITIAL_FRAME : int
+	Frame to consider as initial.
+	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
+	the middle frame of the simulation.
+	DEFAULT: -1
+INTERVAL_MAXIMUM : int
+	Maximum number of intervals of same length dt considered in mean square
+	displacement calculations.
+	DEFAULT: 1
+INTERVAL_PERIOD : int
+	Mean square displacement will be calculated for each INTERVAL_PERIOD dumps
+	period of time.
+	DEFAULT: 1
+
+Output
+------
+[COMPUTE MODE]
+> Prints execution time.
+> Saves mean square displacements, lag times and corresponding standard errors
+according to the active_particles.naming.Msd standard in DATA_DIRECTORY.
+[SHOW or PLOT mode]
+> Plots mean square displacements.
+[SAVE mode]
+> Saves mean square displacements figure in DATA_DIRECTORY.
+[FITTING LINE mode]
+> Adds fitting line to figure.
+"""
+
+import active_particles.naming as naming
+
+from active_particles.init import get_env, StdOut
+from active_particles.dat import Dat
+from active_particles.maths import wo_mean, mean_sterr
+
+from os import getcwd
+from os import environ as envvar
 
 import numpy as np
 
 import pickle
 
-import os
-import sys
+import subprocess
 
-sys.path.append('/home/yketa')
-from exponents import float_to_letters
-sys.path.append('/home/yketa/hoomd/colmig_DPD_P_A/data')
-from readdat import *
+from datetime import datetime
 
 from collections import OrderedDict
 
-from datetime import datetime
-startTime = datetime.now()
+import matplotlib as mpl
+if not(get_env('SHOW', default=False, vartype=bool)):
+	mpl.use('Agg')	# avoids crash if launching without display
+import matplotlib.pyplot as plt
 
-def mean_square_displacement(data_dir='/home/yketa/hoomd', parameters_file='param.pickle', unwrapped_file='trajectory.dat', init_frame=-1, snap_max=1, snap_period=1):
-	# Returns mean square displacements at associated times.
+from active_particles.plot.mpl_tools import FittingLine
 
-	with open(parameters_file, 'rb') as param_file:
-		N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
+def square_displacement(u_traj, frame, dt):
+    """
+    Returns square displacement without mean drift between frames frame and
+    frame + dt of all particles in uwrapped trajectory file.
 
-	Nentries = N_steps//period_dump # number of time snapshots in velocity and position files
-	init_frame = int(Nentries/2) if init_frame < 0 else init_frame # initial frame
-	Nframes = Nentries - init_frame # number of frames available for the calculation
-	Ntimes = Nframes//snap_period # number of time intervals considered in the calculation
+    Parameters
+    ----------
+    u_traj : active_particles.dat.Dat
+		Unwrapped trajectory object.
+    frame : int
+        Initial frame.
+    dt : int
+        Lag time.
 
-	times = lambda Nframes, dt: np.linspace(0, Nframes - dt - 1, min(snap_max, Nframes - dt), dtype=int) # list of time snapshots at which to evaluate the mean square displacement at n*dumps for N time snapshots
-	intervals = lambda Nframes, Ntimes: np.array(list(OrderedDict.fromkeys(map(lambda x: int(x), np.exp(np.linspace(np.log(1), np.log(Nframes - 1), Ntimes)))))) # intervals of times logarithmically spaced for the calculation
+    Returns
+    -------
+    sq_disp : Numpy array
+        Array of all square displacements without mean drift.
+    """
 
-	out_file = data_dir + '/msd_sterr_D' + float_to_letters(density) + '_V' + float_to_letters(vzero) + '_R' + float_to_letters(dr) + '_N' + float_to_letters(N) + '_I' + float_to_letters(init_frame) + '_M' + float_to_letters(snap_max) + '_P' + float_to_letters(snap_period) + '.csv' # MSD file
+    displacements = u_traj.displacement(frame, frame + dt)  # displacements between frame and frame + dt
+    return  np.sum(wo_mean(displacements)**2, axis=-1)
 
-	time = list(map(lambda dt: time_step*period_dump*dt, intervals(Nframes, Ntimes)))
-	with open(unwrapped_file, 'rb') as unwrap_file:
-		pos = lambda time: getarray(unwrap_file, N, init_frame + time) # positions of the particles at time time
+# DEFAULT VARIABLES
 
-		def displacements(time, dt): # square displacements of the particles between time and time + dt
-			wo_drift = lambda values: values - np.mean(values, axis=0) # deviation from the mean of array values
-			return np.sum((wo_drift(pos(time + dt)) - wo_drift(pos(time)))**2, axis=1)
-		def msd_sterr(dt): # mean square displacement and standard error for time intervals of size dt
-			sterr = lambda values: np.std(values)/np.sqrt(np.prod(values.shape)) # standard error of array values
-			return (lambda disp: (np.mean(disp), sterr(disp)))(
-				np.array(list(map(lambda time: displacements(time, dt), times(Nframes, dt))))
-			)
+_slope0 = 1     # default initial slope of fitting line
+_slope_min = 0  # default minimum slope of fitting line
+_slope_max = 3  # default maximum slope of fitting line
 
-		msd, sterr = np.transpose(list(map(lambda dt: msd_sterr(dt), intervals(Nframes, Ntimes))))
+if __name__ == '__main__':  # executing as script
 
-	with open(out_file, 'w') as msd_dump:
-		msd_dump.write("time, MSD, sterr\n") # header
-		for t, m, s in zip(time, msd, sterr):
-				msd_dump.write("%e,%e,%e\n" % (t, m, s)) # writing output to csv file
+    # VARIABLE DEFINITIONS
 
-	return time, msd, sterr
+    data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
-data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
-parameters_file = os.environ['PARAMETERS_FILE'] if 'PARAMETERS_FILE' in os.environ else data_dir + '/param.pickle' # parameters file
-unwrapped_file = os.environ['UNWRAPPED_FILE'] if 'UNWRAPPED_FILE' in os.environ else data_dir + '/trajectory.dat' # trajectory binary file
+    init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)	# frame to consider as initial
+    int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)	# maximum number of intervals of same length dt considered in mean square displacement calculations
+    int_period = get_env('INTERVAL_PERIOD', default=1, vartype=int) # mean square displacement will be calculated for each int_period dumps period of time
 
-init_frame = int(eval(os.environ['INITIAL_FRAME'])) if 'INITIAL_FRAME' in os.environ else -1 # initial time for the calculation of the mean square displacement
-snap_max = int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ else 1 # maximum number of time snapshots taken for the calculation of the mean square displacement at each time
-snap_period = int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.environ else 1 # mean square displacement will be calculated for each snap_period dumps period of time
+    parameters_file = get_env('PARAMETERS_FILE',
+		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
+    with open(parameters_file, 'rb') as param_file:
+        parameters = pickle.load(param_file)				# parameters hash table
 
-mean_square_displacement(data_dir=data_dir, parameters_file=parameters_file, unwrapped_file=unwrapped_file, init_frame=init_frame, snap_max=snap_max, snap_period=snap_period) # calculation of the mean square displacement
+    Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in unwrapped trajectory file
+    init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
 
-# EXECUTION TIME
-print("Execution time: %s" % (datetime.now() - startTime))
+    # NAMING
+
+    attributes = {'density': parameters['density'],
+        'vzero': parameters['vzero'], 'dr': parameters['dr'],
+        'N': parameters['N'], 'init_frame': init_frame, 'int_max': int_max,
+        'int_period': int_period}                       # attributes displayed in filenames
+    naming_msd = naming.Msd()                           # mean square displacement naming object
+    msd_filename, = naming_msd.filename(**attributes)   # mean square displacement filename
+
+    # STANDARD OUTPUT
+
+    if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
+
+        output_dir = data_dir + '/out/'								# output directory
+        subprocess.call(['mkdir', '-p', output_dir])				# create output directory if not existing
+        output_filename, = naming_msd.out().filename(**attributes)	# output file name
+        output_file = open(output_dir + output_filename, 'w')		# output file
+        output_file.write('Job ID: %i\n\n'
+            % get_env('SLURM_JOB_ID', vartype=int))					# write job ID to output file
+
+        stdout = StdOut()
+        stdout.set(output_file)	# set output file as standard output
+
+    # MODE SELECTION
+
+    if get_env('COMPUTE', default=False, vartype=bool):	# COMPUTE mode
+
+        startTime = datetime.now()
+
+		# VARIABLE DEFINITIONS
+
+        unwrap_file_name = get_env('UNWRAPPED_FILE',
+			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+
+        Nframes = Nentries - init_frame # number of frames available for the calculation
+        Ntimes = Nframes//int_period    # number of time intervals considered in the calculation
+
+        lag_times = list(OrderedDict.fromkeys(map(
+            int,
+            np.exp(np.linspace(np.log(1), np.log(Nframes - 1), Ntimes))
+            ))) # lag times logarithmically spaced for the calculation
+
+        # MEAN SQUARE DISPLACEMENT
+
+        with open(unwrap_file_name, 'rb') as unwrap_file,\
+            open(data_dir + '/' + msd_filename, 'w') as msd_file:   # opens unwrapped trajectory file and mean square displacement output file
+            msd_file.write('time, MSD, sterr\n')                    # output file header
+
+            u_traj = Dat(unwrap_file, parameters['N'])  # unwrapped trajectory object
+
+            for dt in lag_times:    # for each lag time
+                lag_time = dt*parameters['period_dump']*parameters['time_step']
+
+                frames = list(OrderedDict.fromkeys(
+                    init_frame + np.linspace(0, Nframes - dt - 1,
+                    min(int_max, Nframes - dt), dtype=int)
+                    ))                              # initial frames for mean square displacement at lag time dt
+                sq_disp = list(map(
+                    lambda frame: square_displacement(u_traj, frame, dt),
+                    frames
+                    ))                              # square displacements for lag time dt
+                msd, sterr = mean_sterr(sq_disp)    # mean square displacement and corresponding standard error
+
+                msd_file.write('%e,%e,%e\n' % (lag_time, msd, sterr))
+
+        # EXECUTION TIME
+
+        print("Execution time: %s" % (datetime.now() - startTime))
+
+    if get_env('PLOT', default=False, vartype=bool) or\
+		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
+
+        # DATA
+
+        dt, msd, sterr = np.transpose(np.genfromtxt(
+            fname=data_dir + '/' + msd_filename,
+            delimiter=',', skip_header=True))   # lag times, mean square displacements and corresponding standard errors
+
+        # PLOT
+
+        fig, ax = plt.subplots()
+
+        fig.suptitle(
+            r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+    		% (parameters['N'], parameters['density'], parameters['vzero'],
+    		parameters['dr']) + '\n' +
+            r'$S_{init}=%.2e, S_{max}=%.2e, S_{period}=%.2e$'
+            % (init_frame, int_max, int_period))
+
+        ax.set_xlabel(r'$\Delta t$')
+        ax.set_ylabel(r'$<|\Delta r(\Delta t)|^2>$')
+
+        ax.errorbar(dt, msd, yerr=sterr)
+
+        if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
+            image_name, = naming_msd.image().filename(**attributes)
+            fig.savefig(data_dir + '/' + image_name)
+
+        if get_env('FITTING_LINE', default=False, vartype=bool):    # FITTING LINE mode
+
+            slope0 = get_env('SLOPE', default=_slope0, vartype=float)           # initial slope of fitting line
+            slope_min = get_env('SLOPE_MIN', default=_slope_min, vartype=float) # minimum slope of fitting line
+            slope_max = get_env('SLOPE_MAX', default=_slope_max, vartype=float) # maximum slope of fitting line
+
+            fitting_line = FittingLine(ax, slope0, slope_min, slope_max)    # interactive fitting line
+
+        if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
+            plt.show()
