@@ -76,8 +76,6 @@ import numpy as np
 
 import pickle
 
-import subprocess
-
 from datetime import datetime
 
 from collections import OrderedDict

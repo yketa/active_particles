@@ -113,8 +113,6 @@ from os import getcwd
 from os import environ as envvar
 from os.path import join as joinpath
 
-import subprocess
-
 from math import ceil
 
 import numpy as np
