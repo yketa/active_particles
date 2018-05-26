@@ -515,6 +515,24 @@ class Msd(_File):
         ])                      # parameters and corresponding abbreviations (in order)
         self.extension = '.csv' # file extension
 
+class VarN(_File):
+    """
+    Naming local densities densities.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        self.name = 'msd_sterr'     # generic name
+        self.parameters = OrderedDict([
+            ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
+            ('init_frame', '_I'), ('int_max', '_M'), ('Ncases', '_C'),
+            ('box_size', '_B')
+        ])                          # parameters and corresponding abbreviations (in order)
+        self.extension = '.pickle'  # file extension
+
 def endpoint():
     """
     Consider a variable A which depends on space, time and a lag time (e.g.,
