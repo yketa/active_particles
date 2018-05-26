@@ -184,9 +184,6 @@ class Dat:
 		Returns array of displacement between time 'time0' and 'time1'.
 		(see active_particles.dat.Dat.position)
 
-		Returns array of velocity at frame 'time'.
-		(see active_particles.dat.Dat.variable)
-
 		Parameters
 		----------
 		time0 : int
@@ -259,6 +256,8 @@ class Gsd(HOOMDTrajectory):
 
 	def position(self, time, *particle, **kwargs):
 		"""
+		Returns array of position at frame 'time'.
+
 		Parameters
 		----------
 		time : int
@@ -287,12 +286,14 @@ class Gsd(HOOMDTrajectory):
 			positions = np.array(itemgetter(*particle)(positions))
 
 		if 'centre' in kwargs:
-			box_dim = self[time].configuration.box[0]						# box dimensions
-			return relative_positions(positions, kwargs['centre'], box_dim)	# positions with centre as centre
+			return relative_positions(positions, kwargs['centre'],
+				self.box_size(time))	# positions with centre as centre
 		return positions
 
 	def velocity(self, time, *particle):
 		"""
+		Returns array of velocity at frame 'time'.
+
 		Parameters
 		----------
 		time : int
@@ -317,6 +318,8 @@ class Gsd(HOOMDTrajectory):
 
 	def diameter(self, time, *particle):
 		"""
+		Returns array of diameter at frame 'time'.
+
 		Parameters
 		----------
 		time : int
@@ -338,3 +341,20 @@ class Gsd(HOOMDTrajectory):
 		diameters = self[time].particles.diameter			# diameters at frame time
 		if particle == ():	return diameters				# returns all diameters
 		return np.array(itemgetter(*particle)(diameters))	# diameters at frame time
+
+	def box_size(self, time=0):
+		"""
+		Returns length of system box in first direction at time 'time'.
+
+		Parameters
+		----------
+		time : int
+			Frame index. (default: 0)
+
+		Returns
+		-------
+		L : float
+			Length of system box in fist direction.
+		"""
+
+		return self[time].configuration.box[0]
