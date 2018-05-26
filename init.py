@@ -4,10 +4,12 @@ analysis.
 """
 
 from os.path import join as joinpath
+from os.path import exists as pathexists
+from os import makedirs
+from shutil import rmtree as rmr
 from os import environ as envvar
 import sys
 import atexit
-import subprocess
 
 def get_env(var_name, default=None, vartype=str):
     """
@@ -79,6 +81,22 @@ class StdOut:
             sys.stdout = self.stdout    # revert to original standart output
         except AttributeError: pass     # no custom output was set
 
+def mkdir(directory, replace=False):
+    """
+    Creates directory if not existing, erases and recreates it if replace is
+    set to be True.
+
+    Parameters
+    ----------
+    directory : string
+        Name of directory.
+    """
+
+    if pathexists(directory):
+        if not(replace): return
+        rmr(directory)
+    makedirs(directory)
+
 def slurm_output(output_dir, naming_standard, attributes):
     """
     Sets standard output to file when launching from Slurm job scheduler.
@@ -94,7 +112,7 @@ def slurm_output(output_dir, naming_standard, attributes):
         Attributes which define ENTIRELY output file name.
     """
 
-    subprocess.call(['mkdir', '-p', output_dir])				    # create output directory if not existing
+    mkdir(output_dir)   # create output directory if not existing
 
     output_filename, = naming_standard.out().filename(**attributes) # output file name
     output_file = open(joinpath(output_dir, output_filename), 'w')  # output file
