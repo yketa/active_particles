@@ -17,6 +17,7 @@ export AP_CSS="python ${AP_DIR}/analysis/css.py"
 export AP_CUU="python ${AP_DIR}/analysis/cuu.py"
 export AP_FRAME="python ${AP_DIR}/analysis/frame.py"
 export AP_MSD="python ${AP_DIR}/analysis/msd.py"
+export AP_VARN="python ${AP_DIR}/analysis/varn.py"
 
 # FUNCTIONS
 . ${AP_DIR}/exponents.sh # translations between floats and litteral expressions
