@@ -13,6 +13,7 @@ from itertools import chain
 from copy import deepcopy
 
 from os import environ as envvar
+from os import listdir as ls
 from os.path import join as joinpath
 
 # DEFAULT NAMES
@@ -166,7 +167,7 @@ class _File:
 
     def filename(self, **definitions):
         """
-        Returns a list of name parts which the hash table parameters enables to
+        Returns a list of name parts which the keyword arguments enables to
         define.
 
         Optional keyword arguments
@@ -198,6 +199,26 @@ class _File:
         name_parts += [buffer]
 
         return name_parts
+
+    def get_files(self, **definitions):
+        """
+        Returns list of files which correpond to the keyword arguments.
+
+        Optional keyword arguments
+        --------------------------
+        definitions : float, int or bool
+            Defined parameters (e.g., density=0.1).
+
+        Returns
+        -------
+        files : list of strings
+            List of files correponding to parameters.
+        """
+
+        name_parts = self.filename(**definitions)   # list of defined name parts
+
+        return [file for file in ls() if
+            all(part in file for part in name_parts)]
 
     def get_data(self, file, *parameter):
         """
