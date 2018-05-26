@@ -129,7 +129,7 @@ Output
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, slurm_output
+from active_particles.init import get_env, slurm_output, mkdir
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import normalise1D, amplogwidth
 
@@ -644,9 +644,8 @@ if __name__ == '__main__':  # executing as script
             'frame_max': frame_max}}
         movie_dir = joinpath(data_dir,
             naming_standard.movie(folder=True).filename(**attributes)[0])   # movie directory name
-        subprocess.call(['mkdir', '-p', movie_dir])                         # create movie directory
-        subprocess.call(['rm', '-rf', joinpath(movie_dir, 'frames')])       # remove frames directory if existing
-        subprocess.call(['mkdir', '-p', joinpath(movie_dir, 'frames')])     # create frames directory
+        mkdir(movie_dir)                                                    # create movie directory
+        mkdir(joinpath(movie_dir, 'frames'), replace=True)                  # create frames directory (or replaces it if existing)
 
         Nframes = np.min([Nentries, frame_fin]) - init_frame                    # number of frames available for the movie
         Ntimes = Nframes//frame_per                                             # maximum number of rendered frames
