@@ -525,7 +525,7 @@ class VarN(_File):
         Architecture of file name.
         """
 
-        self.name = 'msd_sterr'     # generic name
+        self.name = 'varN'          # generic name
         self.parameters = OrderedDict([
             ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
             ('init_frame', '_I'), ('int_max', '_M'), ('Ncases', '_C'),
