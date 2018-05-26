@@ -12,6 +12,7 @@ from collections import OrderedDict
 from itertools import chain
 from copy import deepcopy
 
+from os import getcwd
 from os import environ as envvar
 from os import listdir as ls
 from os.path import join as joinpath
@@ -200,9 +201,14 @@ class _File:
 
         return name_parts
 
-    def get_files(self, **definitions):
+    def get_files(self, directory=getcwd(), **definitions):
         """
         Returns list of files which correpond to the keyword arguments.
+
+        Parameters
+        ----------
+        directory : string
+            Files directory. (default: current working directory)
 
         Optional keyword arguments
         --------------------------
@@ -217,7 +223,7 @@ class _File:
 
         name_parts = self.filename(**definitions)   # list of defined name parts
 
-        return [file for file in ls() if
+        return [file for file in ls(directory) if
             all(part in file for part in name_parts)]
 
     def get_data(self, file, *parameter):
