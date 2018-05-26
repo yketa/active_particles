@@ -127,7 +127,7 @@ active_particles.naming.Cee standards in DATA_DIRECTORY.
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, StdOut
+from active_particles.init import get_env, slurm_output
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions, wo_mean, g2Dto1Dsquare
 
@@ -136,8 +136,7 @@ from active_particles.analysis.correlations import corField2D_scalar_average,\
 
 from os import getcwd
 from os import environ as envvar
-
-import subprocess
+from os.path import join as joinpath
 
 from math import ceil
 
@@ -360,7 +359,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
 
     if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
         image_name, = naming_standard.image().filename(**attributes)
-        fig.savefig(data_dir + '/' + image_name)
+        fig.savefig(joinath(data_dir, image_name))
 
 # DEFAULT VARIABLES
 
@@ -391,7 +390,7 @@ if __name__ == '__main__':  # executing as script
     int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)	# maximum number of intervals of length dt considered in correlations calculations
 
     parameters_file = get_env('PARAMETERS_FILE',
-		default=data_dir + '/' + naming.parameters_file)	# simulation parameters file
+		default=joinpath(data_dir, naming.parameters_file))	# simulation parameters file
     with open(parameters_file, 'rb') as param_file:
 	       parameters = pickle.load(param_file)				# parameters hash table
 
@@ -431,16 +430,7 @@ if __name__ == '__main__':  # executing as script
 	# STANDARD OUTPUT
 
 	if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
-
-		output_dir = data_dir + '/out/'								# output directory
-		subprocess.call(['mkdir', '-p', output_dir])				# create output directory if not existing
-		output_filename, = naming_Cuu.out().filename(**attributes)	# output file name
-		output_file = open(output_dir + output_filename, 'w')		# output file
-		output_file.write('Job ID: %i\n\n'
-			% get_env('SLURM_JOB_ID', vartype=int))					# write job ID to output file
-
-		stdout = StdOut()
-		stdout.set(output_file)	# set output file as standard output
+		slurm_output(joinpath(data_dir, 'out'), naming_Css, attributes)
 
     # MODE SELECTION
 
@@ -451,9 +441,9 @@ if __name__ == '__main__':  # executing as script
 		# VARIABLE DEFINITIONS
 
         wrap_file_name = get_env('WRAPPED_FILE',
-			default=data_dir + '/' + naming.wrapped_trajectory_file)	# wrapped trajectory file (.gsd)
+			default=joinpath(data_dir, naming.wrapped_trajectory_file))		# wrapped trajectory file (.gsd)
         unwrap_file_name = get_env('UNWRAPPED_FILE',
-			default=data_dir + '/' + naming.unwrapped_trajectory_file)	# unwrapped trajectory file (.dat)
+			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
         times = np.array(list(OrderedDict.fromkeys(map(
 			lambda x: int(x),
@@ -491,11 +481,11 @@ if __name__ == '__main__':  # executing as script
 
         # SAVING
 
-        with open(data_dir + '/' + Cnn_filename, 'wb') as Cnn_dump_file,\
-            open(data_dir + '/' + Cuu_filename, 'wb') as Cuu_dump_file,\
-            open(data_dir + '/' + Cww_filename, 'wb') as Cww_dump_file,\
-            open(data_dir + '/' + Cdd_filename, 'wb') as Cdd_dump_file,\
-            open(data_dir + '/' + Cee_filename, 'wb') as Cee_dump_file:
+        with open(joinpath(data_dir, Cnn_filename), 'wb') as Cnn_dump_file,\
+            open(joinpath(data_dir, Cuu_filename), 'wb') as Cuu_dump_file,\
+            open(joinpath(data_dir, Cww_filename), 'wb') as Cww_dump_file,\
+            open(joinpath(data_dir, Cdd_filename), 'wb') as Cdd_dump_file,\
+            open(joinpath(data_dir, Cee_filename), 'wb') as Cee_dump_file:
             pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
             pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor, CuuL, CuuT], Cuu_dump_file)
             pickle.dump([Cww2D, Cww1D, Cww1Dcor, CwwL, CwwT], Cww_dump_file)
@@ -510,11 +500,11 @@ if __name__ == '__main__':  # executing as script
 
 		# DATA
 
-        with open(data_dir + '/' + Cnn_filename, 'rb') as Cnn_dump_file,\
-            open(data_dir + '/' + Cuu_filename, 'rb') as Cuu_dump_file,\
-            open(data_dir + '/' + Cww_filename, 'rb') as Cww_dump_file,\
-            open(data_dir + '/' + Cdd_filename, 'rb') as Cdd_dump_file,\
-            open(data_dir + '/' + Cee_filename, 'rb') as Cee_dump_file:
+        with open(joinpath(data_dir, Cnn_filename), 'rb') as Cnn_dump_file,\
+            open(joinpath(data_dir, Cuu_filename), 'rb') as Cuu_dump_file,\
+            open(joinpath(data_dir, Cww_filename), 'rb') as Cww_dump_file,\
+            open(joinpath(data_dir, Cdd_filename), 'rb') as Cdd_dump_file,\
+            open(joinpath(data_dir, Cee_filename), 'rb') as Cee_dump_file:
             Cnn2D, Cnn1D = pickle.load(Cnn_dump_file)
             Cuu2D, Cuu1D, Cuu1Dcor, CuuL, CuuT = pickle.load(Cuu_dump_file)
             Cww2D, Cww1D, Cww1Dcor, CwwL, CwwT = pickle.load(Cww_dump_file)
