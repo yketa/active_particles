@@ -198,8 +198,8 @@ class Cgrid:
 
         self.grid = np.array(grid)
         self.shape = np.array(self.grid.shape[:2])  # grid shape in 2 first dimensions
-        self.box_size = np.array(box_size)
-        self.r_max = np.array(r_max) if r_max != None else self.box_size
+        self.box_size = np.array(box_size, ndmin=1)
+        self.r_max = np.array(r_max, ndmin=1) if r_max!=None else self.box_size
 
         self.middle_cases = np.array(self.shape/2, dtype=int)   # number of boxes correspond to half of the grid in all directions
         self.half_r_max_cases = np.array(
