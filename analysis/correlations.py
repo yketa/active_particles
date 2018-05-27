@@ -181,7 +181,7 @@ class Cgrid:
     conditions.
     """
 
-    def __init__(self, grid, box_size, r_max=None):
+    def __init__(self, grid, box_size, display_size=None):
         """
         Initiates grid and display grid.
 
@@ -191,7 +191,7 @@ class Cgrid:
             2D correlation grid.
         box_size : float or float array-like
             Length of grid in one or all dimensions.
-        r_max : float
+        display_size : float
             Length of display grid in one or all dimensions. (default: None)
             NOTE: None correponds to original grid size.
         """
@@ -199,22 +199,26 @@ class Cgrid:
         self.grid = np.array(grid)
         self.shape = np.array(self.grid.shape[:2])  # grid shape in 2 first dimensions
         self.box_size = np.array(box_size, ndmin=1)
-        self.r_max = np.array(r_max, ndmin=1) if r_max!=None else self.box_size
+        if display_size == None:
+            self.display_size = self.box_size
+        else: self.display_size = np.array(display_size, ndmin=1)
 
         self.middle_cases = np.array(self.shape/2, dtype=int)   # number of boxes correspond to half of the grid in all directions
-        self.half_r_max_cases = np.array(
-            self.r_max*(np.array(self.shape)/self.box_size)/2,
-            dtype=int)                                          # number of boxes in all or all dimensions corresponding to half of r_max
+        self.half_display_size_cases = np.array(
+            self.display_size*(np.array(self.shape)/self.box_size)/2,
+            dtype=int)                                          # number of boxes in all or all dimensions corresponding to half of display_size
 
         self.display_grid = Grid(np.roll(
             np.roll(self.grid, self.middle_cases[1], axis=0),
             self.middle_cases[0], axis=1)[
-            self.middle_cases[1] - self.half_r_max_cases[1]:
-            self.middle_cases[1] + self.half_r_max_cases[1] + 1,
-            self.middle_cases[0] - self.half_r_max_cases[0]:
-            self.middle_cases[0] + self.half_r_max_cases[0] + 1],
-            extent=(-self.r_max[0], self.r_max[0],
-            -self.r_max[-1], self.r_max[-1]))
+            self.middle_cases[1] - self.half_display_size_cases[1]:
+            self.middle_cases[1] + self.half_display_size_cases[1] + 1,
+            self.middle_cases[0] - self.half_display_size_cases[0]:
+            self.middle_cases[0] + self.half_display_size_cases[0] + 1],
+            extent=(-self.half_display_size_cases[0]/2,
+            self.half_display_size_cases[0]/2,
+            -self.half_display_size_cases[-1]/2,
+            self.half_display_size_cases[-1]/2))
 
     def integrate_over_angles(self, r, projection=lambda angle: 1,
         points_theta=100):

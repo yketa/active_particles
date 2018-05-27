@@ -286,7 +286,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
 
     # C2D
 
-    cgrid = Cgrid(C2D, box_size, r_max=r_max)
+    cgrid = Cgrid(C2D, box_size, display_size=2*r_max)
 
     Cmin = np.min(C2D)
     Cmax = np.max(C2D)
