@@ -259,12 +259,13 @@ class GridCircle:
             Display circle radius slider.
         """
 
-        self.grid = Grid(grid)
         self.extent = np.array(extent)
+        self.grid = Grid(grid, extent=self.extent)
 
         self.circle_centre = np.array(circle_centre)
         self.radius = 0 # radius of the circle
         self.points_theta = points_theta
+        self.theta = np.linspace(0, 2*np.pi, points_theta)  # points used for calculations
 
         self.show_slider = show_slider
 
@@ -365,8 +366,7 @@ class GridCircle:
 
         self.line.set_ydata(list(map(
             lambda angle: self.grid.get_value_polar(self.radius, angle,
-            centre=self.circle_centre),
-            np.linspace(0, 2*np.pi, self.points_theta))))   # values of the grid along the circle
+            centre=self.circle_centre), self.theta)))   # values of the grid along the circle
 
         self.circle.set_radius(self.radius) # adjusting circle radius
 
