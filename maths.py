@@ -196,3 +196,113 @@ def mean_sterr(values):
     if values.size == 0: return None, None
 
     return np.mean(values), np.std(values)/np.sqrt(np.prod(values.shape))
+
+class Grid:
+    """
+    Manipulate 2D grids, in which we consider the values to correspond to a
+    variable at uniformly distributed positions in space.
+    """
+
+    def __init__(self, grid, extent=(-1, 1, -1, 1)):
+        """
+        Sets the grid.
+
+        Parameters
+        ----------
+        grid : array-like
+            2D grid.
+        extent : scalars (left, right, bottom, top)
+            Values of space variables at corners. (default: (-1, 1, -1, 1))
+        """
+
+        self.grid = np.array(grid)
+        self.shape = self.grid.shape    # shape of the grid
+
+        self.extent = extent
+        self.sep_boxes_x = (self.extent[1] - self.extent[0])/self.grid.shape[0] # distance between consecutive boxes in x (first) direction
+        self.sep_boxes_y = (self.extent[3] - self.extent[2])/self.grid.shape[1] # distance between consecutive boxes in y (second) direction
+
+    def __getitem__(self, *key):
+        """
+        Associates Grid[key] to Grid.grid[key].
+
+        Parameters
+        ----------
+        key : *
+            Key to access.
+
+        Returns
+        -------
+        value : *
+            Grid.grid[key]
+        """
+
+        return self.grid.__getitem__(*key)
+
+    def in_grid(self, x, y):
+        """
+        Indicates if point (x, y) in cartesian coordinates is in grid.
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate
+        y : float
+            y-coordinate
+
+        Returns
+        -------
+        is_in_grid : bool
+            (x, y) in grid.
+        """
+
+        return (x >= self.extent[0] and x <= self.extent[1]
+            and y >= self.extent[2] and y <= self.extent[3])
+
+    def get_value_cartesian(self, x, y):
+        """
+        Get value of grid at position in cartesian coordinates.
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate
+        y : float
+            y-coordinate
+
+        Returns
+        -------
+        value : *
+            Value at (x, y).
+        """
+
+        if not(self.in_grid(x, y)): return None # point not on grid
+
+        index_x = int((x - self.extent[0])//self.sep_boxes_x)%self.shape[0] # index correponding to x
+        index_y = int((y - self.extent[2])//self.sep_boxes_y)%self.shape[1] # index correponding to y
+
+        return self.grid[index_x, index_y]
+
+    def get_value_polar(self, r, angle, centre=(0, 0)):
+        """
+        Get value of grid at position in polar coordinates.
+
+        Parameters
+        ----------
+        r : float
+            Radius from centre.
+        angle : float
+            Angle from x-direction.
+        centre : float tuple
+            Origin for calculation. (default: (0, 0))
+
+        Returns
+        -------
+        value : *
+            Value at (r, angle) from centre.
+        """
+
+        x = centre[0] - r*np.sin(angle) # corresponding cartesian x-coordinate
+        y = centre[1] + r*np.cos(angle) # corresponding cartesian y-coordinate
+
+        return self.get_value_cartesian(x, y)
