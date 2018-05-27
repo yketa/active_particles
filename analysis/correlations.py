@@ -4,6 +4,8 @@ Module correlations provides functions to calculate 2D fields correlations.
 
 import numpy as np
 
+from active_particles.maths import Grid
+
 def corField2D_scalar(field):
     """
     2D correlation field of a scalar field. Correlations are calculated with
@@ -170,3 +172,75 @@ def corField2D_vector_average_Cnn(field_list, Cnn):
         ))(*tuple(np.sum(list(map(corField2D_vector, field_list)), axis=0)))    # normalised averaged correlation field, longitudinal and transversal correlations
 
     return C, CL, CT
+
+class Cgrid:
+    """
+    Manipulate 2D correlation grids.
+
+    We consider [0, 0] as the origin of the grid and periodic boundary
+    conditions.
+    """
+
+    def __init__(self, grid, box_size, r_max=None):
+        """
+        Initiates grid and display grid.
+
+        Parameters
+        ----------
+        grid : array-like
+            2D correlation grid.
+        box_size : float or float array-like
+            Length of grid in one or all dimensions.
+        r_max : float
+            Length of display grid in one or all dimensions. (default: None)
+            NOTE: None correponds to original grid size.
+        """
+
+        self.grid = np.array(grid)
+        self.shape = np.array(self.grid.shape[:2])  # grid shape in 2 first dimensions
+        self.box_size = np.array(box_size)
+        self.r_max = np.array(r_max) if r_max != None else self.box_size
+
+        self.middle_cases = np.array(self.shape/2, dtype=int)   # number of boxes correspond to half of the grid in all directions
+        self.half_r_max_cases = np.array(
+            self.r_max*(np.array(self.shape)/self.box_size)/2,
+            dtype=int)                                          # number of boxes in all or all dimensions corresponding to half of r_max
+
+        self.display_grid = Grid(np.roll(
+            np.roll(self.grid, self.middle_cases[1], axis=0),
+            self.middle_cases[0], axis=1)[
+            self.middle_cases[1] - self.half_r_max_cases[1]:
+            self.middle_cases[1] + self.half_r_max_cases[1] + 1,
+            self.middle_cases[0] - self.half_r_max_cases[0]:
+            self.middle_cases[0] + self.half_r_max_cases[0] + 1],
+            extent=(-r_max[0], r_max[0], -r_max[-1], r_max[-1]))
+
+    def integrate_over_angles(self, r, projection=lambda angle: 1,
+        points_theta=100):
+        """
+        Returns intergration of values of display grid over all angles,
+        projected on projection, at radius r.
+
+        Parameters
+        ----------
+        r : float
+            Radius.
+        projection : function of angle
+            Projector. (default: 1)
+        points_theta : int
+            Number of values of angles for integration.
+
+        Returns
+        -------
+        integration : float
+            Integration of display grid.
+        """
+
+        if r > np.min(self.r_max): return None  # integration over regions not in display grid
+
+        theta = np.linspace(0, 2*np.pi, points_theta)# angles for integration
+        return np.trapz(
+            list(map(lambda angle:
+            self.display_grid.get_value_polar(r, angle)*projection(angle),
+            theta)),
+            theta)
