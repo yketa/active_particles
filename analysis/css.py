@@ -106,6 +106,7 @@ from active_particles.maths import relative_positions
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
+from active_particles.analysis.correlations import Cgrid as CorGrid
 from active_particles.analysis.coarse_graining import GaussianCG,\
 	CoarseGraining
 
@@ -335,13 +336,9 @@ def plot(grid, corr, box_size, var, naming_standard):
 	CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
 	CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
 
-	r_max_cases = int(r_max*(Ncases/box_size))
-	C2D_display = np.roll(np.roll(corr, int(Ncases/2), axis=0),
-		int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:
-		int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:
-		int(Ncases/2) + r_max_cases + 1]	# part of variable correlations to display
+	cgrid = CorGrid(corr, box_size, display_size=2*r_max)
 
-	ax[1].imshow(C2D_display, cmap=cmap, norm=CvNorm,
+	ax[1].imshow(cgrid.display_grid.grid, cmap=cmap, norm=CvNorm,
 		extent=[-r_max, r_max, -r_max, r_max])
 
 	ax[1].set_xlabel(r'$x$')
@@ -362,8 +359,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 
 	# GRID CIRCLE FIGURE
 
-	gridcircle = GridCircle(C2D_display,
-		extent=[-box_size/2, box_size/2, -box_size/2, box_size/2])
+	gridcircle = GridCircle(cgrid.display_grid.grid,
+		extent=[-r_max, r_max, -r_max, r_max])
 	fig_gc, (ax_grid, ax_plot), cb_gc = gridcircle.get_fig_ax_cmap()
 
 	fig_gc.set_size_inches(16, 16)		# figure size
