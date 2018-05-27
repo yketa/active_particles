@@ -132,7 +132,7 @@ from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions, wo_mean, g2Dto1Dsquare
 
 from active_particles.analysis.correlations import corField2D_scalar_average,\
-    corField2D_vector_average_Cnn
+    corField2D_vector_average_Cnn, Cgrid
 
 from os import getcwd
 from os import environ as envvar
@@ -210,7 +210,7 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
 		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)   # array of wrapped particle positions
     dL = new_box_size/Ncases                                                  # box separation
 
-	displacements = u_traj.displacement(time, time + dt)	# displacements between times time and time + dt
+    displacements = u_traj.displacement(time, time + dt)	# displacements between times time and time + dt
 
     # DISPLACEMENT GRIDS CALCULATION
 
@@ -286,19 +286,15 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
 
     # C2D
 
+    cgrid = Cgrid(C2D, box_size, r_max=r_max)
+
     Cmin = np.min(C2D)
     Cmax = np.max(C2D)
 
     CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
     CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
 
-    r_max_cases = int(r_max*(Ncases/box_size))
-    C2D_display = np.roll(np.roll(C2D, int(Ncases/2), axis=0),
-        int(Ncases/2), axis=1)[int(Ncases/2) - r_max_cases:
-        int(Ncases/2) + r_max_cases + 1, int(Ncases/2) - r_max_cases:
-        int(Ncases/2) + r_max_cases + 1]    # part of variable correlations to display
-
-    axs[0, 0].imshow(C2D_display, cmap=cmap, norm=CvNorm,
+    axs[0, 0].imshow(cgrid.display_grid.grid, cmap=cmap, norm=CvNorm,
         extent=[-r_max, r_max, -r_max, r_max])
 
     axs[0, 0].set_xlabel(r'$x$')
@@ -315,7 +311,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     cb = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=CvNorm, orientation='vertical')
     cb.set_label(r'$%s$' % C, labelpad=20, rotation=270)
 
-    # Cuu1D shifted
+    # C1D shifted
 
     fplot(axs[1, 0])(C1D[1:, 0], C1D[1:, 1]/Cnn1D[-1, 1])
 
@@ -327,7 +323,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     axs[1, 0].set_xlim(r_min, r_max)
     axs[1, 0].set_ylim(C_min, C_max)
 
-    # Cnn1D and Cuu1D
+    # Cnn1D and C1D
 
     axs[0, 1].set_title('radial ' + r'$C_{\rho\rho}$' + ' and ' + r'$%s$' % C)
     axs[0, 1].set_xlabel(r'$r$')
@@ -429,8 +425,8 @@ if __name__ == '__main__':  # executing as script
 
 	# STANDARD OUTPUT
 
-	if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
-		slurm_output(joinpath(data_dir, 'out'), naming_Css, attributes)
+    if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
+        slurm_output(joinpath(data_dir, 'out'), naming_Css, attributes)
 
     # MODE SELECTION
 
