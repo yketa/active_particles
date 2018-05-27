@@ -12,6 +12,8 @@ import matplotlib.cm as cmx
 import matplotlib as mpl
 cmap = plt.cm.jet
 
+from active_particles.maths import Grid
+
 class FittingLine:
     """
     Provided a matplotlib.axes.Axes object, this object:
@@ -257,10 +259,8 @@ class GridCircle:
             Display circle radius slider.
         """
 
-        self.grid = np.array(grid)
+        self.grid = Grid(grid)
         self.extent = np.array(extent)
-        self.sep_boxes_x = (self.extent[1] - self.extent[0])/self.grid.shape[0] # distance between consecutive boxes in x (first) direction
-        self.sep_boxes_y = (self.extent[3] - self.extent[2])/self.grid.shape[1] # distance between consecutive boxes in y (second) direction
 
         self.circle_centre = np.array(circle_centre)
         self.radius = 0 # radius of the circle
@@ -272,15 +272,15 @@ class GridCircle:
 
         # COLORMAP
 
-        self.min = np.min(self.grid)
-        self.max = np.max(self.grid)
+        self.min = np.min(self.grid.grid)
+        self.max = np.max(self.grid.grid)
 
         self.norm = colors.Normalize(vmin=self.min, vmax=self.max)      # normalises data
         self.scalarmap = cmx.ScalarMappable(norm=self.norm, cmap=cmap)  # scalar map for grid values
 
         # GRID
 
-        self.ax_grid.imshow(self.grid, cmap=cmap, norm=self.norm,
+        self.ax_grid.imshow(self.grid.grid, cmap=cmap, norm=self.norm,
             extent=self.extent) # grid
 
         self.colormap_ax = make_axes_locatable(self.ax_grid).append_axes(
@@ -332,38 +332,6 @@ class GridCircle:
 
         return self.fig, (self.ax_grid, self.ax_plot), self.colormap
 
-    def get_value(self, radius, angle):
-        """
-        Returns value on grid at position (radius, angle) in polar coordinates
-        from self.circle_centre.
-
-        Parameters
-        ----------
-        radius : float
-            Radius of polar coordinates.
-        angle : float
-            Angle of polar coordinates.
-
-        Returns
-        -------
-        value : float
-            Value on grid at position (radius, angle).
-        """
-
-        position = self.circle_centre + radius*np.array(
-            [- np.sin(angle), np.cos(angle)])   # position in the grid at which we want the value
-
-        if not((position[0] >= self.extent[0]
-            and position[0] <= self.extent[1]) and (position[1] >=
-            self.extent[2] and position[1] <= self.extent[3])): # point not on grid
-            return None
-
-        return self.grid[
-            int((position[0] - self.extent[0])//self.sep_boxes_x)
-            %self.grid.shape[0],
-            int((position[1] - self.extent[2])//self.sep_boxes_y)
-            %self.grid.shape[1]]
-
     def update_grid(self, event):
         """
         Executes on click on figure.
@@ -396,7 +364,8 @@ class GridCircle:
         """
 
         self.line.set_ydata(list(map(
-            lambda angle: self.get_value(self.radius, angle),
+            lambda angle: self.grid.get_value_polar(self.radius, angle,
+            centre=self.circle_centre),
             np.linspace(0, 2*np.pi, self.points_theta))))   # values of the grid along the circle
 
         self.circle.set_radius(self.radius) # adjusting circle radius
