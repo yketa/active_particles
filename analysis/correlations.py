@@ -215,10 +215,8 @@ class Cgrid:
             self.middle_cases[1] + self.half_display_size_cases[1] + 1,
             self.middle_cases[0] - self.half_display_size_cases[0]:
             self.middle_cases[0] + self.half_display_size_cases[0] + 1],
-            extent=(-self.half_display_size_cases[0]/2,
-            self.half_display_size_cases[0]/2,
-            -self.half_display_size_cases[-1]/2,
-            self.half_display_size_cases[-1]/2))
+            extent=(-self.display_size[0]/2, self.display_size[0]/2,
+            -self.display_size[-1]/2, self.display_size[-1]/2))
 
     def integrate_over_angles(self, r, projection=lambda angle: 1,
         points_theta=100):
