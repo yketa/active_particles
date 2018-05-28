@@ -66,7 +66,7 @@ if 'INITIALISATION_GSD' in os.environ and init_frame == -1: # initialise from th
 if 'INITIALISATION_GSD' in os.environ:
 	system = hoomd.init.read_gsd(filename=init_gsd, frame=init_frame) # initialisation from gsd file
 	snapshot = system.take_snapshot(all=True)
-	N_cases = len(snapshot.particles.types) # number of different sizes
+	N_sizes = len(snapshot.particles.types) # number of different sizes
 else:
 	snapshot = hoomd.data.make_snapshot(N=N, particle_types=[str(particle) for particle in range(N_sizes)], box=hoomd.data.boxdim(L=box_size, dimensions=2)) # creating box with N particles
 	snapshot.particles.position[:] = np.array([np.ndarray.tolist(np.array([np.random.rand(1)[0], np.random.rand(1)[0]])*box_size - box_size/2) + [0] for particle in range(N)]) # random position of the particles
@@ -114,9 +114,11 @@ fire = hoomd.md.integrate.mode_minimize_fire(dt=time_step) # FIRE energy minimis
 nve = hoomd.md.integrate.nve(group=all)
 
 prep_steps = 0
-while not(fire.has_converged()):
-	hoomd.run(100) # run FIRE until it has converged
-	prep_steps += 100
+
+if not('INITIALISATION_GSD' in os.environ):	# don't fire if starting from initial .gsd configuration
+	while not(fire.has_converged()):
+		hoomd.run(100) # run FIRE until it has converged
+		prep_steps += 100
 
 # PARAMETERS FILE
 
@@ -138,7 +140,7 @@ hoomd.update.box_resize(xy=hoomd.variant.linear_interp([(0, 0), (N_steps, shear_
 activity = [] # active force applied on each particle
 for particle in range(N):
 	force = np.array([np.random.rand(1)[0] - 0.5 for axis in range(2)] + [0]) # non-normalised direction of the force
-	force *= vzero/np.sqrt(np.sum(force**2)) # active force 
+	force *= vzero/np.sqrt(np.sum(force**2)) # active force
 	activity += [tuple(force)]
 
 propulsion = hoomd.md.force.active(group=all, seed=123, f_lst=activity, rotation_diff=dr, orientation_link=False)
@@ -166,4 +168,3 @@ def run(dump_file, snaps, increments, N, L, dt, period_dump):
 with open(name_trajectory + '.dat', 'wb') as output_trajectory: # trajectory data file
 	for runs in range(int(N_steps//period_dump)):
 		snaps, increments = run(output_trajectory, snaps, increments, N, box_size, time_step, period_dump)
-
