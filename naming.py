@@ -201,6 +201,24 @@ class _File:
 
         return name_parts
 
+    def filename_length(self):
+        """
+        Returns the length of the filename according to its name, parameters
+        and extensions.
+
+        Returns
+        -------
+        length : int
+            Length of filename.
+        """
+
+        length = len(self.name)
+        for parameter in self.parameters.values():
+            length += len(parameter) + 1 + significant_figures
+        length += len(self.extension)
+
+        return length
+
     def get_files(self, directory=getcwd(), **definitions):
         """
         Returns list of files which correpond to the keyword arguments.
@@ -221,10 +239,12 @@ class _File:
             List of files correponding to parameters.
         """
 
+        length = self.filename_length()             # length of filename
         name_parts = self.filename(**definitions)   # list of defined name parts
 
         return [file for file in ls(directory) if
-            all(part in file for part in name_parts)]
+            all(part in file for part in name_parts)
+            and len(file) == length]
 
     def get_data(self, file, *parameter):
         """
