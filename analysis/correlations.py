@@ -241,9 +241,9 @@ class Cgrid:
             Integration of display grid.
         """
 
-        if r > np.min(self.r_max): return None  # integration over regions not in display grid
+        if r > np.min(self.display_size): return None   # integration over regions not in display grid
 
-        theta = np.linspace(0, 2*np.pi, points_theta)# angles for integration
+        theta = np.linspace(0, 2*np.pi, points_theta)   # angles for integration
         return np.trapz(
             list(map(lambda angle:
             self.display_grid.get_value_polar(r, angle)*projection(angle),
