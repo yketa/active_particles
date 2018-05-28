@@ -24,7 +24,7 @@ except IndexError:          # sys.argv[1] does not exist
     sys.exit()
 except FileNotFoundError:   # parameters file not found
     print('Parameters file %s not found in directory %s.' %
-        (sys.argv[1], parameters_file))
+        (parameters_file, sys.argv[1]))
     sys.exit()
 
 try:
