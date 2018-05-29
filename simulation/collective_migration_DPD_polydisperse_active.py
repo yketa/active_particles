@@ -55,7 +55,7 @@ N_steps = int(eval(os.environ['N_STEPS'])) if 'N_STEPS' in os.environ else int(1
 
 period_dump = int(eval(os.environ['PERIOD_DUMP'])) if 'PERIOD_DUMP' in os.environ else 100 # period of dumping to gsd file
 
-init_gsd = os.environ['INITALISATION_GSD'] if 'INITALISATION_GSD' in os.environ else '' # initialisation gsd file
+init_gsd = os.environ['INITIALISATION_GSD'] if 'INITIALISATION_GSD' in os.environ else '' # initialisation gsd file
 init_frame = int(eval(os.environ['INITIALISATION_FRAME'])) if 'INITIALISATION_FRAME' in os.environ else 0 # initialisation frame in the gsd file
 
 # BOX PARAMETRISATION
