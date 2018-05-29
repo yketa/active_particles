@@ -9,6 +9,8 @@ import subprocess
 import hoomd
 import hoomd.md
 
+import gsd
+
 import numpy as np
 
 import pickle
@@ -55,11 +57,6 @@ period_dump = int(eval(os.environ['PERIOD_DUMP'])) if 'PERIOD_DUMP' in os.enviro
 
 init_gsd = os.environ['INITALISATION_GSD'] if 'INITALISATION_GSD' in os.environ else '' # initialisation gsd file
 init_frame = int(eval(os.environ['INITIALISATION_FRAME'])) if 'INITIALISATION_FRAME' in os.environ else 0 # initialisation frame in the gsd file
-
-if 'INITIALISATION_GSD' in os.environ and init_frame == -1: # initialise from the last frame
-	with gsd.pygsd.GSDFile(open(init_gsd, 'rb')) as init_gsd_file:
-		init_gsd_trajectory = gsd.hoomd.HOOMDTrajectory(init_gsd_file)
-		init_frame = len(init_gsd_trajectory) - 1 # last frame
 
 # BOX PARAMETRISATION
 
