@@ -208,6 +208,13 @@ class _Frame:
         self.arrow_head_width = arrow_head_width
         self.arrow_head_length = arrow_head_length
 
+    def __del__(self):
+        """
+        Closes figure.
+        """
+
+        plt.close(self.fig)
+
     def draw_circle(self, particle, color='black', fill=False):
         """
         Draws circle at particle's position with particle's diameter.
@@ -673,7 +680,7 @@ if __name__ == '__main__':  # executing as script
                 figure.fig.suptitle(suptitle(frame))
                 figure.fig.savefig(joinpath(movie_dir, 'frames',
                     '%010d' % frames.tolist().index(frame) + '.png'))   # save frame
-                plt.close(figure.fig)                                   # close frame
+                del figure                                              # delete (close) figure
 
         subprocess.call([
             'ffmpeg', '-r', '5', '-f', 'image2', '-s', '1280x960', '-i',
