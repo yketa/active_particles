@@ -104,7 +104,7 @@ if __name__ == '__main__':  # executing as script
     mpl.rcParams.update({'font.size': font_size, 'lines.markersize': marker_size})
 
     ratio_legend = get_env('RATIO_LEGEND', default=_ratio_legend, vartype=int)  # width ratio between legend and figure
-    ncol_legend = get_env('NCOL_LEGEND', default=_ncol_legend, vartype=int)      # number of columns for the legend
+    ncol_legend = get_env('NCOL_LEGEND', default=_ncol_legend, vartype=int)     # number of columns for the legend
 
     wspace = get_env('WSPACE', default=_wspace, vartype=float)  # plots width space
     hspace = get_env('HSPACE', default=_hspace, vartype=float)  # plots height space
@@ -203,6 +203,10 @@ if __name__ == '__main__':  # executing as script
         sigma)
     title += '\n'
     title += r'$N_r=%.2e, N_{\theta}=%.2e$' % (points_x, points_theta)
+    if 'BOX_SIZE' in envvar:
+        title += r'$, L = %.3e$' % box_size
+    if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:
+        title += r'$, x_0=%.3e, y_0=%.3e$' % centre
     fig.suptitle(title)
 
     plt.show()
