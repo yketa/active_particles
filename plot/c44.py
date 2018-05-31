@@ -50,8 +50,8 @@ _points_theta = 100 # default number of angles to evaluate integrated strain cor
 
 _y_min = 1e-4   # default minimum C44 value
 _y_max = 2e-1   # default maximum C44 value
-_r_min = 2      # default minimum radius over average particle separation value
-_r_max = 15     # default maximum radius over average particle separation value
+_r_min = 1      # default minimum radius over average particle separation value
+_r_max = 20     # default maximum radius over average particle separation value
 
 if __name__ == '__main__':  # executing as script
 
