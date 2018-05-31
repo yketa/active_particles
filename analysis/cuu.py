@@ -426,7 +426,7 @@ if __name__ == '__main__':  # executing as script
 	# STANDARD OUTPUT
 
     if 'SLURM_JOB_ID' in envvar:	# script executed from Slurm job scheduler
-        slurm_output(joinpath(data_dir, 'out'), naming_Css, attributes)
+        slurm_output(joinpath(data_dir, 'out'), naming_Cuu, attributes)
 
     # MODE SELECTION
 
