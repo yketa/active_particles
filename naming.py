@@ -445,6 +445,18 @@ class Cee(_CorFile):
 
         super().__init__('Cee')  # initialise with superclass
 
+class Ctt(_CorFile):
+    """
+    Naming transversal component of displacement Fourier transform.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Ctt')  # initialise with superclass
+
 class _FrameFile(_File):
     """
     Naming system image files.
@@ -579,6 +591,51 @@ class VarN(_File):
             ('box_size', '_B')
         ])                          # parameters and corresponding abbreviations (in order)
         self.extension = '.pickle'  # file extension
+
+class AHB2D(_File):
+    """
+    Naming simulations of 2D active brownian uniformly polydisperse particles
+    directories.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        self.name = ''      # generic name
+        self.parameters = OrderedDict([
+            ('density', 'D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
+            ('launch', '_L')
+        ])                  # parameters and corresponding abbreviations (in order)
+        self.extension = '' # file extension
+
+    def filename(self, directory=getcwd(), **definitions):
+        """
+        Returns a list of name parts which the keyword arguments enables to
+        define.
+
+        Parameters
+        ----------
+        directory : string
+            Directory in which the folder will be created.
+
+        Optional keyword arguments
+        --------------------------
+        definitions : float, int or bool
+            Defined parameters (e.g., density=0.1).
+
+        Returns
+        -------
+        name_parts : list of strings
+            List of defined name parts.
+        """
+
+        if not('launch' in definitions):    # launch number not defined
+            definitions['launch'] = len(super().get_files(**definitions,
+                launch=None))
+        return super().filename(**definitions)
+
 
 def endpoint():
     """
