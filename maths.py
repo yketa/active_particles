@@ -129,6 +129,37 @@ def g2Dto1Dsquare(g2D, L):
         lambda sqradius: [dL*np.sqrt(sqradius), np.mean(g1D_dic[sqradius])],
         sorted(g1D_dic))))
 
+def g2Dto1Dgrid(g2D, grid):
+    """
+    Returns cylindrical average of square 2D grid with values of radius given
+    by other parameter grid.
+
+    Parameters
+    ----------
+    g2D : 2D array
+        Square 2D grid.
+    grid : 2D array
+        Array of radii.
+
+    Returns
+    -------
+    g1D : Numpy array
+        Array of (r, g1D(r)) with g1D(r) the averaged 2D grid at radius r.
+    """
+
+    g2D = np.array(g2D)
+
+    g1D_dic = DictList()    # hash table of radii and values at radii
+
+    for i in range(g2D.shape[0]):
+        for j in range(g2D.shape[1]):
+            radius = grid[i, j] # radius corresponding to coordinates [i, j]
+            g1D_dic[grid[i, j]] += [g2D[i, j]]
+
+    return np.array(list(map(
+        lambda radius: [radius, np.mean(g1D_dic[radius])],
+        sorted(g1D_dic))))
+
 def normalise1D(vector):
     """
     Returs 1D vector of unitary norm with same direction.
