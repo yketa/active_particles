@@ -148,12 +148,12 @@ def g2Dto1Dgrid(g2D, grid):
     """
 
     g2D = np.array(g2D)
+    grid = np.array(grid)
 
     g1D_dic = DictList()    # hash table of radii and values at radii
 
     for i in range(g2D.shape[0]):
         for j in range(g2D.shape[1]):
-            radius = grid[i, j] # radius corresponding to coordinates [i, j]
             g1D_dic[grid[i, j]] += [g2D[i, j]]
 
     return np.array(list(map(
