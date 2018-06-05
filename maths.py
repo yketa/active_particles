@@ -392,7 +392,7 @@ def kFFTgrid(grid, d=1):
 
     k_cross_grid = np.cross(wave_vectors, FFTgrid)  # k cross FFTgrid
 
-    k_dot_grid = np.zeros(FFTgrid.shape[:2])
+    k_dot_grid = np.zeros(FFTgrid.shape[:2], dtype=np.complex128)
     for i in range(FFTgrid.shape[0]):
         for j in range(FFTgrid.shape[1]):
             k_dot_grid[i, j] = np.dot(wave_vectors[i, j], FFTgrid[i, j])    # k dot FFTgrid
