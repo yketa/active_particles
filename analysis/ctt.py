@@ -73,13 +73,13 @@ R_MIN [PLOT or SHOW mode] : float
 	DEFAULT: active_particles.analysis.ctt._r_min
 R_MAX [PLOT or SHOW mode] : float
 	Maximum wave length norm for plots.
-	DEFAULT: BOX_SIZE
+	DEFAULT: sqrt(2) times BOX_SIZE
 Y_MIN [PLOT or SHOW mode] : float
 	Minimum y-coordinate for plots.
-	DEFAULT: active_particles.analysis.ctt._y_min
+	DEFAULT: fit to data
 Y_MAX [PLOT or SHOW mode] : float
 	Maximum y-coordinate for plots.
-	DEFAULT: active_particles.analysis.ctt._y_max
+	DEFAULT: fit to data
 SLOPE [FITTING_LINE mode] : float
 	Initial slope for fitting line.
 	DEFAULT: active_particles.analysis.ctt._slope0
@@ -251,9 +251,6 @@ def plot():
 
 _r_min = 1		# default minimum wave length for plots
 
-_y_min = 1e-6	# default minimum y-coordinate for plots
-_y_max = 1		# default maximum y-coordinate for plots
-
 _slope0 = -2	# default initial slope for fitting line
 _slope_min = -4	# default minimum slope for fitting line
 _slope_max = 0	# default maximum slope for fitting line
@@ -384,8 +381,14 @@ if __name__ == '__main__':  # executing as script
         r_min = get_env('R_MIN', default=_r_min, vartype=float)					# minimum wave length for plots
         r_max = get_env('R_MAX', default=np.sqrt(2)*box_size, vartype=float)	# maximum wave length for plots
 
-        y_min = get_env('Y_MIN', default=_y_min, vartype=float)	# minimum y-coordinate for plots
-        y_max = get_env('Y_MAX', default=_y_max, vartype=float)	# maximum y-coordinate for plots
+        y_min = get_env('Y_MIN',
+			default=np.min((k_cross_FFTugrid1D_sqnorm[1:, 1],
+			k_dot_FFTugrid1D_sqnorm[1:, 1])),
+			vartype=float)	# minimum y-coordinate for plots
+        y_max = get_env('Y_MAX',
+			default=np.max((k_cross_FFTugrid1D_sqnorm[1:, 1],
+			k_dot_FFTugrid1D_sqnorm[1:, 1])),
+			vartype=float)	# maximum y-coordinate for plots
 
         slope0 = get_env('SLOPE', default=_slope0, vartype=float)			# initial slope for fitting line
         slope_min = get_env('SLOPE_MIN', default=_slope_min, vartype=float)	# minimum slope for fitting line
