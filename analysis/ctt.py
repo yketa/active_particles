@@ -68,12 +68,12 @@ X_ZERO : float
 Y_ZERO : float
 	2nd coordinate of the centre of the square box to consider.
 	DEFAULT: 0
-K_MIN [PLOT or SHOW mode] : float
-	Minimum wave vector norm for plots.
-	DEFAULT: active_particles.analysis.ctt._k_min
-K_MAX [PLOT or SHOW mode] : float
-	Maximum wave vector norm for plots.
-	DEFAULT: active_particles.analysis.ctt._k_max
+R_MIN [PLOT or SHOW mode] : float
+	Minimum wave length norm for plots.
+	DEFAULT: active_particles.analysis.ctt._r_min
+R_MAX [PLOT or SHOW mode] : float
+	Maximum wave length norm for plots.
+	DEFAULT: BOX_SIZE
 Y_MIN [PLOT or SHOW mode] : float
 	Minimum y-coordinate for plots.
 	DEFAULT: active_particles.analysis.ctt._y_min
@@ -178,45 +178,47 @@ def plot():
 	# CROSS
 
 	ax_cross = plt.subplot(gs[0, 0])
-	ax_cross.loglog(k_cross_FFTugrid1D_sqnorm[1:, 0],
+	ax_cross.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
 		k_cross_FFTugrid1D_sqnorm[1:, 1],
 		color='blue',
 		label=r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>$')	# cross product
 
-	ax_cross.set_xlabel(r'$k$')
-	ax_cross.set_xlim([k_min, k_max])
+	ax_cross.set_xlabel(r'$\lambda = 2\pi/k$')
+	ax_cross.set_xlim([r_min, r_max])
 	ax_cross.set_ylabel(
 		r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>$')
 	ax_cross.set_ylim([y_min, y_max])
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):
-		fl_cross = FittingLine(ax_cross, slope0, slope_min, slope_max)	# add fitting line to plot
+		fl_cross = FittingLine(ax_cross, slope0, slope_min, slope_max,
+			x_fit='\lambda')	# add fitting line to plot
 
 	# DOT
 
 	ax_dot = plt.subplot(gs[1, 0])
-	ax_dot.loglog(k_dot_FFTugrid1D_sqnorm[1:, 0],
+	ax_dot.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
 		k_dot_FFTugrid1D_sqnorm[1:, 1],
 		color='orange',
 		label=r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>$')		# dot product
 
-	ax_dot.set_xlabel(r'$k$')
-	ax_dot.set_xlim([k_min, k_max])
+	ax_dot.set_xlabel(r'$\lambda = 2\pi/k$')
+	ax_dot.set_xlim([r_min, r_max])
 	ax_dot.set_ylabel(
 		r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>$')
 	ax_dot.set_ylim([y_min, y_max])
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):
-		fl_dot = FittingLine(ax_dot, slope0, slope_min, slope_max)	# add fitting line to plot
+		fl_dot = FittingLine(ax_dot, slope0, slope_min, slope_max,
+			x_fit='\lambda')	# add fitting line to plot
 
 	# SUPER
 
 	ax_super = plt.subplot(gs[:, 1])
-	ax_super.loglog(k_cross_FFTugrid1D_sqnorm[1:, 0],
+	ax_super.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
 		k_cross_FFTugrid1D_sqnorm[1:, 1],
 		color='blue',
 		label=r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>$')	# cross product
-	ax_super.loglog(k_dot_FFTugrid1D_sqnorm[1:, 0],
+	ax_super.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
 		k_dot_FFTugrid1D_sqnorm[1:, 1],
 		color='orange',
 		label=r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>$')		# dot product
@@ -224,13 +226,14 @@ def plot():
 	legend = ax_super.legend()
 	ax_super.add_artist(legend)
 
-	ax_super.set_xlabel(r'$k$')
-	ax_super.set_xlim([k_min, k_max])
+	ax_super.set_xlabel(r'$\lambda = 2\pi/k$')
+	ax_super.set_xlim([r_min, r_max])
 	ax_super.set_ylabel(r'$k^2S(k)$')
 	ax_super.set_ylim([y_min, y_max])
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):
-		fl_super = FittingLine(ax_super, slope0, slope_min, slope_max)	# add fitting line to plot
+		fl_super = FittingLine(ax_super, slope0, slope_min, slope_max,
+			x_fit='\lambda')	# add fitting line to plot
 
 	# SAVING
 
@@ -246,15 +249,14 @@ def plot():
 
 # DEFAULT VARIABLES
 
-_k_min = 1e-3	# default minimum wave vector norm for plots
-_k_max = 1		# default maximum wave vector norm for plots
+_r_min = 1		# default minimum wave length for plots
 
 _y_min = 1e-6	# default minimum y-coordinate for plots
 _y_max = 1		# default maximum y-coordinate for plots
 
-_slope0 = 2		# default initial slope for fitting line
-_slope_min = 0	# default minimum slope for fitting line
-_slope_max = 4	# default maximum slope for fitting line
+_slope0 = -2	# default initial slope for fitting line
+_slope_min = -4	# default minimum slope for fitting line
+_slope_max = 0	# default maximum slope for fitting line
 
 if __name__ == '__main__':  # executing as script
 
@@ -379,8 +381,8 @@ if __name__ == '__main__':  # executing as script
 
 		# PLOT
 
-        k_min = get_env('K_MIN', default=_k_min, vartype=float)	# minimum wave vector norm
-        k_max = get_env('K_MAX', default=_k_max, vartype=float)	# maximum wave vector norm
+        r_min = get_env('R_MIN', default=_r_min, vartype=float)					# minimum wave length for plots
+        r_max = get_env('R_MAX', default=np.sqrt(2)*box_size, vartype=float)	# maximum wave length for plots
 
         y_min = get_env('Y_MIN', default=_y_min, vartype=float)	# minimum y-coordinate for plots
         y_max = get_env('Y_MAX', default=_y_max, vartype=float)	# maximum y-coordinate for plots
