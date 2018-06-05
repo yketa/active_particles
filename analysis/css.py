@@ -285,6 +285,15 @@ def plot(grid, corr, box_size, var, naming_standard):
 		Name of variable.
 	naming_standard : active_particles.naming standard
 		Standard naming object.
+
+	Returns
+	-------
+	fig : matplotlib figure
+		Figure.
+	ax : matplotlib axis
+		Axis.
+	fl : active_particles.plot.mpl_tools.GridCircle
+		Grid circle object.
 	"""
 
 	# GRID AND CORRELATION FIGURE
