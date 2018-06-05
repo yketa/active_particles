@@ -371,8 +371,8 @@ if __name__ == '__main__':  # executing as script
 
 		# DATA
 
-        with open(joinpath(data_dir, Ctt_filename), 'wb') as Ctt_dump_file,\
-			open(joinpath(data_dir, Cll_filename), 'wb') as Cll_dump_file:
+        with open(joinpath(data_dir, Ctt_filename), 'rb') as Ctt_dump_file,\
+			open(joinpath(data_dir, Cll_filename), 'rb') as Cll_dump_file:
             _, _, k_cross_FFTugrid1D_sqnorm = pickle.load(Ctt_dump_file)
             _, _, k_dot_FFTugrid1D_sqnorm = pickle.load(Cll_dump_file)
 
