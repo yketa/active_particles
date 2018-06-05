@@ -62,7 +62,7 @@ class FittingLine:
     """
 
     def __init__(self, ax, slope, slope_min, slope_max, color='black',
-        linestyle='--', **kwargs):
+        linestyle='--', legend=True, **kwargs):
         """
         Parameters
         ----------
@@ -78,6 +78,8 @@ class FittingLine:
             Color of fitting line.
         linestyle : any matplotlib line style
             Line style of fitting line.
+        legend : bool
+            Display legend.
 
         Optional keyword arguments
         --------------------------
@@ -102,15 +104,18 @@ class FittingLine:
         self.slope = slope                                      # slope of fitting line
 
         self.line, = self.ax.plot([], [], label=' ',
-            color=self.color, linestyle=self.linestyle)         # Line2D representing fitting line
-        self.x_legend = np.mean(self.ax.get_xlim())             # x coordinate of fitting line legend
-        self.y_legend = np.mean(self.ax.get_ylim())             # y coordinate of fitting line legend
-        self.legend = plt.legend(handles=[self.line], loc=10,
-            bbox_to_anchor=(self.x_legend, self.y_legend),
-            bbox_transform=self.ax.transData)                   # fitting line legend
-        self.legend_artist = self.ax.add_artist(self.legend)    # fitting line legend artist object
-        self.legend_artist.set_picker(10)                       # epsilon tolerance in points to fire pick event
-        self.on_legend = False                                  # has the mouse been clicked on fitting line legend
+            color=self.color, linestyle=self.linestyle) # Line2D representing fitting line
+
+        self.display_legend = legend                                # display legend
+        if self.display_legend == True:
+            self.x_legend = np.mean(self.ax.get_xlim())             # x coordinate of fitting line legend
+            self.y_legend = np.mean(self.ax.get_ylim())             # y coordinate of fitting line legend
+            self.legend = plt.legend(handles=[self.line], loc=10,
+                bbox_to_anchor=(self.x_legend, self.y_legend),
+                bbox_transform=self.ax.transData)                   # fitting line legend
+            self.legend_artist = self.ax.add_artist(self.legend)    # fitting line legend artist object
+            self.legend_artist.set_picker(10)                       # epsilon tolerance in points to fire pick event
+        self.on_legend = False                                      # has the mouse been clicked on fitting line legend
 
         self.slider_ax = make_axes_locatable(self.ax).append_axes(
             'bottom', size='5%', pad=0.6)               # slider Axes
@@ -161,6 +166,8 @@ class FittingLine:
         Fitting line legend can be moved if dragged.
         """
 
+        if self.display_legend == False: return
+
         if event.artist == self.legend_artist:  # if fitting line legend is clicked
             self.on_legend = True               # fitting line legend has been clicked
 
@@ -170,6 +177,8 @@ class FittingLine:
 
         Moves fitting line legend to release position.
         """
+
+        if self.display_legend == False: return
 
         if not(self.on_legend): return      # if fitting line legend has not been clicked
         self.x_legend = event.xdata         # x coordinate of fitting line legend
@@ -220,8 +229,9 @@ class FittingLine:
             self.line.set_label(r'$%s \propto e^{%.2e%s}$' % (self.y_fit,
                 self.slope, self.x_fit)) # fitting line label
 
-        self.legend.get_texts()[0].set_text(self.line.get_label())  # updates fitting line legend
-        self.draw()                                                 # updates figure
+        if self.display_legend == True:
+            self.legend.get_texts()[0].set_text(self.line.get_label())  # updates fitting line legend
+        self.draw()                                                     # updates figure
 
     def draw(self):
         """
