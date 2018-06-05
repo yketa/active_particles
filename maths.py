@@ -337,3 +337,64 @@ class Grid:
         y = centre[1] + r*np.cos(angle) # corresponding cartesian y-coordinate
 
         return self.get_value_cartesian(x, y)
+
+def vector_vector_grid(vector1, vector2):
+    """
+    From vector1 = (v1_i)_i and vector2 = (v2_i)_i, returns matrix
+    M = (M_{i, j})_{i, j} = ((v1_i, v2_j))_{i, j}.
+
+    Parameters
+    ----------
+    vector1 : 1D array-like
+        Vector 1.
+    vector2 : 1D array-like
+        Vector 2.
+
+    Returns
+    -------
+    M : 2D array-like
+        Matrix M.
+    """
+
+    M = np.zeros((len(vector1), len(vector2), 2))
+    M[:, :, 0] = vector1
+    M = np.transpose(M, (1, 0, 2))
+    M[:, :, 1] = vector2
+
+    return M
+
+def kFFTgrid(grid, d=1):
+    """
+    Calculates the Fast Fourier Transform (FFT) of 2D grid and returns its dot
+    and cross product with corresponding wave vector as well as grid of wave
+    vector.
+
+    Parameters
+    ----------
+    grid : array-like
+        2D grid of 2D vectors (i.e., (_, _, 2) grid).
+    d : float
+        Distance between two consecutive grid boxes. (default: 1)
+
+    Returns
+    -------
+    wave_vectors : (*grid.shape, 2) Numpy array
+        Grid of wave vectors.
+    k_cross_grid : grid.shape Numpy array
+        Grid of cross products between wave vectors and Fourier transform.
+    k_dot_grid : grid.shape Numpy array
+        Grid of dot products between wave vectors and Fourier transform.
+    """
+
+    FFTgrid = np.fft.fft2(grid, axes=(0, 1))    # Fourier transform of grid
+    wave_vectors = vector_vector_grid(np.fft.fftfreq(grid.shape[0], d=d),
+        np.fft.fftfreq(grid.shape[1], d=d))     # grid of wave vectors
+
+    k_cross_grid = np.cross(wave_vectors, FFTgrid)  # k cross FFTgrid
+
+    k_dot_grid = np.zeros(FFTgrid.shape[:2])
+    for i in range(FFTgrid.shape[0]):
+        for j in range(FFTgrid.shape[1]):
+            k_dot_grid[i, j] = np.dot(wave_vectors[i, j], FFTgrid[i, j])    # k dot FFTgrid
+
+    return wave_vectors, k_cross_grid, k_dot_grid
