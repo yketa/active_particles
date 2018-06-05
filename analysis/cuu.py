@@ -161,10 +161,62 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
 	u_traj, dL):
     """
-    Calculates grids of displacement, density, relative displacement,
-    displacement norm and displacement direction grids.
+    Calculates displcament grid from square uniform coarse-graining.
 
-    Resorts to neighbours grids.
+    Parameters
+	----------
+	box_size : float
+		Length of the system's square box.
+    new_box_size : float
+		Length of the considered system's square box.
+    centre : float array
+        Centre f the box.
+	Ncases : int
+		Number of boxes in each direction to compute the displacements.
+	time : int
+		Frame at which displacements will be calculated.
+	dt : int
+		Length of the interval of time for which the displacements are
+		calculated.
+	w_traj : active_particles.dat.Gsd
+		Wrapped trajectory object.
+	u_traj : active_particles.dat.Dat
+		Unwrapped trajectory object.
+	dL : float
+        Grid boxes separation.
+        NOTE: Equal to box_size/Ncases.
+
+    Returns
+    -------
+    ugrid : 2D array like
+        Displacement grid.
+    """
+
+    positions = w_traj.position(time +
+		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)   # array of wrapped particle positions
+    dL = new_box_size/Ncases                                                  # box separation
+
+    displacements = u_traj.displacement(time, time + dt)	# displacements between times time and time + dt
+
+    # DISPLACEMENT GRIDS CALCULATION
+
+    ugrid = np.zeros((Ncases, Ncases, 3))
+    for particle in range(len(positions)):
+        position = positions[particle]
+        if (np.abs(position) <= new_box_size/2).all():
+            ugrid[tuple(np.array((position + new_box_size/2)//dL, dtype=int))]\
+                += np.concatenate(([1], displacements[particle]))
+    ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
+        out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
+
+    return ugrid
+
+def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
+	dt, w_traj, u_traj, dL):
+	"""
+	Calculates grids of displacement (from
+	active_particles.analysis.cuu.displacement_grid), density, relative
+	displacement, displacement norm and displacement direction grids.
 
     Parameters
 	----------
@@ -204,36 +256,22 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
     Output
 	------
 	Prints neighbours grid computation time.
-    """
+	"""
 
-    positions = w_traj.position(time +
-		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)   # array of wrapped particle positions
-    dL = new_box_size/Ncases                                                  # box separation
+	ugrid = displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
+		w_traj, u_traj, dL)	# displacement grid
 
-    displacements = u_traj.displacement(time, time + dt)	# displacements between times time and time + dt
+	wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
 
-    # DISPLACEMENT GRIDS CALCULATION
+	ngrid = (ugrid != 0).any(axis=-1)*1         # density grid
+	ngridr = np.reshape(ngrid, ngrid.shape + (1,))
+	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1))  # displacement norm grid
+	dgridr = np.reshape(dgrid, dgrid.shape + (1,))
 
-    ugrid = np.zeros((Ncases, Ncases, 3))
-    for particle in range(len(positions)):
-        position = positions[particle]
-        if (np.abs(position) <= new_box_size/2).all():
-            ugrid[tuple(np.array((position + new_box_size/2)//dL, dtype=int))]\
-                += np.concatenate(([1], displacements[particle]))
-    ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
-        out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
-
-    wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
-
-    ngrid = (ugrid != 0).any(axis=-1)*1         # density grid
-    ngridr = np.reshape(ngrid, ngrid.shape + (1,))
-    dgrid = np.sqrt(np.sum(ugrid**2, axis=-1))  # displacement norm grid
-    dgridr = np.reshape(dgrid, dgrid.shape + (1,))
-
-    egrid = np.divide(ugrid, dgridr, out=np.zeros(ugrid.shape),
+	egrid = np.divide(ugrid, dgridr, out=np.zeros(ugrid.shape),
         where=dgridr!=0) # displacement direction
 
-    return np.concatenate((ngridr, dgridr), axis=-1), ugrid, wgrid, egrid  # displacement variable grid
+	return np.concatenate((ngridr, dgridr), axis=-1), ugrid, wgrid, egrid  # displacement variable grid
 
 def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     **directional_correlations):
@@ -454,7 +492,7 @@ if __name__ == '__main__':  # executing as script
             w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
             u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
             NDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
-                lambda time: displacement_grid(parameters['box_size'],
+                lambda time: displacement_related_grids(parameters['box_size'],
                 box_size, centre, Ncases, time, dt, w_traj, u_traj, dL)
                 , times)), (1, 0, 2, 3, 4)))                # lists of displacement variables
 
