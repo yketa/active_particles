@@ -447,7 +447,8 @@ class Cee(_CorFile):
 
 class Ctt(_CorFile):
     """
-    Naming transversal component of displacement Fourier transform.
+    Naming mean square norm of cross product of wave vector and displacement
+    Fourier transform.
     """
 
     def __init__(self):
@@ -456,6 +457,19 @@ class Ctt(_CorFile):
         """
 
         super().__init__('Ctt')  # initialise with superclass
+
+class Cll(_CorFile):
+    """
+    Naming mean square norm of dot product of wave vector and displacement
+    Fourier transform.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('Cll')  # initialise with superclass
 
 class _FrameFile(_File):
     """
