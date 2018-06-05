@@ -380,10 +380,10 @@ def kFFTgrid(grid, d=1):
     -------
     wave_vectors : (*grid.shape, 2) Numpy array
         Grid of wave vectors.
-    k_cross_grid : grid.shape Numpy array
-        Grid of cross products between wave vectors and Fourier transform.
-    k_dot_grid : grid.shape Numpy array
-        Grid of dot products between wave vectors and Fourier transform.
+    k_cross_dot_grid : (*grid.shape, 2) Numpy array
+        Concatenanated grids of cross and dot products between wave vectors and
+        grid Fourier transform.
+        NOTE: Concatenation is for dimension reasons.
     """
 
     FFTgrid = np.fft.fft2(grid, axes=(0, 1))    # Fourier transform of grid
@@ -397,4 +397,7 @@ def kFFTgrid(grid, d=1):
         for j in range(FFTgrid.shape[1]):
             k_dot_grid[i, j] = np.dot(wave_vectors[i, j], FFTgrid[i, j])    # k dot FFTgrid
 
-    return wave_vectors, k_cross_grid, k_dot_grid
+    return wave_vectors, np.concatenate(
+        (np.reshape(k_cross_grid, k_cross_grid.shape + (1,)),
+        np.reshape(k_dot_grid, k_dot_grid.shape + (1,))),
+        axis=-1)
