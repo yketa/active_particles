@@ -387,7 +387,8 @@ def kFFTgrid(grid, d=1):
     """
 
     FFTgrid = np.fft.fft2(grid, axes=(0, 1))    # Fourier transform of grid
-    wave_vectors = vector_vector_grid(np.fft.fftfreq(grid.shape[0], d=d),
+    wave_vectors = 2*np.pi*vector_vector_grid(
+        np.fft.fftfreq(grid.shape[0], d=d),
         np.fft.fftfreq(grid.shape[1], d=d))     # grid of wave vectors
 
     k_cross_grid = np.cross(wave_vectors, FFTgrid)  # k cross FFTgrid
