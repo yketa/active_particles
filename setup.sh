@@ -14,6 +14,7 @@ alias ap_launch="bash ${AP_DIR}/launch/launch.sh"
 
 # SCRIPTS (defined as variables so they can be used with ap_launch)
 export AP_CSS="python ${AP_DIR}/analysis/css.py"
+export AP_CTT="python ${AP_DIR}/analysis/ctt.py"
 export AP_CUU="python ${AP_DIR}/analysis/cuu.py"
 export AP_FRAME="python ${AP_DIR}/analysis/frame.py"
 export AP_MSD="python ${AP_DIR}/analysis/msd.py"
