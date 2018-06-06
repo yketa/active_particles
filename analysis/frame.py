@@ -35,6 +35,9 @@ SHOW [PLOT mode] : bool
 SAVE [PLOT mode] : bool
 	Save figure.
 	DEFAULT: False
+TRACER_PARTICLE ['trajecotry' mode] : bool
+    Display tracer particle.
+    DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -380,13 +383,16 @@ class Trajectory(_Frame):
         super().__init__(w_traj, frame, box_size, centre,
             arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
 
-        global trajectory_tracer_particle                           # index of tracer particle
+        global trajectory_tracer_particle                               # index of tracer particle
         try:
-            if not(trajectory_tracer_particle in self.particles):   # tracer particle not in frame
-                raise NameError                                     # do as if tracer particle were not defined
-        except NameError:                                           # tracer particle not defined
-            trajectory_tracer_particle = np.argmin(
-                np.sum(self.positions**2, axis=-1))                 # tracer particle at centre of frame
+            if not(trajectory_tracer_particle in self.particles):       # tracer particle not in frame
+                raise NameError                                         # do as if tracer particle were not defined
+        except NameError:                                               # tracer particle not defined
+            if get_env('TRACER_PARTICLE', default=True, vartype=bool):  # TRACER_PARTICLE mode
+                trajectory_tracer_particle = np.argmin(
+                    np.sum(self.positions**2, axis=-1))                 # tracer particle at centre of frame
+            else:
+                trajectory_tracer_particle = -1                         # there is no particle with index -1
 
         self.displacements = u_traj.displacement(frame, frame + dt,
             *self.particles)   # particles' displacements between time and time + dt
