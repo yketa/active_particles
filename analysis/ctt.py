@@ -175,18 +175,58 @@ def plot():
 
 	gs = GridSpec(2, 2)
 
+	def plot_cross(ax):
+		"""
+		Plot cross product data on ax.
+
+		Parameters
+		----------
+		ax : matplotlib axis
+			Axis to plot on.
+
+		Returns
+		-------
+		cross : matplotlib.lines.Line2D
+			Plotted cross product.
+		"""
+
+		cross, = ax.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
+			k_cross_FFTugrid1D_sqnorm[1:, 1]/(
+			k_cross_FFTugrid1D_sqnorm[1:, 0]**2),
+			color='blue', label=
+			r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+		return cross
+
+	def plot_dot(ax):
+		"""
+		Plot dot product data on ax.
+
+		Parameters
+		----------
+		ax : matplotlib axis
+			Axis to plot on.
+
+		Returns
+		-------
+		dot : matplotlib.lines.Line2D
+			Plotted dot product.
+		"""
+
+		dot, = ax.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
+			k_dot_FFTugrid1D_sqnorm[1:, 1]/(
+			k_dot_FFTugrid1D_sqnorm[1:, 0]**2),
+			color='orange', label=
+			r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+		return dot
+
 	# CROSS
 
 	ax_cross = plt.subplot(gs[0, 0])
-	ax_cross.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
-		k_cross_FFTugrid1D_sqnorm[1:, 1],
-		color='blue',
-		label=r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>$')	# cross product
+	cross_cross = plot_cross(ax_cross)	# cross product
 
 	ax_cross.set_xlabel(r'$\lambda = 2\pi/k$')
 	ax_cross.set_xlim([r_min, r_max])
-	ax_cross.set_ylabel(
-		r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>$')
+	ax_cross.set_ylabel(cross_cross.get_label())
 	ax_cross.set_ylim([y_min, y_max])
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):
@@ -196,15 +236,11 @@ def plot():
 	# DOT
 
 	ax_dot = plt.subplot(gs[1, 0])
-	ax_dot.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
-		k_dot_FFTugrid1D_sqnorm[1:, 1],
-		color='orange',
-		label=r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>$')		# dot product
+	dot_dot = plot_dot(ax_dot)	# dot product
 
 	ax_dot.set_xlabel(r'$\lambda = 2\pi/k$')
 	ax_dot.set_xlim([r_min, r_max])
-	ax_dot.set_ylabel(
-		r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>$')
+	ax_dot.set_ylabel(dot_dot.get_label())
 	ax_dot.set_ylim([y_min, y_max])
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):
@@ -214,21 +250,15 @@ def plot():
 	# SUPER
 
 	ax_super = plt.subplot(gs[:, 1])
-	ax_super.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
-		k_cross_FFTugrid1D_sqnorm[1:, 1],
-		color='blue',
-		label=r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>$')	# cross product
-	ax_super.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
-		k_dot_FFTugrid1D_sqnorm[1:, 1],
-		color='orange',
-		label=r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>$')		# dot product
+	cross_super = plot_cross(ax_super)	# cross product
+	dot_super = plot_dot(ax_super)		# dot product
 
 	legend = ax_super.legend()
 	ax_super.add_artist(legend)
 
 	ax_super.set_xlabel(r'$\lambda = 2\pi/k$')
 	ax_super.set_xlim([r_min, r_max])
-	ax_super.set_ylabel(r'$k^2S(k)$')
+	ax_super.set_ylabel(r'$S(k)$')
 	ax_super.set_ylim([y_min, y_max])
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):
@@ -251,9 +281,9 @@ def plot():
 
 _r_min = 1		# default minimum wave length for plots
 
-_slope0 = -2	# default initial slope for fitting line
-_slope_min = -4	# default minimum slope for fitting line
-_slope_max = 0	# default maximum slope for fitting line
+_slope0 = 2		# default initial slope for fitting line
+_slope_min = 0	# default minimum slope for fitting line
+_slope_max = 4	# default maximum slope for fitting line
 
 if __name__ == '__main__':  # executing as script
 
@@ -382,12 +412,16 @@ if __name__ == '__main__':  # executing as script
         r_max = get_env('R_MAX', default=np.sqrt(2)*box_size, vartype=float)	# maximum wave length for plots
 
         y_min = get_env('Y_MIN',
-			default=np.min((k_cross_FFTugrid1D_sqnorm[1:, 1],
-			k_dot_FFTugrid1D_sqnorm[1:, 1])),
+			default=np.min((k_cross_FFTugrid1D_sqnorm[1:, 1]
+			/(k_cross_FFTugrid1D_sqnorm[1:, 0]**2),
+			k_dot_FFTugrid1D_sqnorm[1:, 1]
+			/(k_dot_FFTugrid1D_sqnorm[1:, 0]**2))),
 			vartype=float)	# minimum y-coordinate for plots
         y_max = get_env('Y_MAX',
-			default=np.max((k_cross_FFTugrid1D_sqnorm[1:, 1],
-			k_dot_FFTugrid1D_sqnorm[1:, 1])),
+			default=np.max((k_cross_FFTugrid1D_sqnorm[1:, 1]
+			/(k_cross_FFTugrid1D_sqnorm[1:, 0]**2),
+			k_dot_FFTugrid1D_sqnorm[1:, 1]
+			/(k_dot_FFTugrid1D_sqnorm[1:, 0]**2))),
 			vartype=float)	# maximum y-coordinate for plots
 
         slope0 = get_env('SLOPE', default=_slope0, vartype=float)			# initial slope for fitting line
