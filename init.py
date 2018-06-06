@@ -31,13 +31,15 @@ def get_env(var_name, default=None, vartype=str):
     """
 
     try:
+        if vartype == bool and envvar[var_name] == 'False': # special custom case for which we want to return False
+                return False
         try:
             return vartype(envvar[var_name])
         except ValueError:
             try:
                 return vartype(eval(envvar[var_name]))
-            except ValueError: raise
-    except:
+            except ValueError: raise KeyError
+    except KeyError:
         return default
 
 class StdOut:
