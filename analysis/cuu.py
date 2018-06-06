@@ -22,6 +22,9 @@ SHOW [COMPUTE or PLOT mode] : bool
 SAVE [COMPUTE or PLOT mode] : bool
 	Save graphs.
 	DEFAULT: False
+GRID_CIRCLE [SHOW mode] : bool
+	Analyse graphically values of corrected correlations at fixed radius.
+	DEFAULT: False
 
 Environment parameters
 ----------------------
@@ -158,6 +161,8 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from active_particles.plot.mpl_tools import GridCircle
+
 def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
 	u_traj, dL):
     """
@@ -204,8 +209,8 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
     for particle in range(len(positions)):
         position = positions[particle]
         if (np.abs(position) <= new_box_size/2).all():
-            ugrid[tuple(np.array((position + new_box_size/2)//dL, dtype=int))]\
-                += np.concatenate(([1], displacements[particle]))
+            ugrid[tuple(np.array(((position + new_box_size/2)//dL)%ugrid.shape,
+				dtype=int))] += np.concatenate(([1], displacements[particle]))
     ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
         out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
 
@@ -306,6 +311,15 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     CT : float
         Transversal correlation.
     NOTE: These two variables have to be provided together.
+
+	Returns
+	-------
+	fig : matplotlib figure
+		Main figure.
+	axs : array of matplotlib axis
+		Main figure's axis.
+	gc [GRID_CIRCLE mode] : active_particles.plot.mpl_tools.GridCircle object
+		Grid circle object.
     """
     cmap = plt.cm.jet
 
@@ -315,12 +329,13 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     fig.subplots_adjust(wspace=0.3)
     fig.subplots_adjust(hspace=0.3)
 
-    fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+    suptitle = str(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
         % (parameters['N'], parameters['density'], parameters['vzero'],
 		parameters['dr']) + '\n' +
         r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
 		dt*parameters['period_dump']*parameters['time_step']) +
         r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+    fig.suptitle(suptitle)
 
     # C2D
 
@@ -394,6 +409,36 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
         image_name, = naming_standard.image().filename(**attributes)
         fig.savefig(joinath(data_dir, image_name))
+
+	# GRID CIRCLE
+
+    if get_env('GRID_CIRCLE', default=False, vartype=bool):	# GRID_CIRCLE mode
+
+        ccorgrid = Cgrid(C2D/Cnn2D, box_size, display_size=2*r_max)	# correlation corrected with density correlation
+
+        gc = GridCircle(ccorgrid.display_grid.grid,
+            extent=(-r_max, r_max, -r_max, r_max))
+        gc.fig.set_size_inches(fig.get_size_inches())
+
+        gc.fig.suptitle(suptitle)
+
+        gc.ax_grid.set_xlabel(r'$x$')
+        gc.ax_grid.set_ylabel(r'$y$')
+        gc.ax_grid.set_title('2D ' + r'$%s$' % C + ' ' +
+            (r'$(%s^T/%s^L(\frac{r}{a} = %.3e) = %.3e)$'
+            % (C, C, (box_size/Ncases)/parameters['a'],
+            directional_correlations['CT']/directional_correlations['CL'])
+            if 'CL' in directional_correlations
+            and 'CT' in directional_correlations else ''))
+
+        gc.colormap.set_label(r'$%s$' % C, labelpad=20, rotation=270)
+
+        gc.ax_plot.set_xlabel(r'$\theta$')
+        gc.ax_plot.set_ylabel(r'$%s(\theta)$' % C)
+
+    try:
+        return fig, axs, gc
+    except NameError: return fig, axs
 
 # DEFAULT VARIABLES
 
@@ -572,14 +617,17 @@ if __name__ == '__main__':  # executing as script
         Cee_min = get_env('CEE_MIN', default=_Cee_min, vartype=float)   # minimum displacement direction correlation for correlation plots
         Cee_max = get_env('CEE_MAX', default=_Cee_max, vartype=float)   # maximum displacement direction correlation for correlation plots
 
-        plot_correlation('C_{uu}', Cuu2D, Cuu1D, Cuu1Dcor, Cuu_min, Cuu_max,
-            naming_Cuu, CL=CuuL, CT=CuuT)
-        plot_correlation('C_{\delta u \delta u}', Cww2D, Cww1D, Cww1Dcor,
-            Cww_min, Cww_max, naming_Cww, CL=CwwL, CT=CwwT)
-        plot_correlation('C_{|u||u|}', Cdd2D, Cdd1D, Cdd1Dcor, Cdd_min,
-            Cdd_max, naming_Cdd)
-        plot_correlation('C_{\hat{u}\hat{u}}', Cee2D, Cee1D, Cee1Dcor, Cee_min,
-            Cee_max, naming_Cee, CL=CeeL, CT=CeeT)
+        plot_Cuu = plot_correlation('C_{uu}', Cuu2D, Cuu1D, Cuu1Dcor, Cuu_min,
+			Cuu_max, naming_Cuu,
+			CL=CuuL, CT=CuuT)
+        plot_Cww = plot_correlation('C_{\delta u \delta u}', Cww2D, Cww1D,
+			Cww1Dcor, Cww_min, Cww_max, naming_Cww,
+			CL=CwwL, CT=CwwT)
+        plot_Cdd = plot_correlation('C_{|u||u|}', Cdd2D, Cdd1D, Cdd1Dcor,
+			Cdd_min, Cdd_max, naming_Cdd)
+        plot_Cee = plot_correlation('C_{\hat{u}\hat{u}}', Cee2D, Cee1D,
+			Cee1Dcor, Cee_min, Cee_max, naming_Cee,
+			CL=CeeL, CT=CeeT)
 
         if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
             plt.show()
