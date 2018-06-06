@@ -209,7 +209,8 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
     for particle in range(len(positions)):
         position = positions[particle]
         if (np.abs(position) <= new_box_size/2).all():
-            ugrid[tuple(np.array(((position + new_box_size/2)//dL)%ugrid.shape,
+            ugrid[tuple(np.array(
+				((position + new_box_size/2)//dL)%ugrid.shape[:2],
 				dtype=int))] += np.concatenate(([1], displacements[particle]))
     ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
         out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
