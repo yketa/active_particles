@@ -461,10 +461,10 @@ def grid_from_function(grid_values, function, dimension=None):
 
     grid_shape = grid_values.shape[:dimension]  # shape of grid
     values_length = np.prod(grid_shape)         # number of elements in grid
-    grid = np.empty(values_length)
 
-    for index, value in zip(range(values_length), np.reshape(grid_values,
-        (values_length, *grid_values.shape[dimension:]))):
-        grid[index] = function(*np.array(value).flatten())
+    grid = list(map(
+        lambda value: function(*np.array(value).flatten()),
+        np.reshape(grid_values,
+        (values_length, *grid_values.shape[dimension:]))))
 
     return np.reshape(grid, grid_shape)
