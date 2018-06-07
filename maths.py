@@ -402,3 +402,26 @@ def kFFTgrid(grid, d=1):
         (np.reshape(k_cross_grid, k_cross_grid.shape + (1,)),
         np.reshape(k_dot_grid, k_dot_grid.shape + (1,))),
         axis=-1)
+
+def divide_arrays(array1, array2):
+    """
+    Divide array1 by array2, and outputs 0 values where array2 is equal to 0.
+    NOTE: array1, array2 and out must have the same shapes.
+
+    Parameters
+    ----------
+    array1 : array-like
+        Numerator array.
+    array2 : array-like
+        Denominator array.
+
+    Returns
+    -------
+    array : array-like
+        Quotient array.
+    """
+
+    array2 = np.array(array2)
+
+    return np.divide(array1, array2,
+        out=np.zeros(array2.shape), where=array2!=0)
