@@ -4,6 +4,7 @@
 # useful when using active_particles.
 
 export AP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # path to active_particles package
+alias ap_update="( cd $AP_DIR ; git pull )"                       # alias to update active_particles git repository
 
 # PYTHON
 export PYTHONPATH=$PYTHONPATH:${AP_DIR}/..  # for python to find active_particles
