@@ -135,13 +135,57 @@ if not(get_env('SHOW', default=False, vartype=bool)):
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
+def plot_cross(ax):
+	"""
+	Plot cross product data on ax.
+
+	Parameters
+	----------
+	ax : matplotlib axis
+		Axis to plot on.
+
+	Returns
+	-------
+	cross : matplotlib.lines.Line2D
+		Plotted cross product.
+	"""
+
+	cross, = ax.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
+		k_cross_FFTugrid1D_sqnorm[1:, 1]/(
+		k_cross_FFTugrid1D_sqnorm[1:, 0]**2),
+		color='blue', label=
+		r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+	return cross
+
+def plot_dot(ax):
+	"""
+	Plot dot product data on ax.
+
+	Parameters
+	----------
+	ax : matplotlib axis
+		Axis to plot on.
+
+	Returns
+	-------
+	dot : matplotlib.lines.Line2D
+		Plotted dot product.
+	"""
+
+	dot, = ax.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
+		k_dot_FFTugrid1D_sqnorm[1:, 1]/(
+		k_dot_FFTugrid1D_sqnorm[1:, 0]**2),
+		color='orange', label=
+		r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+	return dot
+
 def plot():
 	"""
 	Plots mean square norm of dot and cross products of wave vector and
 	displacement Fourier transform.
 
 	Returns
-	-------fig, ax_cross, ax_dot, ax_super, fl_cross, fl_dot, fl_super
+	-------
 	fig : matplotlib figure
 		Figure.
 	ax_cross : matplotlib axis
@@ -150,13 +194,12 @@ def plot():
 		Mean square dot product axis.
 	ax_super : matplotlib axis
 		Superimposed mean square cross and dot products axis.
-	fl_cross : active_particles.plot.mpl_tools.FittingLine
+	fl_cross [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
 		Fitting line object for cross axis.
-		NOTE: Only in FITTING_LINE mode.
-	fl_dot : active_particles.plot.mpl_tools.FittingLine
+	fl_dot [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
 		Fitting line object for dot axis.
 		NOTE: Only in FITTING_LINE mode.
-	fl_super : active_particles.plot.mpl_tools.FittingLine
+	fl_super [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
 		Fitting line object for superimposition axis.
 		NOTE: Only in FITTING_LINE mode.
 	"""
@@ -174,50 +217,6 @@ def plot():
 		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
 
 	gs = GridSpec(2, 2)
-
-	def plot_cross(ax):
-		"""
-		Plot cross product data on ax.
-
-		Parameters
-		----------
-		ax : matplotlib axis
-			Axis to plot on.
-
-		Returns
-		-------
-		cross : matplotlib.lines.Line2D
-			Plotted cross product.
-		"""
-
-		cross, = ax.loglog(2*np.pi/k_cross_FFTugrid1D_sqnorm[1:, 0],
-			k_cross_FFTugrid1D_sqnorm[1:, 1]/(
-			k_cross_FFTugrid1D_sqnorm[1:, 0]**2),
-			color='blue', label=
-			r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
-		return cross
-
-	def plot_dot(ax):
-		"""
-		Plot dot product data on ax.
-
-		Parameters
-		----------
-		ax : matplotlib axis
-			Axis to plot on.
-
-		Returns
-		-------
-		dot : matplotlib.lines.Line2D
-			Plotted dot product.
-		"""
-
-		dot, = ax.loglog(2*np.pi/k_dot_FFTugrid1D_sqnorm[1:, 0],
-			k_dot_FFTugrid1D_sqnorm[1:, 1]/(
-			k_dot_FFTugrid1D_sqnorm[1:, 0]**2),
-			color='orange', label=
-			r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
-		return dot
 
 	# CROSS
 
