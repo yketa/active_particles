@@ -468,3 +468,27 @@ def grid_from_function(grid_values, function, dimension=None):
         (values_length, *grid_values.shape[dimension:]))))
 
     return np.reshape(grid, grid_shape)
+
+def step_function(X, Y):
+    """
+    Returns step function f from array-likes X and Y, such that
+           | Y[0]      if x <= X[0]
+    f(x) = | Y[i + 1]  if X[i] < x <= X[i + 1]
+           | Y[-1]     if x >= X[-1]
+
+    NOTE: X and Y must have the same shape.
+
+    Parameters
+    ----------
+    X : 1D array-like
+        x-coordinates.
+    Y : 1D array-like
+        y-coordinates.
+
+    Returns
+    -------
+    f : lambda function
+        f function.
+    """
+
+    return lambda x: Y[next((i for i in range(len(X)) if X[i] >= x), -1)]
