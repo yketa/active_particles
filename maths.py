@@ -129,7 +129,7 @@ def g2Dto1Dsquare(g2D, L):
         lambda sqradius: [dL*np.sqrt(sqradius), np.mean(g1D_dic[sqradius])],
         sorted(g1D_dic))))
 
-def g2Dto1Dgrid(g2D, grid):
+def g2Dto1Dgrid(g2D, grid, average_grid=False):
     """
     Returns cylindrical average of square 2D grid with values of radius given
     by other parameter grid.
@@ -140,11 +140,15 @@ def g2Dto1Dgrid(g2D, grid):
         Square 2D grid.
     grid : 2D array
         Array of radii.
+    average_grid : bool
+        Return g2D grid with cylindrically averaged values.
 
     Returns
     -------
     g1D : Numpy array
         Array of (r, g1D(r)) with g1D(r) the averaged 2D grid at radius r.
+    g2D_cylindrical [average_grid] : Numpy array
+        Cylindrically averaged g2D.
     """
 
     g2D = np.array(g2D)
@@ -156,9 +160,18 @@ def g2Dto1Dgrid(g2D, grid):
         for j in range(g2D.shape[1]):
             g1D_dic[grid[i, j]] += [g2D[i, j]]
 
-    return np.array(list(map(
+    g1D = np.array(list(map(
         lambda radius: [radius, np.mean(g1D_dic[radius])],
         sorted(g1D_dic))))
+
+    if not(average_grid): return g1D
+
+    g2D_cylindrical = np.zeros(grid.shape)
+    for radius, mean_g in zip(*np.transpose(g1D)):
+        for i, j in zip(*np.where(grid == radius)):
+            g2D_cylindrical[i, j] = mean_g
+
+    return g1D, g2D_cylindrical
 
 def normalise1D(vector):
     """
