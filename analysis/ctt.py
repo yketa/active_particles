@@ -376,8 +376,12 @@ if __name__ == '__main__':  # executing as script
 			[k_cross_FFTUgrid, k_dot_FFTUgrid]))			# grid of mean square norms of cross and dot products of wave vectors with displacement grids Fourier transform
 
         wave_vectors_norm = np.sqrt(np.sum(wave_vectors**2, axis=-1))	# grid of wave vectors norm
-        k_cross_FFTugrid1D_sqnorm, k_dot_FFTugrid1D_sqnorm = list(map(
-			lambda grid2D: g2Dto1Dgrid(grid2D, wave_vectors_norm),
+        ((k_cross_FFTugrid1D_sqnorm,
+			k_cross_FFTugrid2D_sqnorm_cylindrical),
+		 	(k_dot_FFTugrid1D_sqnorm,
+			k_dot_FFTugrid2D_sqnorm_cylindrical)) = list(map(
+			lambda grid2D:
+			g2Dto1Dgrid(grid2D, wave_vectors_norm, average_grid=True),
 			[k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm]))		# cylindrical averages of mean square norms of cross and dot products of wave vectors with displacement grids Fourier transform
 
         # SAVING
@@ -385,8 +389,10 @@ if __name__ == '__main__':  # executing as script
         with open(joinpath(data_dir, Ctt_filename), 'wb') as Ctt_dump_file,\
 			open(joinpath(data_dir, Cll_filename), 'wb') as Cll_dump_file:
             pickle.dump([wave_vectors, k_cross_FFTugrid2D_sqnorm,
+				k_cross_FFTugrid2D_sqnorm_cylindrical,
 				k_cross_FFTugrid1D_sqnorm], Ctt_dump_file)
             pickle.dump([wave_vectors, k_dot_FFTugrid2D_sqnorm,
+				k_dot_FFTugrid2D_sqnorm_cylindrical,
 				k_dot_FFTugrid1D_sqnorm], Cll_dump_file)
 
         # EXECUTION TIME
@@ -399,8 +405,8 @@ if __name__ == '__main__':  # executing as script
 
         with open(joinpath(data_dir, Ctt_filename), 'rb') as Ctt_dump_file,\
 			open(joinpath(data_dir, Cll_filename), 'rb') as Cll_dump_file:
-            _, _, k_cross_FFTugrid1D_sqnorm = pickle.load(Ctt_dump_file)
-            _, _, k_dot_FFTugrid1D_sqnorm = pickle.load(Cll_dump_file)
+            _, _, _, k_cross_FFTugrid1D_sqnorm = pickle.load(Ctt_dump_file)
+            _, _, _, k_dot_FFTugrid1D_sqnorm = pickle.load(Cll_dump_file)
 
     if get_env('PLOT', default=False, vartype=bool) or\
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
