@@ -422,6 +422,8 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
         gc.fig.set_size_inches(fig.get_size_inches())
 
         gc.fig.suptitle(suptitle)
+        gc.fig.subplots_adjust(wspace=0.4)	# width space
+        gc.fig.subplots_adjust(hspace=0.3)	# height space
 
         gc.ax_grid.set_xlabel(r'$x$')
         gc.ax_grid.set_ylabel(r'$y$')
