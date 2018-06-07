@@ -425,3 +425,46 @@ def divide_arrays(array1, array2):
 
     return np.divide(array1, array2,
         out=np.zeros(array2.shape), where=array2!=0)
+
+def grid_from_function(grid_values, function, dimension=None):
+    """
+    Returns grid of dimension dimension from function evaluated at
+    grid_values.
+
+    NOTE: in 1D, use list(map(function, grid_values)).
+
+    Parameters
+    ----------
+    grid_values : array-like
+        Grid of values at which to evaluate function.
+    function : function
+        Function of grid values variables.
+    dimension : int or None
+        Dimension of the grid to return. (default: None)
+        NOTE: None is considered as dimension equal to dimension of
+        grid_values.
+        NOTE : dimension can be lesser than grid_values dimension, in this case
+        values in grid_values remaining dimensions are passed as positional
+        parameters to function.
+
+    Returns
+    -------
+    grid : Numpy array
+        Grid created from function evaluated at grid_values.
+    """
+
+    grid_values = np.array(grid_values)
+    grid_values_dimension = len(grid_values.shape)  # dimension of grid_values
+
+    if dimension == None or dimension > grid_values_dimension:
+        dimension = grid_values_dimension
+
+    grid_shape = grid_values.shape[:dimension]  # shape of grid
+    values_length = np.prod(grid_shape)         # number of elements in grid
+    grid = np.empty(values_length)
+
+    for index, value in zip(range(values_length), np.reshape(grid_values,
+        (values_length, *grid_values.shape[dimension:]))):
+        grid[index] = function(*np.array(value).flatten())
+
+    return np.reshape(grid, grid_shape)
