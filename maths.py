@@ -457,10 +457,11 @@ def divide_arrays(array1, array2):
         Quotient array.
     """
 
+    array1 = np.array(array1)
     array2 = np.array(array2)
 
     return np.divide(array1, array2,
-        out=np.zeros(array2.shape), where=array2!=0)
+        out=np.zeros(array1.shape, dtype=array1.dtype), where=array2!=0)
 
 def grid_from_function(grid_values, function, dimension=None):
     """
