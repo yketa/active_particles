@@ -321,7 +321,8 @@ class StrainCorrelations:
 		self.r_cut_line = self.ax_kFFTugrid.axvline(x=self.r_cut, color='red',
 			label=r'$r_{cut}$')	# vertical line delimiting wave lengths cutting domain
 
-		self.ax_kFFTugrid.legend()	# display labels
+		self.kFFTugrid_legend = plt.legend()				# products legend
+		self.ax_kFFTugrid.add_artist(self.kFFTugrid_legend)	# add legend to plot
 
 		self.r_cut_line.figure.canvas.mpl_connect('button_press_event',
 		    self.update_r_cut_line)	# call self.update_r_cut_line() on button press event
