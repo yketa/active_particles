@@ -244,7 +244,7 @@ class StrainCorrelations:
 		self.k_dot_FFTugrid2D_sqnorm = k_dot_FFTugrid2D_sqnorm
 
 		self.strain_correlations_FFT = (
-			divide_arrays(
+			- divide_arrays(
 				(self.k_cross_FFTugrid2D_sqnorm - self.k_dot_FFTugrid2D_sqnorm)
 				*self.kxsq*self.kysq,
 				self.ksq)
