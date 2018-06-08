@@ -497,12 +497,12 @@ def grid_from_function(grid_values, function, dimension=None):
     grid_shape = grid_values.shape[:dimension]  # shape of grid
     values_length = np.prod(grid_shape)         # number of elements in grid
 
-    grid = list(map(
+    grid = np.array(list(map(
         lambda value: function(*np.array(value).flatten()),
         np.reshape(grid_values,
-        (values_length, *grid_values.shape[dimension:]))))
+        (values_length, *grid_values.shape[dimension:])))))
 
-    return np.reshape(grid, grid_shape)
+    return np.reshape(grid, grid_shape + grid.shape[1:])
 
 def step_function(X, Y):
     """
