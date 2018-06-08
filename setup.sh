@@ -9,6 +9,10 @@ alias ap_update="( cd $AP_DIR ; git pull )"                       # alias to upd
 # PYTHON
 export PYTHONPATH=$PYTHONPATH:${AP_DIR}/..  # for python to find active_particles
 
+# SIMULATION DIRECTORY
+export AP_SIM=$(python -c 'from active_particles.naming import sim_directory; print(sim_directory)')  # simulation directory
+mkdir -p $AP_SIM                                                                                      # create if not existing
+
 # COMMANDS
 alias ap_param="python ${AP_DIR}/param.py"
 alias ap_launch="bash ${AP_DIR}/launch/launch.sh"
