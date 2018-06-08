@@ -4,6 +4,8 @@ Module maths provides useful mathematic tools.
 
 import numpy as np
 
+from copy import deepcopy
+
 def relative_positions(positions, point, box_size):
     """
     Returns relative positions to point in box of extent
@@ -173,13 +175,13 @@ def g2Dto1Dgrid(g2D, grid, average_grid=False):
 
     return g1D, g2D_cylindrical
 
-def normalise1D(vector):
+def normalise1D(*vector):
     """
     Returs 1D vector of unitary norm with same direction.
 
     Parameters
     ----------
-    vector : 1D array-like
+    vector : 1D array-like or coordinates as positional arguments
         Vector to normalise.
 
     Returns
@@ -188,9 +190,11 @@ def normalise1D(vector):
         Unitary vector with same direction.
     """
 
-    norm = np.linalg.norm(vector)           # vector norm
-    if norm == 0: return np.array(vector)   # vector is 0
-    return np.array(vector)/norm
+    vector = np.array(vector).flatten() # 1D vector
+
+    norm = np.linalg.norm(vector)   # vector norm
+    if norm == 0: return vector     # vector is 0
+    return vector/norm
 
 def amplogwidth(arr, factor=2):
     """
@@ -376,45 +380,63 @@ def vector_vector_grid(vector1, vector2):
 
     return M
 
-def kFFTgrid(grid, d=1):
+def wave_vectors_2D(nx, ny, d=1):
+    """
+    Returns wave vectors for 2D signals with window lengths nx and ny in the
+    two directions and sample spacing d.
+
+    Parameters
+    ----------
+    nx : int
+        Window length in first direction.
+    ny : int
+        Window length in second direction.
+    d : float
+        Sample spacing. (default: 1)
+
+    Returns
+    -------
+    wave_vectors : (nx, ny, 2) Numpy array
+        Grid of wave vectors.
+    """
+
+    return 2*np.pi*vector_vector_grid(
+        np.fft.fftfreq(nx, d=d),
+        np.fft.fftfreq(ny, d=d))
+
+def kFFTgrid(grid):
     """
     Calculates the Fast Fourier Transform (FFT) of 2D grid and returns its dot
-    and cross product with corresponding wave vector as well as grid of wave
-    vector.
+    and cross product with corresponding normalised wave vector.
 
     Parameters
     ----------
     grid : array-like
         2D grid of 2D vectors (i.e., (_, _, 2) grid).
-    d : float
-        Distance between two consecutive grid boxes. (default: 1)
 
     Returns
     -------
-    wave_vectors : (*grid.shape, 2) Numpy array
-        Grid of wave vectors.
-    k_cross_dot_grid : (*grid.shape, 2) Numpy array
-        Concatenanated grids of cross and dot products between wave vectors and
-        grid Fourier transform.
-        NOTE: Concatenation is for dimension reasons.
+    k_cross_grid : grid.shape Numpy array
+        Grid of cross products between normalised wave vectors and grid Fourier
+        transform.
+    k_dot_grid : grid.shape Numpy array
+        Grid of dot products between normalised wave vectors and grid Fourier
+        transform.
     """
 
-    FFTgrid = np.fft.fft2(grid, axes=(0, 1))    # Fourier transform of grid
-    wave_vectors = 2*np.pi*vector_vector_grid(
-        np.fft.fftfreq(grid.shape[0], d=d),
-        np.fft.fftfreq(grid.shape[1], d=d))     # grid of wave vectors
+    FFTgrid = np.fft.fft2(grid, axes=(0, 1))                        # Fourier transform of grid
+    normalised_wave_vectors = grid_from_function(
+        wave_vectors_2D(*grid.shape[:2]), normalise1D, dimension=2) # grid of normalised wave vectors
 
-    k_cross_grid = np.cross(wave_vectors, FFTgrid)  # k cross FFTgrid
+    k_cross_grid = np.cross(normalised_wave_vectors, FFTgrid)   # k cross FFTgrid
 
     k_dot_grid = np.zeros(FFTgrid.shape[:2], dtype=np.complex128)
     for i in range(FFTgrid.shape[0]):
         for j in range(FFTgrid.shape[1]):
-            k_dot_grid[i, j] = np.dot(wave_vectors[i, j], FFTgrid[i, j])    # k dot FFTgrid
+            k_dot_grid[i, j] = np.dot(normalised_wave_vectors[i, j],
+                FFTgrid[i, j])  # k dot FFTgrid
 
-    return wave_vectors, np.concatenate(
-        (np.reshape(k_cross_grid, k_cross_grid.shape + (1,)),
-        np.reshape(k_dot_grid, k_dot_grid.shape + (1,))),
-        axis=-1)
+    return k_cross_grid, k_dot_grid
 
 def divide_arrays(array1, array2):
     """
@@ -505,3 +527,124 @@ def step_function(X, Y):
     """
 
     return lambda x: Y[next((i for i in range(len(X)) if X[i] >= x), -1)]
+
+class FFT2Dfilter:
+    """
+    Filter signal from Fourier components obtained via fast Fourier transform.
+    """
+
+    def __init__(self, signalFFT, d=1, **kwargs):
+        """
+        Defines wave vectors corresponding to input FFT.
+        NOTE: It is assumed that the order of Fourier components has not been
+        altered from the np.fft.fft2 function.
+
+        Parameters
+        ----------
+        signalFFT : 2D array-like
+            Fast Fourier transform of signal.
+        d : float
+            Sample spacing. (default: 1)
+
+        Optional keyword arguments
+        --------------------------
+        wave_vectors : (*signalFFT.shape, 2) array-like
+            Wave vectors corresponding to signalFFT components.
+        """
+
+        self.signalFFT = np.array(signalFFT)    # signal fast Fourier transform
+
+        if not('wave_vectors' in kwargs):                                       # no input wave vectors
+            self.wave_vectors = wave_vectors_2D(*self.signalFFT, d=d)           # wave vectors corresponding to signalFFT components
+        else: self.wave_vectors = np.array(kwargs['wave_vectors'])
+        self.wave_vectors_norm = np.sqrt(np.sum(self.wave_vectors**2, axis=-1)) # wave vectors norm
+
+    def get_signal(self):
+        """
+        Gets signal defined by the Fourier components in self.signalFFT.
+
+        Returns
+        -------
+        signal : Numpy array
+            Signal from inverse fast Fourier transform.
+        """
+
+        return np.fft.ifft2(self.signalFFT)
+
+    def cut_low_wave_frequencies(self, threshold):
+        """
+        Sets Fourier components corresponding to wave vectors corresponding to
+        frequencies lower than threshold to 0.
+
+        Parameters
+        ----------
+        threshold : float
+            Threshold frequency for cutting.
+
+        Returns
+        -------
+        filteredFFT : active_particles.maths.FFT2Dfilter
+            Filtered Fourier components.
+        """
+
+        filteredFFT = deepcopy(self)
+        filteredFFT.signalFFT[filteredFFT.wave_vectors_norm < thereshold] = 0   # cut low wave frequencies
+
+        return filteredFFT
+
+    def cut_high_wave_frequencies(self, threshold):
+        """
+        Sets Fourier components corresponding to wave vectors corresponding to
+        frequencies higher than threshold to 0.
+
+        Parameters
+        ----------
+        threshold : float
+            Threshold frequency for cutting.
+
+        Returns
+        -------
+        filteredFFT : active_particles.maths.FFT2Dfilter
+            Filtered Fourier components.
+        """
+
+        filteredFFT = deepcopy(self)
+        filteredFFT.signalFFT[filteredFFT.wave_vectors_norm > thereshold] = 0   # cut high wave frequencies
+
+        return filteredFFT
+
+    def cut_low_wave_lengths(self, thereshold):
+        """
+        Sets Fourier components corresponding to wave vectors corresponding to
+        lengths lower than threshold to 0.
+
+        Parameters
+        ----------
+        threshold : float
+            Threshold length for cutting.
+
+        Returns
+        -------
+        filteredFFT : active_particles.maths.FFT2Dfilter
+            Filtered Fourier components.
+        """
+
+        return self.cut_high_wave_frequencies(np.divide(2*np.pi, threshold))
+
+    def cut_high_wave_lengths(self, thereshold):
+        """
+        Sets Fourier components corresponding to wave vectors corresponding to
+        lengths higher than threshold to 0.
+
+        Parameters
+        ----------
+        threshold : float
+            Threshold length for cutting.
+
+        Returns
+        -------
+        filteredFFT : active_particles.maths.FFT2Dfilter
+            Filtered Fourier components.
+        """
+
+        return self.cut_low_wave_frequencies(np.divide(2*np.pi, threshold))
