@@ -330,7 +330,7 @@ def plot(grid, corr, box_size, var, naming_standard):
 	ax[0].set_title('2D ' + r'$%s$' % var)
 
 	divider0 = make_axes_locatable(ax[0])
-	cax0 = divider0.append_axes("right", size="5%", pad=0.05)
+	cax0 = divider0.append_axes('right', size='5%', pad=0.05)
 	cb0 = mpl.colorbar.ColorbarBase(cax0, cmap=cmap, norm=SvNorm,
 		orientation='vertical')
 	cb0.set_label(r'$%s$' % var, labelpad=20, rotation=270)
