@@ -588,7 +588,7 @@ class FFT2Dfilter:
         """
 
         filteredFFT = deepcopy(self)
-        filteredFFT.signalFFT[filteredFFT.wave_vectors_norm < thereshold] = 0   # cut low wave frequencies
+        filteredFFT.signalFFT[filteredFFT.wave_vectors_norm < threshold] = 0   # cut low wave frequencies
 
         return filteredFFT
 
@@ -609,7 +609,7 @@ class FFT2Dfilter:
         """
 
         filteredFFT = deepcopy(self)
-        filteredFFT.signalFFT[filteredFFT.wave_vectors_norm > thereshold] = 0   # cut high wave frequencies
+        filteredFFT.signalFFT[filteredFFT.wave_vectors_norm > threshold] = 0   # cut high wave frequencies
 
         return filteredFFT
 
