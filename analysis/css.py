@@ -106,7 +106,7 @@ from active_particles.maths import relative_positions
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
-from active_particles.analysis.correlations import Cgrid as CorGrid
+from active_particles.analysis.correlations import CorGrid
 from active_particles.analysis.coarse_graining import GaussianCG,\
 	CoarseGraining
 
@@ -343,7 +343,6 @@ def plot(grid, corr, box_size, var, naming_standard):
 	Cmax = np.max(corr)
 
 	CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
-	CscalarMap = cmx.ScalarMappable(norm=CvNorm, cmap=cmap)
 
 	cgrid = CorGrid(corr, box_size, display_size=2*r_max)
 

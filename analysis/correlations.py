@@ -173,7 +173,7 @@ def corField2D_vector_average_Cnn(field_list, Cnn):
 
     return C, CL, CT
 
-class Cgrid:
+class CorGrid:
     """
     Manipulate 2D correlation grids.
 

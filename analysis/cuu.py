@@ -135,7 +135,7 @@ from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions, wo_mean, g2Dto1Dsquare
 
 from active_particles.analysis.correlations import corField2D_scalar_average,\
-    corField2D_vector_average_Cnn, Cgrid
+    corField2D_vector_average_Cnn, CorGrid
 
 from os import getcwd
 from os import environ as envvar
@@ -340,7 +340,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
 
     # C2D
 
-    cgrid = Cgrid(C2D, box_size, display_size=2*r_max)
+    cgrid = CorGrid(C2D, box_size, display_size=2*r_max)
 
     Cmin = np.min(C2D)
     Cmax = np.max(C2D)
@@ -415,7 +415,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
 
     if get_env('GRID_CIRCLE', default=False, vartype=bool):	# GRID_CIRCLE mode
 
-        ccorgrid = Cgrid(C2D/Cnn2D, box_size, display_size=2*r_max)	# correlation corrected with density correlation
+        ccorgrid = CorGrid(C2D/Cnn2D, box_size, display_size=2*r_max)	# correlation corrected with density correlation
 
         gc = GridCircle(ccorgrid.display_grid.grid,
             extent=(-r_max, r_max, -r_max, r_max))

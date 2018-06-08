@@ -12,7 +12,7 @@ from os import environ as envvar
 envvar['SHOW'] = 'True'
 from os.path import join as joinpath
 
-from active_particles.analysis.correlations import Cgrid
+from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.plot import list_colormap
 from active_particles.plot.mpl_tools import FittingLine
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':  # executing as script
     for file, dt in zip(files, dt_list):
         with open(joinpath(data_dir, file), 'rb') as Css_dump_file:
             _, Css2D = pickle.load(Css_dump_file)
-        Css2Dgrid = Cgrid(Css2D, box_size)
+        Css2Dgrid = CorGrid(Css2D, box_size)
         C44[dt] = list(map(
             lambda r: Css2Dgrid.integrate_over_angles(r*av_p_sep,
             projection=lambda theta: np.cos(4*theta)/np.pi,
