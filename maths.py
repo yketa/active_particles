@@ -613,7 +613,7 @@ class FFT2Dfilter:
 
         return filteredFFT
 
-    def cut_low_wave_lengths(self, thereshold):
+    def cut_low_wave_lengths(self, threshold):
         """
         Sets Fourier components corresponding to wave vectors corresponding to
         lengths lower than threshold to 0.
@@ -631,7 +631,7 @@ class FFT2Dfilter:
 
         return self.cut_high_wave_frequencies(np.divide(2*np.pi, threshold))
 
-    def cut_high_wave_lengths(self, thereshold):
+    def cut_high_wave_lengths(self, threshold):
         """
         Sets Fourier components corresponding to wave vectors corresponding to
         lengths higher than threshold to 0.
