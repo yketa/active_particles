@@ -136,8 +136,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from active_particles.plot.mpl_tools import GridCircle
 
-def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
-	box_size, neighbours_grid):
+def strain_vorticity(point, time, dt, positions, displacements,
+	sigma, r_cut, box_size, neighbours_grid):
 	"""
 	From coarse-grained displacement field u, calculates
 	> linearised shear strain, \\epsilon_{xy} =
@@ -160,8 +160,8 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 		calculated.
 	positions : (N, 2) shaped array like
 		Array of wrapped particle positions.
-	u_traj : active_particles.dat.Dat
-		Unwrapped trajectory object.
+	displacements : (N, 2) shaped array like
+		Array of particle displacements.
 	sigma : float
 		Length scale of the spatial extent of the coarse graining function.
 	r_cut : float
@@ -187,7 +187,7 @@ def strain_vorticity(point, time, dt, positions, u_traj, sigma, r_cut,
 
 	pos_wrcut = relative_positions(
 		np.array(itemgetter(*wrcut)(positions), ndmin=2), point, box_size)	# position at time time (with boundary conditions) with point as the centre of the frame
-	dis_wrcut = u_traj.displacement(time, time + dt, *wrcut)				# displacements of the particles between time and time + dt
+	dis_wrcut = np.array(itemgetter(*wrcut)(displacements), ndmin=2)		# displacements of the particles between time and time + dt
 
 	coarse_graining = CoarseGraining(GaussianCG(sigma, r_cut).factors,
 		pos_wrcut)															# coarse graining object
@@ -255,6 +255,8 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt, w_traj,
 		dt*get_env('ENDPOINT', default=False, vartype=bool))		# array of wrapped particle positions
 	neighbours_grid = NeighboursGrid(positions, box_size, r_cut)	# neighbours grid
 
+	displacements = u_traj.displacement(time, time + dt)	# array of particle displacements
+
 	print("Neighbours grid computation time (time = %e): %s" %
 		(time, datetime.now() - startTime0))	# neighbours grid computation time
 
@@ -262,7 +264,7 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt, w_traj,
 
 	sgrid, cgrid = tuple(np.transpose(list(map(
 		lambda point: strain_vorticity(point, time, dt, positions,
-		u_traj, sigma, r_cut, box_size, neighbours_grid),
+		displacements, sigma, r_cut, box_size, neighbours_grid),
 		grid_points))))	# shear strain and displacement vorticity lists
 
 	correct_grid = lambda grid: np.transpose(
