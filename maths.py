@@ -425,18 +425,19 @@ def kFFTgrid(grid):
     """
 
     FFTgrid = np.fft.fft2(grid, axes=(0, 1))                        # Fourier transform of grid
-    normalised_wave_vectors = grid_from_function(
-        wave_vectors_2D(*grid.shape[:2]), normalise1D, dimension=2) # grid of normalised wave vectors
+    wave_vectors = wave_vectors_2D(*grid.shape[:2])                 # grid of wave vectors
+    wave_vectors_norm = np.sqrt(np.sum(wave_vectors**2, axis=-1))   # grid of wave vectors norm
 
-    k_cross_grid = np.cross(normalised_wave_vectors, FFTgrid)   # k cross FFTgrid
+    k_cross_grid = np.cross(wave_vectors, FFTgrid)   # k cross FFTgrid
 
     k_dot_grid = np.zeros(FFTgrid.shape[:2], dtype=np.complex128)
     for i in range(FFTgrid.shape[0]):
         for j in range(FFTgrid.shape[1]):
-            k_dot_grid[i, j] = np.dot(normalised_wave_vectors[i, j],
+            k_dot_grid[i, j] = np.dot(wave_vectors[i, j],
                 FFTgrid[i, j])  # k dot FFTgrid
 
-    return k_cross_grid, k_dot_grid
+    return (divide_arrays(k_cross_grid, wave_vectors_norm),
+        divide_arrays(k_dot_grid, wave_vectors_norm))
 
 def divide_arrays(array1, array2):
     """
