@@ -1,8 +1,10 @@
 """
 Module ctt calculates or plots mean squared cross and dot products of
-normalised wave vectors and displacement Fourier transform.
+normalised wave vectors and displacement Fourier transform, as well as strain
+correlations from these variables.
 
-Files are saved according to active_particles.naming.Ctt (cross product) and active_particles.naming.Cll (dot product) naming standard.
+Files are saved according to active_particles.naming.Ctt (cross product) and
+active_particles.naming.Cll (dot product) naming standard.
 
 Environment modes
 -----------------
