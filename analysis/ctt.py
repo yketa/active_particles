@@ -187,7 +187,7 @@ def plot_cross(ax):
 	cross = plot_product(k_cross_FFTugrid1D_sqnorm, ax)
 	cross.set_color('blue')
 	cross.set_label(
-		r'$\left<||\vec{k}\times\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+		r'$\left<||\vec{k}\wedge\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
 
 	return cross
 
