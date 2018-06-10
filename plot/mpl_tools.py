@@ -252,7 +252,7 @@ class GridCircle:
     """
 
     def __init__(self, grid, extent=(-1, 1, -1, 1), circle_centre=(0, 0),
-        points_theta=100, show_slider=True):
+        min=None, max=None, points_theta=100, show_slider=True):
         """
         Parameters
         ----------
@@ -262,15 +262,20 @@ class GridCircle:
             Values of space variables at corners. (default: (-1, 1, -1, 1))
         circle_centre : scalars (x, y)
             Location of the centre of the circle to draw on top of grid.
+        min : float
+            Minimum value for the colormap. (default: None)
+            NOTE: None will be considered as the minimum being the minimum
+            value of grid.
+        max : float
+            Maximum value for the colormap. (default: None)
+            NOTE: None will be considered as the maximum being the maximum
+            value of grid.
         points_theta : int
             Number of points to consider in the interval [0, 2\\pi] when
             computing values along circle.
         show_slider : bool
             Display circle radius slider.
         """
-
-        self.extent = np.array(extent)
-        self.grid = Grid(grid, extent=self.extent)
 
         self.circle_centre = np.array(circle_centre)
         self.radius = 0 # radius of the circle
@@ -283,38 +288,23 @@ class GridCircle:
 
         # COLORMAP
 
-        self.min = np.min(self.grid.grid)
-        self.max = np.max(self.grid.grid)
+        self.min = np.min(self.grid.grid) if min == None else min
+        self.max = np.max(self.grid.grid) if max == None else max
 
         self.norm = colors.Normalize(vmin=self.min, vmax=self.max)      # normalises data
         self.scalarmap = cmx.ScalarMappable(norm=self.norm, cmap=cmap)  # scalar map for grid values
-
-        # GRID
-
-        self.ax_grid.imshow(self.grid.grid, cmap=cmap, norm=self.norm,
-            extent=self.extent) # grid
-
-        self.colormap_ax = make_axes_locatable(self.ax_grid).append_axes(
-            'right', size='5%', pad=0.05)           # color map axes
-        self.colormap = mpl.colorbar.ColorbarBase(self.colormap_ax, cmap=cmap,
-            norm=self.norm, orientation='vertical')    # color map
-
-        self.circle = plt.Circle(self.circle_centre, self.radius,
-            color='black', fill=False) # circle on grid
-        self.ax_grid.add_artist(self.circle)
-
-        self.ax_grid.figure.canvas.mpl_connect('button_press_event',
-            self.update_grid)   # call self.update_grid() on button press event
 
         # PLOT
 
         self.ax_plot.set_ylim([self.min, self.max]) # setting y-axis limit of plot as grid extrema
         self.ax_plot.set_xlim([0, 2*np.pi])         # angle on the cirlce
 
-        self.line, = self.ax_plot.plot(np.linspace(0, 2*np.pi,
-        self.points_theta), [0]*self.points_theta)  # plot of values along circle
+        self.line, = self.ax_plot.plot(
+            np.linspace(0, 2*np.pi, self.points_theta), [0]*self.points_theta)  # plot of values along circle
 
         # SLIDER
+
+        self.extent = np.array(extent)  # grid extent
 
         if self.show_slider:
 
@@ -325,9 +315,26 @@ class GridCircle:
 
             self.slider.on_changed(self.update_slider)  # call self.update_slider() on slider update
 
-        # DRAW
+        # GRID
 
-        self.draw() # updates circle and plot
+        grid = np.array(grid)
+
+        self.grid_plot = self.ax_grid.imshow(grid,
+            cmap=cmap, norm=self.norm, extent=self.extent)  # grid plot
+
+        self.colormap_ax = make_axes_locatable(self.ax_grid).append_axes(
+            'right', size='5%', pad=0.05)           # color map axes
+        self.colormap = mpl.colorbar.ColorbarBase(self.colormap_ax, cmap=cmap,
+            norm=self.norm, orientation='vertical') # color map
+
+        self.circle = plt.Circle(self.circle_centre, self.radius,
+            color='black', fill=False) # circle on grid
+        self.ax_grid.add_artist(self.circle)
+
+        self.ax_grid.figure.canvas.mpl_connect('button_press_event',
+            self.update_grid)   # call self.update_grid() on button press event
+
+        self.update_grid_plot(grid) # plots grid and updates circle and plot
 
     def get_fig_ax_cmap(self):
         """
@@ -342,6 +349,27 @@ class GridCircle:
         """
 
         return self.fig, (self.ax_grid, self.ax_plot), self.colormap
+
+    def update_grid_plot(self, grid, extent=None):
+        """
+        Plots grid.
+
+        Parameters
+        ----------
+        grid : 2D array-like
+            Grid to plot values from.
+        extent : scalars (left, right, bottom, top)
+            Values of space variables at corners. (default: None)
+            NOTE: None will be considered as extent to be self.extent.
+        """
+
+        if extent != None: self.extent = np.array(extent)
+        self.grid = Grid(grid, extent=self.extent)
+
+        self.grid_plot.set_data(self.grid.grid) # plots grid
+        self.grid_plot.set_extent(self.extent)  # set extent
+
+        self.draw() # updates circle and plot
 
     def update_grid(self, event):
         """
