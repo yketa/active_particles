@@ -124,7 +124,7 @@ from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
 from active_particles.analysis.cuu import displacement_grid
 from active_particles.analysis.css import _r_max as _r_max_css
 from active_particles.analysis.correlations import CorGrid
-from active_particles.plot.mpl_tools import FittingLine
+from active_particles.plot.mpl_tools import FittingLine, GridCircle
 
 from os import getcwd
 from os import environ as envvar
@@ -334,6 +334,12 @@ class StrainCorrelations:
 			self.r_max_css, valinit=0)				# slider
 		self.slider.on_changed(self.update_r_cut)	# call update_r_cut when slider value is changed
 
+		# GRID CIRLCE FIGURE
+
+		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
+			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
+			min=Cmin, max=Cmax)
+
 	# METHODS CALLED BY SELF.PLOT()
 
 	def strain_correlations_corgrid(self):
@@ -382,6 +388,8 @@ class StrainCorrelations:
 
 		self.r_cut_line.set_xdata([self.r_cut]*2)	# update line position
 		self.r_cut_line.figure.canvas.draw()		# update plot
+
+		self.grid_circle.update_grid_plot(grid.display_grid.grid)	# plot grid
 
 def plot():
 	"""
@@ -493,11 +501,14 @@ def plot():
 		to_return += (sc,)
 		sc.plot(parameters['box_size'], r_max_css)
 
+		# R_CUT FIGURE
+
 		sc.fig.set_size_inches(16, 16)
 		sc.fig.subplots_adjust(wspace=0.3)
 		sc.fig.subplots_adjust(hspace=0.3)
 
-		sc.fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+		sc.fig.suptitle(
+			r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
 			% (parameters['N'], parameters['density'], parameters['vzero'],
 			parameters['dr']) + '\n' +
 			r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
@@ -514,6 +525,32 @@ def plot():
 		sc.ax_kFFTugrid.set_xlim(ax_super.get_xlim())
 		sc.ax_kFFTugrid.set_ylabel(ax_super.get_ylabel())
 		sc.ax_kFFTugrid.set_ylim(ax_super.get_ylim())
+
+		# GRID CIRCLE FIGURE
+
+		fig_gc, (ax_grid, ax_plot), cb_gc = sc.grid_circle.get_fig_ax_cmap()
+
+		fig_gc.suptitle(
+			r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+			% (parameters['N'], parameters['density'], parameters['vzero'],
+			parameters['dr']) + '\n' +
+			r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
+			dt*parameters['period_dump']*parameters['time_step']) +
+			r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+
+		fig_gc.set_size_inches(16, 16)		# figure size
+		fig_gc.subplots_adjust(wspace=0.4)	# width space
+		fig_gc.subplots_adjust(hspace=0.3)	# height space
+
+		ax_grid.set_xlabel(r'$x$')
+		ax_grid.set_ylabel(r'$y$')
+		ax_grid.set_title('2D ' + r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$')
+		cb_gc.set_label(r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$',
+			labelpad=20, rotation=270)
+
+		ax_plot.set_xlabel(r'$\theta$')
+		ax_plot.set_ylabel(
+			r'$C_{\varepsilon_{xy}\varepsilon_{xy}}(r, \theta)$')
 
 	# RETURN
 
