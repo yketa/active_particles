@@ -278,7 +278,7 @@ class GridCircle:
         """
 
         self.circle_centre = np.array(circle_centre)
-        self.radius = 0 # radius of the circle
+        self.radius = 0                                     # radius of the circle
         self.points_theta = points_theta
         self.theta = np.linspace(0, 2*np.pi, points_theta)  # points used for calculations
 
@@ -288,8 +288,8 @@ class GridCircle:
 
         # COLORMAP
 
-        self.min = np.min(self.grid.grid) if min == None else min
-        self.max = np.max(self.grid.grid) if max == None else max
+        self.min = np.min(grid) if min == None else min
+        self.max = np.max(grid) if max == None else max
 
         self.norm = colors.Normalize(vmin=self.min, vmax=self.max)      # normalises data
         self.scalarmap = cmx.ScalarMappable(norm=self.norm, cmap=cmap)  # scalar map for grid values
