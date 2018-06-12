@@ -30,6 +30,65 @@ from matplotlib.gridspec import GridSpec
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 
+class Css2DtoC44:
+    """
+    Calculates C44 as projection of 2D shear strain correlations on
+    cos(4\\theta).
+    """
+
+    def __init__(self, box_size, points_x, points_theta,
+        r_min, r_max):
+        """
+        Sets parameters for C44 integration.
+
+        Parameters
+        ----------
+        box_size : float
+            Size of the square box to consider.
+        points_x : int
+            Number of radii at which to evaluate integrated strain correlation.
+        points_theta : int
+            Number of angles to evaluate integrated strain correlation.
+        r_min : float
+            Minimum radius.
+        r_max : float
+            Maximum radius.
+        """
+
+        self.box_size = box_size
+
+        self.points_x = points_x
+        self.points_theta = points_theta
+
+        self.r_min = r_min
+        self.r_max = r_max
+        self.c44_x = np.linspace(self.r_min, self.r_max, self.points_x)
+
+    def get_C44(self, Css2D):
+        """
+        From 2D strain correlations Css2D, returns values of C44 at
+        self.points_x radii between r_max and r_min.
+
+        Parameters
+        ----------
+        Css2D : 2D array-like
+            Shear strain correlation grid.
+
+        Returns
+        -------
+        C44 : 2D Numpy array
+            List of [r, C44(r)].
+        """
+
+        self.css2Dgrid = CorGrid(Css2D, self.box_size)  # shear strain 2D CorGrid object
+        self.c44 = np.array(list(map(
+            lambda r: [r, self.css2Dgrid.integrate_over_angles(r,
+            projection=lambda theta: np.cos(4*theta)/np.pi,
+            points_theta=self.points_theta)],
+            self.c44_x)))
+
+        return self.c44
+
 # DEFAULT VARIABLES
 
 _font_size = 10     # default plot font size
@@ -114,7 +173,6 @@ if __name__ == '__main__':  # executing as script
     # CALCULATION PARAMETERS
 
     points_x = get_env('POINTS_X', default=_points_x, vartype=int)              # number of radii at which to evaluate integrated strain correlation
-    X = np.linspace(r_min, r_max, points_x)                                     # evaluation radii over average particle separation
     points_theta = get_env('POINTS_THETA', default=_points_theta, vartype=int)  # default number of angles to evaluate integrated strain correlation
 
     # CALCULATION
@@ -123,16 +181,13 @@ if __name__ == '__main__':  # executing as script
     dt_list = np.array(list(map(
         lambda file: naming_Css.get_data(file, 'dt'), files))).flatten()    # list of lag times corresponding to files
 
-    C44 = {}  # hash table of tables of C44 at X with lag times as keys
+    toC44 = Css2DtoC44(box_size, points_x, points_theta,
+        av_p_sep*r_min, av_p_sep*r_max) # Css2D to C44 conversion object
+    C44 = {}                            # hash table of tables of C44 at X with lag times as keys
     for file, dt in zip(files, dt_list):
         with open(joinpath(data_dir, file), 'rb') as Css_dump_file:
             _, Css2D = pickle.load(Css_dump_file)
-        Css2Dgrid = CorGrid(Css2D, box_size)
-        C44[dt] = list(map(
-            lambda r: Css2Dgrid.integrate_over_angles(r*av_p_sep,
-            projection=lambda theta: np.cos(4*theta)/np.pi,
-            points_theta=points_theta),
-            X))
+        C44[dt] = toC44.get_C44(Css2D)
 
     # PLOT
 
@@ -167,7 +222,8 @@ if __name__ == '__main__':  # executing as script
             x_fit='(r/a)', y_fit='C_4^4(r/a)')
 
     for dt in dt_list:
-        ax.loglog(X, C44[dt], color=colors[dt], label=r'$\Delta t = %.0e$'
+        ax.loglog(C44[dt][:, 0]/av_p_sep, C44[dt][:, 1],
+            color=colors[dt], label=r'$\Delta t = %.0e$'
             % (parameters['period_dump']*parameters['time_step']*dt))
 
     if get_env('TEMPERATURE', default=False, vartype=bool): # TEMPERATURE mode
