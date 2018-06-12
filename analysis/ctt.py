@@ -97,6 +97,33 @@ SLOPE_MAX [FITTING_LINE mode] : float
 R_MAX_CSS [STRAIN_CORRELATIONS mode] : float
 	Maximum radius in infinite norm for strain correlations plot.
 	DEFAULT: active_particles.analysis.css._r_max
+POINTS_X_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
+	Number of radii at which to evaluate integrated strain correlation.
+	DEFAULT: active_particles.plot.c44._points_x
+POINTS_THETA_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
+	Number of angles to evaluate integrated strain correlation.
+	DEFAULT: active_particles.plot.c44._points_theta
+Y_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+	Minimum plot value for C44.
+	DEFAULT: active_particles.plot.c44._y_min
+Y_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+	Maximum plot value for C44.
+	DEFAULT: active_particles.plot.c44._y_max
+R_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+	Minimum radius in average particle separation for C44 calculation.
+	DEFAULT: active_particles.plot.c44._r_min
+R_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+	Maximum radius in average particle separation for C44 calculation.
+	DEFAULT: active_particles.plot.c44._r_max
+SLOPE_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : slope
+	Initial slope for fitting line.
+	DEFAULT: active_particles.plot.c44._slope0
+SLOPE_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+	Minimum slope for fitting line.
+	DEFAULT: active_particles.plot.c44._slope_min
+SLOPE_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+	Maximum slope for fitting line.
+	DEFAULT: active_particles.plot.c44._slope_max
 
 Output
 ------
@@ -125,6 +152,11 @@ from active_particles.analysis.cuu import displacement_grid
 from active_particles.analysis.css import _r_max as _r_max_css
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
+from active_particles.plot.c44 import Css2DtoC44, _points_x as _points_x_c44,\
+	_points_theta as _points_theta_c44, _y_min as _y_min_c44,\
+	_y_max as _y_max_c44, _r_min as _r_min_c44, _r_max as _r_max_c44,\
+	_slope0 as _slope0_c44, _slope_min as _slope_min_c44,\
+	_slope_max as _slope_max_c44
 
 from os import getcwd
 from os import environ as envvar
@@ -275,7 +307,10 @@ class StrainCorrelations:
 			.get_signal()).real
 		return sc/sc[0, 0]	# correlation normalisation
 
-	def plot(self, box_size, r_max_css):
+	def plot(self, box_size, r_max_css, av_p_sep,
+		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
+		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
+		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44):
 		"""
 		Plots strain correlations with slider for cut-off radius.
 
@@ -285,6 +320,26 @@ class StrainCorrelations:
 			System length.
 		r_max_css : float
 			Maximum radius in infinite norm for strain correlations plots.
+		av_p_sep : float
+			Average particle separation.
+		points_x_c44 : int
+            Number of radii at which to evaluate integrated strain correlation.
+			(default: active_particles.plot.c44._points_x)
+        points_theta_c44 : int
+            Number of angles to evaluate integrated strain correlation.
+			(default: active_particles.plot.c44._points_theta)
+		y_min_c44 : float
+			Minimum plot value for C44.
+			(default: active_particles.plot.c44._y_min)
+		y_max_c44 : float
+			Maximum plot value for C44.
+			(default: active_particles.plot.c44._y_max)
+        r_min_c44 : float
+            Minimum radius in average particle separation for C44 calculation.
+			(default: active_particles.plot.c44._r_min)
+        r_max_c44 : float
+            Maximum radius in average particle separation for C44 calculation.
+			(default: active_particles.plot.c44._r_max)
 		"""
 
 		self.box_size = box_size
@@ -340,6 +395,27 @@ class StrainCorrelations:
 			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
 			min=Cmin, max=Cmax)
 
+		# C44 FIGURE
+
+		self.av_p_sep = av_p_sep
+		self.points_x_c44 = points_x_c44
+		self.points_theta_c44 = points_theta_c44
+		self.y_min_c44 = y_min_c44
+		self.y_max_c44 = y_max_c44
+		self.r_min_c44 = r_min_c44
+		self.r_max_c44 = r_max_c44
+
+		self.toC44 = Css2DtoC44(self.box_size,
+			self.points_x_c44, self.points_theta_c44,
+			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
+
+		self.fig_c44, self.ax_c44 = plt.subplots()
+		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
+		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
+
+		self.c44 = self.toC44.get_C44(grid.grid)							# list of [r, C44(r)]
+		self.line_c44, = self.ax_c44.plot(self.c44[:, 0], self.c44[:, 1])	# C44 plotting line
+
 	# METHODS CALLED BY SELF.PLOT()
 
 	def strain_correlations_corgrid(self):
@@ -390,6 +466,10 @@ class StrainCorrelations:
 		self.r_cut_line.figure.canvas.draw()		# update plot
 
 		self.grid_circle.update_grid_plot(grid.display_grid.grid)	# plot grid
+
+		self.c44 = self.toC44.get_C44(grid.grid)	# update C44 values
+		self.line_c44.set_ydata(self.c44[:, 1])		# plot C44
+		self.line_c44.figure.canvas.draw()			# update plot
 
 def plot():
 	"""
@@ -499,7 +579,11 @@ def plot():
 		sc = StrainCorrelations(wave_vectors,
 		    k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
 		to_return += (sc,)
-		sc.plot(parameters['box_size'], r_max_css)
+		sc.plot(parameters['box_size'], r_max_css,
+			parameters['box_size']/np.sqrt(parameters['N']),
+			points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
+			y_min_c44=y_min_c44, y_max_c44=y_max_c44,
+			r_min_c44=r_min_c44, r_max_c44=r_max_c44)
 
 		# R_CUT FIGURE
 
@@ -551,6 +635,32 @@ def plot():
 		ax_plot.set_xlabel(r'$\theta$')
 		ax_plot.set_ylabel(
 			r'$C_{\varepsilon_{xy}\varepsilon_{xy}}(r, \theta)$')
+
+		# C44 FIGURE
+
+		sc.fig_c44.suptitle(
+			r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+			% (parameters['N'], parameters['density'], parameters['vzero'],
+			parameters['dr']) + '\n' +
+			r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
+			dt*parameters['period_dump']*parameters['time_step']) +
+			r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+
+		sc.fig_c44.set_size_inches(16, 16)	# figure size
+
+		sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
+		sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
+			+ ' ' + r'$C_{\epsilon_{xy}\epsilon_{xy}}(r, \theta)$'
+			+ ' ' + r'$\cos4\theta$')
+		sc.ax_c44.set_xlim([r_min_c44, r_max_c44])
+		sc.ax_c44.set_ylim([y_min_c44, y_max_c44])
+		sc.ax_c44.set_yscale('log')
+		sc.ax_c44.set_xscale('log')
+
+		if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
+			fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
+				slope_max_c44, x_fit='(r/a)', y_fit='C_4^4(r)')		# add fitting line to plot
+			to_return += (fl_c44,)
 
 	# RETURN
 
@@ -705,6 +815,24 @@ if __name__ == '__main__':  # executing as script
         slope_max = get_env('SLOPE_MAX', default=_slope_max, vartype=float)	# maximum slope for fitting line
 
         r_max_css = get_env('R_MAX_CSS', default=_r_max_css, vartype=float)	# maximum radius in infinite norm for strain correlations plot
+
+        points_x_c44 = get_env('POINTS_X_C44', default=_points_x_c44,
+			vartype=int)							# number of radii at which to evaluate integrated strain correlation
+        points_theta_c44 = get_env('POINTS_THETA_C44',
+			default=_points_theta_c44, vartype=int)	# number of angles to evaluate integrated strain correlation
+
+        y_min_c44 = get_env('Y_MIN_C44', default=_y_min_c44, vartype=float)	# minimum plot value for C44
+        y_max_c44 = get_env('Y_MAX_C44', default=_y_max_c44, vartype=float)	# maximum plot value for C44
+
+        r_min_c44 = get_env('R_MIN_C44', default=_r_min_c44, vartype=float)	# minimum radius in average particle separation for C44 calculation
+        r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
+
+        slope0_c44 = get_env('SLOPE_C44', default=_slope0_c44,
+			vartype=float)	# initial slope for fitting line
+        slope_min_c44 = get_env('SLOPE_MIN_C44', default=_slope_min_c44,
+			vartype=float)	# minimum slope for fitting line
+        slope_max_c44 = get_env('SLOPE_MAX_C44', default=_slope_max_c44,
+			vartype=float)	# maximum slope for fitting line
 
         plot = plot()
 
