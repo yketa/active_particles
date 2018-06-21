@@ -56,8 +56,8 @@ fi
 sbatch ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #! /bin/bash
 #SBATCH --job-name=${JOB_NAME-${SCRIPT##*/}}  # job name
-#SBATCH --partition=${PARTITION-gpu}          # partition for the resource allocation
-#SBATCH --gres=${GRES-gpu:k80:1}              # generic consumable resources
+#SBATCH --partition=${PARTITION-vis}          # partition for the resource allocation
+#SBATCH --gres=${GRES-}                       # generic consumable resources
 #SBATCH --output=${OUT_FILE-/dev/null}        # standard output file
 #SBATCH --error=${OUT_DIR}/%j.out             # standard error output file
 #SBATCH --ntasks-per-node=${NTASKS-1}         # maximum ntasks to be invoked on each core
