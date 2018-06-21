@@ -249,8 +249,8 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
 
     Returns
     -------
-    ndgrid : 2D array like
-        Concatenated density and displacement norm grids.
+    ddgrid : 2D array like
+        Displacement norm grid concatenated with itself.
         NOTE: These are concatenated for dimension reasons.
     ugrid : 2D array like
         Displacement grid.
@@ -269,15 +269,54 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
 
 	wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
 
-	ngrid = (ugrid != 0).any(axis=-1)*1         # density grid
-	ngridr = np.reshape(ngrid, ngrid.shape + (1,))
 	dgrid = np.sqrt(np.sum(ugrid**2, axis=-1))  # displacement norm grid
 	dgridr = np.reshape(dgrid, dgrid.shape + (1,))
 
 	egrid = np.divide(ugrid, dgridr, out=np.zeros(ugrid.shape),
         where=dgridr!=0) # displacement direction
 
-	return np.concatenate((ngridr, dgridr), axis=-1), ugrid, wgrid, egrid  # displacement variable grid
+	return np.concatenate((dgridr, dgridr), axis=-1), ugrid, wgrid, egrid  # displacement variable grid
+
+class Cnn:
+	"""
+	Manipulates density self-correlations computed from displacement grids.
+	"""
+
+	def __init__(self, ugrid, box_size):
+		"""
+		Calculates grids of density and their averaged correlations.
+
+		Parameters
+		----------
+		ugrid : array-like
+			Array of displacements or list of array of displacements.
+		box_size : float
+			Length of the system's square box.
+		"""
+
+		self.ugrid = np.array(ugrid, ndmin=4)	# list of array of displacements
+		self.box_size = box_size
+
+		self.ngrid = (self.ugrid != 0).any(axis=-1)*1			# density grid
+		self.cnn2D = corField2D_scalar_average(self.ngrid)		# 2D density correlation
+		self.cnn1D = g2Dto1Dsquare(self.cnn2D, self.box_size)	# 1D averaged density correlation
+
+	def save(self, attributes, dir=getcwd()):
+		"""
+		Saves 2D and 1D density correlation grids to directory dir.
+
+		Parameters
+		----------
+		attributes : hash-table
+			Attributes displayed in filename.
+		dir : string
+			Saving directory. (default: current working directory)
+		"""
+
+		self.filename, =  naming.Cnn().filename(**attributes)	# density correlation file name
+
+		with open(joinpath(dir, self.filename), 'wb') as dump_file:
+			pickle.dump([self.cnn2D, self.cnn1D], dump_file)
 
 def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     **directional_correlations):
@@ -409,7 +448,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
 
     if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
         image_name, = naming_standard.image().filename(**attributes)
-        fig.savefig(joinath(data_dir, image_name))
+        fig.savefig(joinpath(data_dir, image_name))
 
 	# GRID CIRCLE
 
@@ -539,20 +578,22 @@ if __name__ == '__main__':  # executing as script
 
             w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
             u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
-            NDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
+            DDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
                 lambda time: displacement_related_grids(parameters['box_size'],
                 box_size, centre, Ncases, time, dt, w_traj, u_traj, dL)
                 , times)), (1, 0, 2, 3, 4)))                # lists of displacement variables
 
-        Ngrid = NDgrid[:, :, :, 0]  # list of density grids
-        Dgrid = NDgrid[:, :, :, 1]  # list of displacement norm grids
+        Dgrid = DDgrid[:, :, :, 0]  				# list of displacement norm grids
+        Cdd2D = corField2D_scalar_average(Dgrid)	# displacement norm correlation grids
 
-        Cnn2D, Cdd2D = tuple(map(corField2D_scalar_average, [Ngrid, Dgrid]))    # density and displacement norm correlation grids
+        Cnn_object = Cnn(Ugrid, box_size)	# density correlation object
+        Cnn2D = Cnn_object.cnn2D			# 2D density correlation grid
+        Cnn1D = Cnn_object.cnn1D			# 1D averaged density correlation grid
+
         (Cuu2D, CuuL, CuuT), (Cww2D, CwwL, CwwT), (Cee2D, CeeL, CeeT) = tuple(
             map(lambda Grid: corField2D_vector_average_Cnn(Grid, Cnn2D),
             [Ugrid, Wgrid, Egrid]))                                             # displacement, relative displacement and displacement direction correlation grids
 
-        Cnn1D = g2Dto1Dsquare(Cnn2D, box_size)  # 1D density correlation
         (Cuu1D, Cuu1Dcor), (Cww1D, Cww1Dcor), (Cdd1D, Cdd1Dcor),\
             (Cee1D, Cee1Dcor) = tuple(map(
             lambda C2D:
@@ -563,12 +604,13 @@ if __name__ == '__main__':  # executing as script
 
         # SAVING
 
-        with open(joinpath(data_dir, Cnn_filename), 'wb') as Cnn_dump_file,\
-            open(joinpath(data_dir, Cuu_filename), 'wb') as Cuu_dump_file,\
+		# density correlations
+        Cnn_object.save(attributes, dir=data_dir)
+		# everything else
+        with open(joinpath(data_dir, Cuu_filename), 'wb') as Cuu_dump_file,\
             open(joinpath(data_dir, Cww_filename), 'wb') as Cww_dump_file,\
             open(joinpath(data_dir, Cdd_filename), 'wb') as Cdd_dump_file,\
             open(joinpath(data_dir, Cee_filename), 'wb') as Cee_dump_file:
-            pickle.dump([Cnn2D, Cnn1D], Cnn_dump_file)
             pickle.dump([Cuu2D, Cuu1D, Cuu1Dcor, CuuL, CuuT], Cuu_dump_file)
             pickle.dump([Cww2D, Cww1D, Cww1Dcor, CwwL, CwwT], Cww_dump_file)
             pickle.dump([Cdd2D, Cdd1D, Cdd1Dcor], Cdd_dump_file)
