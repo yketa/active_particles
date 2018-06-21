@@ -1,5 +1,5 @@
 """
-Module c44 plots strain correlations projected on cos(4 \theta) for different
+Module c44 plots strain correlations projected on cos(4 \\theta) for different
 lag times, which we call C44.
 """
 
