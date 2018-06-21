@@ -30,11 +30,11 @@ MOVIE : bool
     Make movie out of several plotted frames.
     DEFAULT: False
 SHOW [PLOT mode] : bool
-	Show figure.
-	DEFAULT: False
+    Show figure.
+    DEFAULT: False
 SAVE [PLOT mode] : bool
-	Save figure.
-	DEFAULT: False
+    Save figure.
+    DEFAULT: False
 TRACER_PARTICLE ['trajecotry' mode] : bool
     Display tracer particle.
     DEFAULT: True
@@ -42,24 +42,24 @@ TRACER_PARTICLE ['trajecotry' mode] : bool
 Environment parameters
 ----------------------
 DATA_DIRECTORY : string
-	Data directory.
-	DEFAULT: current working directory
+    Data directory.
+    DEFAULT: current working directory
 PARAMETERS_FILE : string
-	Simulation parameters file.
-	DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
+    Simulation parameters file.
+    DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
 WRAPPED_FILE : string
-	Wrapped trajectory file. (.gsd)
-	DEFAULT: DATA_DIRECTORY/active_particles.naming.wrapped_trajectory_file
+    Wrapped trajectory file. (.gsd)
+    DEFAULT: DATA_DIRECTORY/active_particles.naming.wrapped_trajectory_file
 UNWRAPPED_FILE : string
-	Unwrapped trajectory file. (.dat)
-	NOTE: .dat files defined with active_particles.dat
-	DEFAULT: DATA_DIRECTORY/active_particles.naming.unwrapped_trajectory_file
+    Unwrapped trajectory file. (.dat)
+    NOTE: .dat files defined with active_particles.dat
+    DEFAULT: DATA_DIRECTORY/active_particles.naming.unwrapped_trajectory_file
 INITIAL_FRAME : int
-	[PLOT mode] Frame to render.
+    [PLOT mode] Frame to render.
     [MOVIE mode] Initial frame to render.
-	NOTE: FRAME < 0 will be interpreted as the frame to render being the middle
-	frame of the simulation.
-	DEFAULT: -1
+    NOTE: FRAME < 0 will be interpreted as the frame to render being the middle
+          frame of the simulation.
+    DEFAULT: -1
 FINAL_FRAME [MOVIE mode] : int
     Final movie frame.
     DEFAULT: Final simulation frame.
@@ -70,21 +70,21 @@ FRAME_MAXIMUM : int
     Maximum number of frames.
     DEFAULT: active_particles.analysis.frame._frame_max
 DT : int
-	Lag time for displacement.
-	NOTE: [PLOT mode] TIME < 0 will be interpreted as a lag time corresponding
+    Lag time for displacement.
+    NOTE: [PLOT mode] TIME < 0 will be interpreted as a lag time corresponding
                       to the total number of simulation frames - FRAME + TIME.
           [MOVIE mode] TIME < 0 will be interpreted as a lag time
                        corresponding to the minimum distance between frames.
-	DEFAULT: -1
+    DEFAULT: -1
 BOX_SIZE : float
-	Length of the square box to render.
-	DEFAULT: simulation box size
+    Length of the square box to render.
+    DEFAULT: simulation box size
 X_ZERO : float
-	1st coordinate of the centre of the square box to render.
-	DEFAULT: 0
+    1st coordinate of the centre of the square box to render.
+    DEFAULT: 0
 Y_ZERO : float
-	2nd coordinate of the centre of the square box to render.
-	DEFAULT: 0
+    2nd coordinate of the centre of the square box to render.
+    DEFAULT: 0
 V_MIN : float
     Minimum value of the colorbar.
     DEFAULT: ['velocity' mode] 10^{E(log(||\\vec{v}||))-2*V(log(||\\vec{v}||))}

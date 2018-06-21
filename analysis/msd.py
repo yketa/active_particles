@@ -37,7 +37,7 @@ UNWRAPPED_FILE : string
 INITIAL_FRAME : int
 	Frame to consider as initial.
 	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
-	the middle frame of the simulation.
+	      the middle frame of the simulation.
 	DEFAULT: -1
 INTERVAL_MAXIMUM : int
 	Maximum number of intervals of same length dt considered in mean square

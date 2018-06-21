@@ -39,12 +39,12 @@ UNWRAPPED_FILE : string
 INITIAL_FRAME : int
 	Frame to consider as initial.
 	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
-	the middle frame of the simulation.
+	      the middle frame of the simulation.
 	DEFAULT: -1
 TIME : int
 	Lag time for displacement.
 	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
-	number of simulation frames - INITIAL_FRAME + TIME.
+	      number of simulation frames - INITIAL_FRAME + TIME.
 	DEFAULT: -1
 INTERVAL_MAXIMUM : int
 	Maximum number of intervals of length dt considered in correlations
@@ -53,7 +53,7 @@ INTERVAL_MAXIMUM : int
 R_CUT : float
 	Cut-off radius for coarse graining function.
 	NOTE: Value of R_CUT is then multiplied by average particle diameter from
-	simulation parameters file.
+	      simulation parameters file.
 	DEFAULT: active_particles.analysis.css._r_cut
 SIGMA : float
 	Length scale of the spatial extent of the coarse graining function.
@@ -62,7 +62,7 @@ N_CASES : int
 	Number of boxes in each direction to compute the shear strain and
 	displacement vorticity grid.
 	DEFAULT: smallest integer value greater than or equal to the square root of
-		the number of particles from the simulation parameters file.
+	         the number of particles from the simulation parameters file.
 BOX_SIZE : float
 	Size of the square box to consider.
 	DEFAULT: simulation box size
@@ -75,7 +75,7 @@ Y_ZERO : float
 R_MAX [PLOT or SHOW mode] : float
 	Half size of the box showed for 2D correlation.
 	NOTE: R_MAX < 0 will be interpreted as the box shown being the actual
-	simulation box.
+	      simulation box.
 	DEFAULT: active_particles.analysis.css._r_max
 DISPLAY_GRID [COMPUTE mode] : int
 	Index of map in list of variable maps to display.

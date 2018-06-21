@@ -46,7 +46,7 @@ N_CASES : int
 	Number of boxes in each direction to compute the shear strain and
 	displacement vorticity grid.
 	DEFAULT: smallest integer value greater than or equal to the square root of
-		     the number of particles from the simulation parameters file.
+	         the number of particles from the simulation parameters file.
 N_BINS [PLOT or SHOW mode] : int
 	Number of bins for the histogram of local densities.
 	DEFAULT: active_particles.analysis.varn._Nbins

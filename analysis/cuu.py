@@ -44,12 +44,12 @@ UNWRAPPED_FILE : string
 INITIAL_FRAME : int
 	Frame to consider as initial.
 	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
-	the middle frame of the simulation.
+	      the middle frame of the simulation.
 	DEFAULT: -1
 TIME : int
 	Lag time for displacement.
 	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
-	number of simulation frames - INITIAL_FRAME + TIME.
+	      number of simulation frames - INITIAL_FRAME + TIME.
 	DEFAULT: -1
 INTERVAL_MAXIMUM : int
 	Maximum number of intervals of length dt considered in correlations
@@ -59,7 +59,7 @@ N_CASES : int
 	Number of boxes in each direction to compute the shear strain and
 	displacement vorticity grid.
 	DEFAULT: smallest integer value greater than or equal to the square root of
-		the number of particles from the simulation parameters file.
+	         the number of particles from the simulation parameters file.
 BOX_SIZE : float
 	Size of the square box to consider.
 	DEFAULT: simulation box size
@@ -76,33 +76,33 @@ R_MAX [PLOT or SHOW mode] : float
 	Maximum radius for correlations plots.
 	DEFAULT: active_particles.analysis.cuu._r_max
 CUU_MIN [PLOT or SHOW mode] : float
-    Minimum displacement correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cuu_min
+	Minimum displacement correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cuu_min
 CUU_MAX [PLOT or SHOW mode] : float
-    Maximum displacement correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cuu_max
+	Maximum displacement correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cuu_max
 CWW_MIN [PLOT or SHOW mode] : float
-    Minimum relative displacement correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cww_min
+	Minimum relative displacement correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cww_min
 CWW_MAX [PLOT or SHOW mode] : float
-    Maximum relative displacement correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cww_max
+	Maximum relative displacement correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cww_max
 CDD_MIN [PLOT or SHOW mode] : float
-    Minimum displacement norm correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cdd_min
+	Minimum displacement norm correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cdd_min
 CDD_MAX [PLOT or SHOW mode] : float
-    Maximum displacement norm correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cdd_max
+	Maximum displacement norm correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cdd_max
 CEE_MIN [PLOT or SHOW mode] : float
-    Minimum displacement direction correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cee_min
+	Minimum displacement direction correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cee_min
 CEE_MAX [PLOT or SHOW mode] : float
-    Maximum displacement direction correlation for correlation plots.
-    DEFAULT: active_particles.analysis.cuu._Cee_max
+	Maximum displacement direction correlation for correlation plots.
+	DEFAULT: active_particles.analysis.cuu._Cee_max
 AXIS [PLOT or SHOW mode] : string
-    Axis scale for correlation plots.
-    NOTE: 'LINLIN', 'LOGLIN', 'LINLOG' or 'LOGLOG'.
-    DEFAULT: 'LOGLOG'
+	Axis scale for correlation plots.
+	NOTE: 'LINLIN', 'LOGLIN', 'LINLOG' or 'LOGLOG'.
+	DEFAULT: 'LOGLOG'
 
 Output
 ------

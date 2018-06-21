@@ -54,12 +54,12 @@ UNWRAPPED_FILE : string
 INITIAL_FRAME : int
 	Frame to consider as initial.
 	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
-	the middle frame of the simulation.
+	      the middle frame of the simulation.
 	DEFAULT: -1
 TIME : int
 	Lag time for displacement.
 	NOTE: TIME < 0 will be interpreted as a lag time corresponding to the total
-	number of simulation frames - INITIAL_FRAME + TIME.
+	      number of simulation frames - INITIAL_FRAME + TIME.
 	DEFAULT: -1
 INTERVAL_MAXIMUM : int
 	Maximum number of intervals of length dt considered for the calculation.
@@ -67,7 +67,7 @@ INTERVAL_MAXIMUM : int
 N_CASES : int
 	Number of boxes in each direction to compute the displacement grid.
 	DEFAULT: smallest integer value greater than or equal to the square root of
-		the number of particles from the simulation parameters file.
+	         the number of particles from the simulation parameters file.
 BOX_SIZE : float
 	Size of the square box to consider.
 	DEFAULT: simulation box size
