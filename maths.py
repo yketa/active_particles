@@ -115,15 +115,15 @@ def g2Dto1Dsquare(g2D, L):
     """
 
     g2D = np.array(g2D)
-    dL = L/g2D.shape[0]     # boxes separation in each direction
-    r_max = g2D.shape[0]/2  # maximum radius to be calculated in number of boxes
+    dL = L/g2D.shape[0]             # boxes separation in each direction
+    sq_r_max = (g2D.shape[0]/2)**2  # maximum radius to be calculated in number of boxes
 
     g1D_dic = DictList()    # hash table of radii and values at radii
 
     for i in range(g2D.shape[0]):
         for j in range(g2D.shape[1]):
             sqradius = i**2 + j**2  # radius corresponding to coordinates [i, j], [-i, j], [i, -j], [-i, -j]
-            if sqradius <= r_max**2:
+            if sqradius <= sq_r_max:
                 g1D_dic[sqradius] += [g2D[i, j], g2D[-i, j], g2D[i, -j],
                     g2D[-i, -j]]
 
