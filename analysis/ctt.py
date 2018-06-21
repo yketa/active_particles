@@ -31,6 +31,10 @@ STRAIN_CORRELATIONS [SHOW mode] : bool
 	vectors and displacement Fourier transform as functions of wave vector
 	norm and plots it, with adjustable cut-off radius.
 	DEFAULT: False
+DIVIDE_BY_CNN [STRAIN_CORRELATIONS mode] : bool
+	Divides strain correlation projection on cos(4 \\theta) by the density
+	correlations at half radius.
+	DEFAULT: False
 
 Environment parameters
 ----------------------
@@ -148,7 +152,7 @@ from active_particles.dat import Dat, Gsd
 from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
 	FFT2Dfilter, divide_arrays
 
-from active_particles.analysis.cuu import displacement_grid
+from active_particles.analysis.cuu import displacement_grid, Cnn
 from active_particles.analysis.css import _r_max as _r_max_css
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
@@ -266,7 +270,6 @@ class StrainCorrelations:
 		k_dot_FFTugrid2D_sqnorm : 2D array-like
 			Square norm of dot product of normalised wave vector and
 			displacement Fourier transform.
-
 		"""
 
 		self.wave_vectors = wave_vectors
@@ -310,7 +313,8 @@ class StrainCorrelations:
 	def plot(self, box_size, r_max_css, av_p_sep,
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
-		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44):
+		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
+		divide_by_cnn=False, **kwargs):
 		"""
 		Plots strain correlations with slider for cut-off radius.
 
@@ -340,10 +344,24 @@ class StrainCorrelations:
         r_max_c44 : float
             Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_max)
+		divide_by_cnn : bool
+			Display C_{\\varepsilon_{xy}\\varepsilon_{xy}}/C_{\\rho\\rho}
+			rather than just C_{\\varepsilon_{xy}\\varepsilon_{xy}}.
+			(default: False)
+			NOTE: if True, then cnn2D must be in the keyword arguments.
+
+		Optional keyword arguments
+		--------------------------
+		cnn2D : 2D array-like
+			Density correlation grid C_{\\rho\\rho}.
 		"""
 
 		self.box_size = box_size
 		self.r_max_css = r_max_css
+
+		self.divide_by_cnn = divide_by_cnn
+		if self.divide_by_cnn:
+			self.cnn2Dgrid = CorGrid(np.array(kwargs['cnn2D']), self.box_size)	# density correlations CorGrid object
 
 		self.fig, (self.ax_sc, self.ax_kFFTugrid) = plt.subplots(1, 2)
 
@@ -353,8 +371,8 @@ class StrainCorrelations:
 
 		grid = self.strain_correlations_corgrid()	# correlation grid
 
-		Cmin = np.min(grid.grid)
-		Cmax = np.max(grid.grid)
+		Cmin = np.max((np.min(grid.grid), _c_min))
+		Cmax = np.max((np.min(grid.grid), _c_max))
 		cmap = plt.cm.jet
 		CvNorm = colors.Normalize(vmin=Cmin, vmax=Cmax)
 
@@ -413,8 +431,9 @@ class StrainCorrelations:
 		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
 		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
 
-		self.c44 = self.toC44.get_C44(grid.grid)							# list of [r, C44(r)]
-		self.line_c44, = self.ax_c44.plot(self.c44[:, 0], self.c44[:, 1])	# C44 plotting line
+		self.c44 = self.css2Dtoc44(grid.grid)	# list of [r, C44(r)]
+		self.line_c44, = self.ax_c44.plot(self.c44[:, 0]/self.av_p_sep,
+			self.c44[:, 1])						# C44 plotting line
 
 	# METHODS CALLED BY SELF.PLOT()
 
@@ -432,13 +451,44 @@ class StrainCorrelations:
 		sc = self.strain_correlations(r_cut=self.r_cut)	# strain correlations grid
 		return CorGrid(sc, self.box_size, display_size=2*self.r_max_css)
 
+	def css2Dtoc44(self, css2D):
+		"""
+		Returns strain correlations projected on cos(4 \\theta) from strain
+		correlations grid.
+		NOTE: This projection is then divided by the density correlations at
+		half-radius in DIVIDE_BY_CNN mode.
+
+		Parameters
+		----------
+		Css2D : array-like
+			Strain correlations grid.
+
+		Returns
+		-------
+		c44 : Numpy array
+			Array of position and projection of strain correlations on
+			cos(4 \\theta) at this position.
+		"""
+
+		c44 = self.toC44.get_C44(css2D)	# list of [r, C44(r)]
+		if not(self.divide_by_cnn): return c44
+
+		# DIVIDE_BY_CNN mode
+
+		css = np.array(list(map(
+            lambda r: self.cnn2Dgrid.integrate_over_angles(r,
+            points_theta=self.toC44.points_theta),
+            self.toC44.c44_x/2)))
+		c44[:, 1] /= css
+		return c44
+
 	def update_r_cut(self, val):
 		"""
 		Updates cut-off radius on slider change.
 		"""
 
-		self.r_cut=self.slider.val	# new cut-off radius
-		self.draw()					# updates figure
+		self.r_cut = self.slider.val	# new cut-off radius
+		self.draw()						# updates figure
 
 	def update_r_cut_line(self, event):
 		"""
@@ -467,7 +517,7 @@ class StrainCorrelations:
 
 		self.grid_circle.update_grid_plot(grid.display_grid.grid)	# plot grid
 
-		self.c44 = self.toC44.get_C44(grid.grid)	# update C44 values
+		self.c44 = self.css2Dtoc44(grid.grid)		# update C44 values
 		self.line_c44.set_ydata(self.c44[:, 1])		# plot C44
 		self.line_c44.figure.canvas.draw()			# update plot
 
@@ -576,6 +626,10 @@ def plot():
 
 	if get_env('STRAIN_CORRELATIONS', default=False, vartype=bool):	# STRAIN_CORRELATIONS mode
 
+		divide_by_cnn = get_env('DIVIDE_BY_CNN', default=False, vartype=bool)	# divide strain correlations by density correlations
+
+		cor_name = r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$'	# name of the plotted correlation
+
 		sc = StrainCorrelations(wave_vectors,
 		    k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
 		to_return += (sc,)
@@ -583,7 +637,8 @@ def plot():
 			parameters['box_size']/np.sqrt(parameters['N']),
 			points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 			y_min_c44=y_min_c44, y_max_c44=y_max_c44,
-			r_min_c44=r_min_c44, r_max_c44=r_max_c44)
+			r_min_c44=r_min_c44, r_max_c44=r_max_c44,
+			divide_by_cnn=divide_by_cnn, cnn2D=Cnn2D)
 
 		# R_CUT FIGURE
 
@@ -599,11 +654,10 @@ def plot():
 			dt*parameters['period_dump']*parameters['time_step']) +
 			r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
 
-		sc.ax_sc.set_title('2D ' + r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$')
+		sc.ax_sc.set_title('2D ' + cor_name)
 		sc.ax_sc.set_xlabel(r'$x$')
 		sc.ax_sc.set_ylabel(r'$y$')
-		sc.colormap.set_label(r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$',
-			labelpad=20, rotation=270)
+		sc.colormap.set_label(cor_name, labelpad=20, rotation=270)
 
 		sc.ax_kFFTugrid.set_xlabel(ax_super.get_xlabel())
 		sc.ax_kFFTugrid.set_xlim(ax_super.get_xlim())
@@ -628,13 +682,11 @@ def plot():
 
 		ax_grid.set_xlabel(r'$x$')
 		ax_grid.set_ylabel(r'$y$')
-		ax_grid.set_title('2D ' + r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$')
-		cb_gc.set_label(r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$',
-			labelpad=20, rotation=270)
+		ax_grid.set_title('2D ' + cor_name)
+		cb_gc.set_label(cor_name, labelpad=20, rotation=270)
 
 		ax_plot.set_xlabel(r'$\theta$')
-		ax_plot.set_ylabel(
-			r'$C_{\varepsilon_{xy}\varepsilon_{xy}}(r, \theta)$')
+		ax_plot.set_ylabel(cor_name + r'$(r, \theta)$')
 
 		# C44 FIGURE
 
@@ -650,8 +702,9 @@ def plot():
 
 		sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
 		sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
-			+ ' ' + r'$C_{\epsilon_{xy}\epsilon_{xy}}(r, \theta)$'
-			+ ' ' + r'$\cos4\theta$')
+			+ ' ' + cor_name + r'$(r, \theta)$'
+			+ ' ' + r'$\cos4\theta$'
+			+ (r'$/C_{\rho\rho}(r/2)$' if divide_by_cnn else ''))
 		sc.ax_c44.set_xlim([r_min_c44, r_max_c44])
 		sc.ax_c44.set_ylim([y_min_c44, y_max_c44])
 		sc.ax_c44.set_yscale('log')
@@ -669,6 +722,9 @@ def plot():
 # DEFAULT VARIABLES
 
 _r_min = 1		# default minimum wave length for plots
+
+_c_min = -0.2	# default minimum value for correlations
+_c_max = 1		# default maximum value for correlations
 
 _slope0 = 2		# default initial slope for fitting line
 _slope_min = 0	# default minimum slope for fitting line
@@ -716,6 +772,8 @@ if __name__ == '__main__':  # executing as script
     Ctt_filename, = naming_Ctt.filename(**attributes)   # Ctt filename
     naming_Cll = naming.Cll()                           # Cll naming object
     Cll_filename, = naming_Cll.filename(**attributes)   # Cll filename
+    naming_Cnn = naming.Cnn()                           # Cnn naming object
+    Cnn_filename, = naming_Cnn.filename(**attributes)   # Cnn filename
 
 	# STANDARD OUTPUT
 
@@ -740,7 +798,7 @@ if __name__ == '__main__':  # executing as script
 			np.linspace(init_frame, Nentries - dt - 1, int_max)
 			))))	# frames at which shear strain will be calculated
 
-        # DISPLACEMENT CORRELATIONS
+        # DISPLACEMENT AND DENSITY CORRELATIONS
 
         with open(wrap_file_name, 'rb') as wrap_file,\
 			open(unwrap_file_name, 'rb') as unwrap_file:	# opens wrapped and unwrapped trajectory files
@@ -751,6 +809,10 @@ if __name__ == '__main__':  # executing as script
                 lambda time: displacement_grid(parameters['box_size'],
                 box_size, centre, Ncases, time, dt, w_traj, u_traj, dL),
                 times))											# lists of displacement variables
+
+        Cnn_object = Cnn(Ugrid, box_size)	# density correlation object
+        Cnn2D = Cnn_object.cnn2D			# 2D density correlation grid
+        Cnn1D = Cnn_object.cnn1D			# 1D averaged density correlation grid
 
         wave_vectors = wave_vectors_2D(Ncases, Ncases, d=dL)			# wave vectors grid
         wave_vectors_norm = np.sqrt(np.sum(wave_vectors**2, axis=-1))	# wave vectors norm grid
@@ -771,6 +833,9 @@ if __name__ == '__main__':  # executing as script
 
         # SAVING
 
+		# density correlations
+        Cnn_object.save(attributes, dir=data_dir)
+		# everything else
         with open(joinpath(data_dir, Ctt_filename), 'wb') as Ctt_dump_file,\
 			open(joinpath(data_dir, Cll_filename), 'wb') as Cll_dump_file:
             pickle.dump([wave_vectors, k_cross_FFTugrid2D_sqnorm,
@@ -787,11 +852,13 @@ if __name__ == '__main__':  # executing as script
 		# DATA
 
         with open(joinpath(data_dir, Ctt_filename), 'rb') as Ctt_dump_file,\
-			open(joinpath(data_dir, Cll_filename), 'rb') as Cll_dump_file:
+			open(joinpath(data_dir, Cll_filename), 'rb') as Cll_dump_file,\
+			open(joinpath(data_dir, Cnn_filename), 'rb') as Cnn_dump_file:
             (wave_vectors, k_cross_FFTugrid2D_sqnorm,
 				k_cross_FFTugrid1D_sqnorm) = pickle.load(Ctt_dump_file)
             (_, k_dot_FFTugrid2D_sqnorm,
 				k_dot_FFTugrid1D_sqnorm) = pickle.load(Cll_dump_file)
+            Cnn2D, Cnn1D = pickle.load(Cnn_dump_file)
 
     if get_env('PLOT', default=False, vartype=bool) or\
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
