@@ -80,6 +80,6 @@ def float_to_letters(flo):
 	except (OverflowError, KeyError): return 'l0000'	# return 0 if exponent not attainable or zero
 	if flo < 0: expo_let = expo_let.upper()				# make upper case if float is negative
 
-	digi = int(abs(flo) * (10**(significant_figures - expo_int - 1)))	# digits in litteral expression
+	digi = round(abs(flo) * (10**(significant_figures - expo_int - 1)))	# digits in litteral expression
 
 	return '%s%i' % (expo_let, digi)
