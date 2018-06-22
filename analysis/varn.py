@@ -223,6 +223,9 @@ def plot(bins, hist):
 
 # DEFAULT VARIABLES
 
+_init_frame = -1	# default frame to consider as initial
+_int_max = 1		# default maximum number of frames on which to calculate densities
+
 _box_size = 10  # default length of the square box in which particles are counted
 
 _Nbins = 10 # default number of bins for the histogram
@@ -234,8 +237,8 @@ if __name__ == '__main__':  # executing as script
 
     data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
-    init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)	# frame to consider as initial
-    int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)	# maximum number of frames on which to calculate densities
+    init_frame = get_env('INITIAL_FRAME', default=_init_frame, vartype=int)	# frame to consider as initial
+    int_max = get_env('INTERVAL_MAXIMUM', default=_int_max, vartype=int)	# maximum number of frames on which to calculate densities
 
     box_size = get_env('BOX_SIZE', default=_box_size, vartype=float)    # length of the square boxes in which particles are counted
 
@@ -250,7 +253,7 @@ if __name__ == '__main__':  # executing as script
     init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
 
     Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
-		vartype=int)	# number of boxes in each direction to compute the shear strain and displacement vorticity grid
+		vartype=int)	# number of boxes in each direction to compute the local density
 
     # NAMING
 
