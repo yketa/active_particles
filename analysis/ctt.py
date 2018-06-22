@@ -107,16 +107,16 @@ POINTS_X_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
 POINTS_THETA_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
 	Number of angles to evaluate integrated strain correlation.
 	DEFAULT: active_particles.plot.c44._points_theta
-Y_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+Y_MIN_C44 [STRAIN_CORRELATIONS mode] : float
 	Minimum plot value for C44.
 	DEFAULT: active_particles.plot.c44._y_min
-Y_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+Y_MAX_C44 [STRAIN_CORRELATIONS mode] : float
 	Maximum plot value for C44.
 	DEFAULT: active_particles.plot.c44._y_max
-R_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+R_MIN_C44 [STRAIN_CORRELATIONS mode] : float
 	Minimum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.plot.c44._r_min
-R_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+R_MAX_C44 [STRAIN_CORRELATION mode] : float
 	Maximum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.plot.c44._r_max
 SLOPE_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : slope

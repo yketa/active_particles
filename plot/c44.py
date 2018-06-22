@@ -1,6 +1,112 @@
 """
 Module c44 plots strain correlations projected on cos(4 \\theta) for different
 lag times, which we call C44.
+
+Input files in simulation directory must follow the active_particles.naming.Css
+naming standard.
+
+Environment modes
+-----------------
+TEMPERATURE : bool
+    Simulation directory corresponds to a thermal Brownian simulation.
+     ________________________________________________
+    | Mode  | Simulation type  | D_0                 |
+    |_______|__________________|_____________________|
+    | True  | thermal Brownian | 2 k_B T / a \\gamma |
+    |_______|__________________|_____________________|
+    | False | active Brownian  | v_0^2 / 2 \\nu_r    |
+    |_______|__________________|_____________________|
+    NOTE: a \\gamma is the Brownian dumping coefficient.
+    DEFAULT: False
+FITTING_LINE : bool
+    Display adjustable fitting line on plot.
+    DEFAULT: False
+
+Environment parameters
+----------------------
+DATA_DIRECTORY : string
+	Data directory.
+	DEFAULT: current working directory
+PARAMETERS_FILE : string
+	Simulation parameters file.
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
+INITIAL_FRAME : int
+	Frame to consider as initial.
+	NOTE: INITIAL_FRAME < 0 will be interpreted as the initial frame being
+	      the middle frame of the simulation.
+	DEFAULT: -1
+INTERVAL_MAXIMUM : int
+	Maximum number of intervals of length dt considered for the calculation.
+	DEFAULT: 1
+R_CUT : float
+    Cut-off radius for coarse graining function in terms of particles' mean
+    radius.
+    DEFAULT: active_particles.analysis.css._r_cut
+SIGMA : float
+    Length scale of the spatial extent of the coarse graining function.
+    DEFAULT: cut-off radius
+N_CASES : int
+    Number of boxes in each direction for which shear strain and displacement
+    vorticity grids have been computed.
+    DEFAULT: smallest integer value greater than or equal to the square root of
+	         the number of particles from the simulation parameters file.
+BOX_SIZE : float
+	Size of the square box to consider.
+	DEFAULT: simulation box size
+X_ZERO : float
+	1st coordinate of the centre of the square box to consider.
+	DEFAULT: 0
+Y_ZERO : float
+	2nd coordinate of the centre of the square box to consider.
+	DEFAULT: 0
+Y_MIN : float
+    Minimum C44 value.
+    DEFAULT: active_particles.plot.c44._y_min
+Y_MAX : float
+    Maximum C44 value.
+    DEFAULT: active_particles.plot.c44._y_max
+R_MIN : float
+    Minimum radius over average particle separation value.
+    DEFAULT: active_particles.plot.c44._r_min
+R_MAX : float
+    Maximum radius over average particle separation value.
+    DEFAULT: active_particles.plot.c44._r_max
+POINTS_X : int
+    Number of radii at which to evaluate integrated strain correlation.
+    DEFAULT: active_particles.plot.c44._points_x
+POINTS_THETA : int
+    Number of angles to evaluate integrated strain correlation.
+    DEFAULT: active_particles.plot.c44._points_theta
+FONT_SIZE : int
+    Plot font size.
+    DEFAULT: active_particles.plot.c44._font_size
+MARKER_SIZE : int
+    Plot marker size.
+    DEFAULT: active_particles.plot.c44._marker_size
+RATIO_LEGEND : float
+    Width ratio between legend and figure.
+    DEFAULT: active_particles.plot.c44._ratio_legend
+NCOL_LEGEND : int
+    Number of columns for the legend.
+    DEFAULT: active_particles.plot.c44._ncol_legend
+WSPACE : float
+    Plots width space.
+    DEFAULT: active_particles.plot.c44._wspace
+HSPACE : float
+    Plots height space.
+    DEFAULT: active_particles.plot.c44._hspace
+COLORMAP : string
+    Plot colormap.
+    DEFAULT: active_particles.plot.c44._colormap
+SLOPE [FITTING_LINE mode] : float
+	Initial slope for fitting line.
+	DEFAULT: active_particles.plot.c44._slope0
+SLOPE_MIN [FITTING_LINE mode] : float
+	Minimum slope for fitting line.
+	DEFAULT: active_particles.plot.c44._slope_min
+SLOPE_MAX [FITTING_LINE mode] : float
+	Maximum slope for fitting line.
+	DEFAULT: active_particles.plot.c44._slope_max
 """
 
 import active_particles.naming as naming
@@ -100,6 +206,8 @@ _ncol_legend = 1    # default number of columns for the legend
 _wspace = 0.2   # default plots width space
 _hspace = 0.05  # default plots height space
 
+_colormap = 'jet'   # default plot colormap
+
 _slope0 = -2    # default initial slope for fitting line slider
 _slope_min = -5 # default minimum slope for fitting line slider
 _slope_max = 0  # default maximum slope for fitting line slider
@@ -128,8 +236,8 @@ if __name__ == '__main__':  # executing as script
 
     av_p_sep = parameters['box_size']/np.sqrt(parameters['N'])  # avergae particles separation
 
-    r_cut = parameters['a']*get_env('R_CUT', default=_r_cut, vartype=float)	# cut-off radius for coarse graining function
-    sigma = get_env('SIGMA', default=r_cut, vartype=float)			# length scale of the spatial extent of the coarse graining function
+    r_cut = parameters['a']*get_env('R_CUT', default=_r_cut, vartype=float) # cut-off radius for coarse graining function
+    sigma = get_env('SIGMA', default=r_cut, vartype=float)                  # length scale of the spatial extent of the coarse graining function
 
     Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
 		vartype=int)	# number of boxes in each direction for which shear strain and displacement vorticity grids have been computed
@@ -152,28 +260,29 @@ if __name__ == '__main__':  # executing as script
 
     # PLOT PARAMETERS
 
-    y_min = get_env('Y_MIN', default=_y_min, vartype=float) # default minimum C44 value
-    y_max = get_env('Y_MAX', default=_y_max, vartype=float) # default maximum C44 value
+    y_min = get_env('Y_MIN', default=_y_min, vartype=float) # minimum C44 value
+    y_max = get_env('Y_MAX', default=_y_max, vartype=float) # maximum C44 value
 
     r_min = get_env('R_MIN', default=_r_min, vartype=float) # minimum radius over average particle separation value
     r_max = get_env('R_MAX', default=_r_max, vartype=float) # maximum radius over average particle separation value
 
-    font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)   # plot font size
+    font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)       # plot font size
     marker_size = get_env('MARKER_SIZE', default=_marker_size, vartype=int) # plot marker size
     mpl.rcParams.update({'font.size': font_size, 'lines.markersize': marker_size})
 
-    ratio_legend = get_env('RATIO_LEGEND', default=_ratio_legend, vartype=int)  # width ratio between legend and figure
-    ncol_legend = get_env('NCOL_LEGEND', default=_ncol_legend, vartype=int)     # number of columns for the legend
+    ratio_legend = get_env('RATIO_LEGEND', default=_ratio_legend,
+        vartype=float)                                                      # width ratio between legend and figure
+    ncol_legend = get_env('NCOL_LEGEND', default=_ncol_legend, vartype=int) # number of columns for the legend
 
     wspace = get_env('WSPACE', default=_wspace, vartype=float)  # plots width space
     hspace = get_env('HSPACE', default=_hspace, vartype=float)  # plots height space
 
-    colormap = get_env('COLORMAP', default='jet')   # legend colormap
+    colormap = get_env('COLORMAP', default=_colormap)   # plot colormap
 
     # CALCULATION PARAMETERS
 
     points_x = get_env('POINTS_X', default=_points_x, vartype=int)              # number of radii at which to evaluate integrated strain correlation
-    points_theta = get_env('POINTS_THETA', default=_points_theta, vartype=int)  # default number of angles to evaluate integrated strain correlation
+    points_theta = get_env('POINTS_THETA', default=_points_theta, vartype=int)  # number of angles to evaluate integrated strain correlation
 
     # CALCULATION
 
