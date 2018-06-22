@@ -141,7 +141,8 @@ glossary = Glossary(*map(lambda entry: VarInfo(*entry), (
             r'$N_{cases}$', '{:.2e}'),
         ('r_cut', 'cut-off radius', r'$r_{cut}$', '{:.2e}'),
         ('sigma', 'length scale of Gaussian function', r'$\sigma$', '{:.2e}'),
-        ('box_size', 'length of the box in one dimension', r'$L$', '{:.3e}')
+        ('box_size', 'length of the box in one dimension', r'$L$', '{:.3e}'),
+        ('launch', 'index of simulation launch', 'launch', '{:d}')
     )))
 
 # FILES NAMING
@@ -151,7 +152,7 @@ _movie_extension = '.mp4'   # default movie extension
 
 class _File:
     """
-    Naming files.
+    Naming files and directories.
 
     This is the superclass which provides methods to get and read names for
     all subclasses defined specifically per files which we will call
@@ -182,18 +183,17 @@ class _File:
             List of defined name parts.
         """
 
-        name_parts = []                 # list of defined name parts
-        buffer = self.name              # consecutive defined attributes
-        for param in self.parameters:   # looping through file name parameters
+        name_parts = []                         # list of defined name parts
+        buffer = self.name                      # consecutive defined attributes
+        for param in self.parameters:           # looping through file name parameters
+            buffer += self.parameters[param]    # parameter abbreviation
 
             try:
                 if definitions[param] == None: raise KeyError
-                buffer += str(
-                    self.parameters[param] +                # parameter abbreviation
-                    float_to_letters(definitions[param]))   # defined value of parameter
+                buffer += str(float_to_letters(definitions[param])) # defined value of parameter
 
-            except KeyError:                            # if parameter is not defined
-                if buffer != '': name_parts += [buffer] # add buffer to defined name parts
+            except KeyError:            # if parameter is not defined
+                name_parts += [buffer]  # add buffer to defined name parts
                 buffer = ''
 
         buffer += self.extension   # adding extension to name parts
@@ -624,7 +624,7 @@ class AHB2D(_File):
         ])                  # parameters and corresponding abbreviations (in order)
         self.extension = '' # file extension
 
-    def filename(self, directory=getcwd(), **definitions):
+    def filename(self, directory=getcwd(), define_launch=False, **definitions):
         """
         Returns a list of name parts which the keyword arguments enables to
         define.
@@ -633,6 +633,11 @@ class AHB2D(_File):
         ----------
         directory : string
             Directory in which the folder will be created.
+        define_launch : bool
+            Set launch number as function of the number of directories with
+            identical parameters already existing, if launch number not
+            defined. (default: False)
+            NOTE: if True, definitions have to ENTIRELY define directory name.
 
         Optional keyword arguments
         --------------------------
@@ -645,11 +650,10 @@ class AHB2D(_File):
             List of defined name parts.
         """
 
-        if not('launch' in definitions):    # launch number not defined
+        if define_launch and not('launch' in definitions):  # launch number to be defined
             definitions['launch'] = len(super().get_files(**definitions,
                 launch=None))
         return super().filename(**definitions)
-
 
 def endpoint():
     """
