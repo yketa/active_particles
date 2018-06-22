@@ -22,7 +22,8 @@ export AP_MSD="python ${AP_DIR}/analysis/msd.py"
 export AP_VARN="python ${AP_DIR}/analysis/varn.py"
 
 # PLOTS
-export AP_C44="python ${AP_DIR}/plot/c44.py"
+alias ap_c44="python ${AP_DIR}/plot/c44.py"
+alias ap_pphiloc="python ${AP_DIR}/plot/pphiloc.py"
 
 # FUNCTIONS
 . ${AP_DIR}/exponents.sh # translations between floats and litteral expressions
