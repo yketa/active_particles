@@ -557,7 +557,7 @@ class FFT2Dfilter:
         self.signalFFT = np.array(signalFFT)    # signal fast Fourier transform
 
         if not('wave_vectors' in kwargs):                                       # no input wave vectors
-            self.wave_vectors = wave_vectors_2D(*self.signalFFT, d=d)           # wave vectors corresponding to signalFFT components
+            self.wave_vectors = wave_vectors_2D(*self.signalFFT.shape[:2], d=d) # wave vectors corresponding to signalFFT components
         else: self.wave_vectors = np.array(kwargs['wave_vectors'])
         self.wave_vectors_norm = np.sqrt(np.sum(self.wave_vectors**2, axis=-1)) # wave vectors norm
 
@@ -571,7 +571,7 @@ class FFT2Dfilter:
             Signal from inverse fast Fourier transform.
         """
 
-        return np.fft.ifft2(self.signalFFT)
+        return np.fft.ifft2(self.signalFFT, axes=(0, 1))
 
     def cut_low_wave_frequencies(self, threshold):
         """
