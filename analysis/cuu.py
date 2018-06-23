@@ -164,7 +164,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from active_particles.plot.mpl_tools import GridCircle
 
 def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
-	u_traj, dL):
+	u_traj):
     """
     Calculates displcament grid from square uniform coarse-graining.
 
@@ -175,7 +175,7 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
     new_box_size : float
 		Length of the considered system's square box.
     centre : float array
-        Centre f the box.
+        Centre of the box.
 	Ncases : int
 		Number of boxes in each direction to compute the displacements.
 	time : int
@@ -187,9 +187,6 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
 		Wrapped trajectory object.
 	u_traj : active_particles.dat.Dat
 		Unwrapped trajectory object.
-	dL : float
-        Grid boxes separation.
-        NOTE: Equal to box_size/Ncases.
 
     Returns
     -------
@@ -218,7 +215,7 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
     return ugrid
 
 def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
-	dt, w_traj, u_traj, dL):
+	dt, w_traj, u_traj):
 	"""
 	Calculates grids of displacement (from
 	active_particles.analysis.cuu.displacement_grid), density, relative
@@ -231,7 +228,7 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
     new_box_size : float
 		Length of the considered system's square box.
     centre : float array
-        Centre f the box.
+        Centre of the box.
 	Ncases : int
 		Number of boxes in each direction to compute the displacements.
 	time : int
@@ -243,9 +240,6 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
 		Wrapped trajectory object.
 	u_traj : active_particles.dat.Dat
 		Unwrapped trajectory object.
-	dL : float
-        Grid boxes separation.
-        NOTE: Equal to box_size/Ncases.
 
     Returns
     -------
@@ -265,7 +259,7 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
 	"""
 
 	ugrid = displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
-		w_traj, u_traj, dL)	# displacement grid
+		w_traj, u_traj)	# displacement grid
 
 	wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
 
