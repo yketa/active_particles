@@ -1,5 +1,9 @@
 """
-Module correlations provides functions to calculate 2D fields correlations.
+Module correlations provides functions to calculate 2D fields
+auto-correlations.
+
+A brief description of the algorithm can be found at:
+https://yketa.github.io/UBC_2018_Wiki/#Discrete%20field%20auto-correlation
 """
 
 import numpy as np
