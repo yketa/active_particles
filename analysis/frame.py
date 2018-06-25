@@ -163,6 +163,21 @@ from collections import OrderedDict
 
 import subprocess
 
+# DEFAULT VARIABLES
+
+_frame_per = 1      # default frame rendering period
+_frame_max = 1000   # default maximum number of frames
+
+_frame_ver = 12 # default vertical size of the frames (in inches)
+_frame_hor = 16 # default horizontal size of the frames (in inches)
+_frame_def = 80 # default definition of images (in dots per inches (dpi))
+
+_arrow_width = 1e-3                         # default width of the arrows
+_arrow_head_width = _arrow_width*3e2        # default width of the arrows' head
+_arrow_head_length = _arrow_head_width*1.5  # default length of the arrows' head
+
+# FUNCTIONS AND CLASSES
+
 class _Frame:
     """
     This class is designed as the superclass of all other plotting classes
@@ -505,18 +520,7 @@ class Displacement(_Frame):
             self.draw_arrow(particle, *normalise1D(displacement)
                 *0.75*self.diameters[particle])                     # draw displacement direction arrow
 
-# DEFAULT VARIABLES
-
-_frame_per = 1      # default frame rendering period
-_frame_max = 1000   # default maximum number of frames
-
-_frame_ver = 12 # default vertical size of the frames (in inches)
-_frame_hor = 16 # default horizontal size of the frames (in inches)
-_frame_def = 80 # default definition of images (in dots per inches (dpi))
-
-_arrow_width = 1e-3                         # default width of the arrows
-_arrow_head_width = _arrow_width*3e2        # default width of the arrows' head
-_arrow_head_length = _arrow_head_width*1.5  # default length of the arrows' head
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 

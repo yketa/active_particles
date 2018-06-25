@@ -90,6 +90,18 @@ if not(get_env('SHOW', default=False, vartype=bool)):
 	mpl.use('Agg')	# avoids crash if launching without display
 import matplotlib.pyplot as plt
 
+# DEFAULT VARIABLES
+
+_init_frame = -1	# default frame to consider as initial
+_int_max = 1		# default maximum number of frames on which to calculate densities
+
+_box_size = 10  # default length of the square box in which particles are counted
+
+_Nbins = 10 # default number of bins for the histogram
+_phimax = 1 # default maximum local density for histogram
+
+# FUNCTIONS AND CLASSES
+
 def density(w_traj, frame, Ncases, box_size):
     """
     Returns local densities in squares of length box_size around
@@ -221,15 +233,7 @@ def plot(bins, hist):
         image_name, = naming_varN.image().filename(**attributes)
         fig.savefig(joinpath(data_dir, image_name))
 
-# DEFAULT VARIABLES
-
-_init_frame = -1	# default frame to consider as initial
-_int_max = 1		# default maximum number of frames on which to calculate densities
-
-_box_size = 10  # default length of the square box in which particles are counted
-
-_Nbins = 10 # default number of bins for the histogram
-_phimax = 1 # default maximum local density for histogram
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 

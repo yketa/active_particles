@@ -3,6 +3,9 @@ Module msd calculates or plots mean square displacements.
 
 Files are saved according to the active_particles.naming.Msd standard.
 
+A brief description of the algorithm can be found at:
+https://yketa.github.io/UBC_2018_Wiki/#Mean%20square%20displacement
+
 Environment modes
 -----------------
 COMPUTE : bool
@@ -87,6 +90,14 @@ import matplotlib.pyplot as plt
 
 from active_particles.plot.mpl_tools import FittingLine
 
+# DEFAULT VARIABLES
+
+_slope0 = 1     # default initial slope of fitting line
+_slope_min = 0  # default minimum slope of fitting line
+_slope_max = 3  # default maximum slope of fitting line
+
+# FUNCTIONS AND CLASSES
+
 def square_displacement(u_traj, frame, dt):
     """
     Returns square displacement without mean drift between frames frame and
@@ -110,11 +121,7 @@ def square_displacement(u_traj, frame, dt):
     displacements = u_traj.displacement(frame, frame + dt)  # displacements between frame and frame + dt
     return  np.sum(wo_mean(displacements)**2, axis=-1)
 
-# DEFAULT VARIABLES
-
-_slope0 = 1     # default initial slope of fitting line
-_slope_min = 0  # default minimum slope of fitting line
-_slope_max = 3  # default maximum slope of fitting line
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 

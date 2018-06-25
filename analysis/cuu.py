@@ -163,6 +163,25 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from active_particles.plot.mpl_tools import GridCircle
 
+# DEFAULT VARIABLES
+
+_r_min = 1  # default minimum radius for correlations plots
+_r_max = 20	# default maximum radius for correlations plots
+
+_Cuu_min = 1e-3 # default minimum displacement correlation for correlation plots
+_Cuu_max = 1    # default maximum displacement correlation for correlation plots
+
+_Cww_min = 1e-3 # default minimum relative displacement correlation for correlation plots
+_Cww_max = 1    # default maximum relative displacement correlation for correlation plots
+
+_Cdd_min = 1e-1 # default minimum displacement norm correlation for correlation plots
+_Cdd_max = 2    # default maximum displacement norm correlation for correlation plots
+
+_Cee_min = 1e-3 # default minimum displacement direction correlation for correlation plots
+_Cee_max = 1    # default maximum displacement direction correlation for correlation plots
+
+# FUNCTIONS AND CLASSES
+
 def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
 	u_traj):
     """
@@ -476,22 +495,7 @@ def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
         return fig, axs, gc
     except NameError: return fig, axs
 
-# DEFAULT VARIABLES
-
-_r_min = 1  # default minimum radius for correlations plots
-_r_max = 20	# default maximum radius for correlations plots
-
-_Cuu_min = 1e-3 # default minimum displacement correlation for correlation plots
-_Cuu_max = 1    # default maximum displacement correlation for correlation plots
-
-_Cww_min = 1e-3 # default minimum relative displacement correlation for correlation plots
-_Cww_max = 1    # default maximum relative displacement correlation for correlation plots
-
-_Cdd_min = 1e-1 # default minimum displacement norm correlation for correlation plots
-_Cdd_max = 2    # default maximum displacement norm correlation for correlation plots
-
-_Cee_min = 1e-3 # default minimum displacement direction correlation for correlation plots
-_Cee_max = 1    # default maximum displacement direction correlation for correlation plots
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 
