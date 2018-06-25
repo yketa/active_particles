@@ -12,7 +12,7 @@ All scripts (or almost) contain a detailed documentation in their header, access
 ## Requirements
 
 * __active_particles__ was tested on Mac OS X and Linux, thus the installation script should work on these OS only.
-* An environment is set specifically for __active_particles__ with [conda](https://conda.io/miniconda.html), which thus have to be installed.
+* An environment is set specifically for __active_particles__ with [conda](https://conda.io/miniconda.html), which thus has to be installed.
 
 ## Installation
 
@@ -22,7 +22,7 @@ git clone https://github.com/yketa/active_particles
 source active_particles/install.sh
 ```
 
-[`install.sh`](https://github.com/yketa/active_particles/blob/master/install.sh) creates a specific conda environment, sources [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh) — which adds the directory containing __active_particles__ to the Python path, and sets up commands, environment variables and functions — and write to `~/.bash_profile` so the latter is done at each login.
+[`install.sh`](https://github.com/yketa/active_particles/blob/master/install.sh) creates a specific conda environment, sources [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh) — which adds the directory containing __active_particles__ to the Python path, and sets up commands, environment variables and functions — and writes to `~/.bash_profile` so the latter is done at each login.
 
 __Remark:__ This is not an installation _stricto sensu_, all scripts can be used as they come without running [`install.sh`](https://github.com/yketa/active_particles/blob/master/install.sh). However, running it then using the defined commands and environment variables makes sure everything works as expected.
 
