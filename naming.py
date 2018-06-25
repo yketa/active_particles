@@ -357,32 +357,68 @@ class _CorFile(_File):
             self.parameters = OrderedDict(chain(self.parameters.items(),
                 OrderedDict([('x_zero', '_X'), ('y_zero', '_Y')]).items()))
 
-class Css(_CorFile):
+class _ShearStrainVorticity(_CorFile):
     """
-    Naming shear strain maps and shear strain correlation files.
+    Naming shear strain and displacement vorticity files.
     """
 
-    def __init__(self):
+    def __init__(self, name, from_ft=False):
         """
         Architecture of file name.
+
+        Parameters
+        ----------
+        name : string
+            Generic name.
+        from_ft : bool
+            Calculation of shear strain in real space (False) or in Fourier
+            space (True).
         """
 
-        super().__init__('Css', ext_parameters=OrderedDict([('r_cut', '_RCUT'),
-            ('sigma', '_SIGM')]))   # initialise with superclass
+        if from_ft: # calculation in Fourier space
+            name += 'ft'
+            ext_parameters = OrderedDict()
+        else:       # calculation in real space
+            ext_parameters = OrderedDict([('r_cut', '_RCUT'),
+                ('sigma', '_SIGM')])
 
-class Ccc(_CorFile):
+        super().__init__(name, ext_parameters=ext_parameters)   # initialise with superclass
+
+class Css(_ShearStrainVorticity):
     """
-    Naming displacement vorticity maps and displacement vorticity correlation
-    files.
+    Naming shear strain files.
     """
 
-    def __init__(self):
+    def __init__(self, from_ft=False):
         """
         Architecture of file name.
+
+        Parameters
+        ----------
+        from_ft : bool
+            Calculation of shear strain in real space (False) or in Fourier
+            space (True).
         """
 
-        super().__init__('Ccc', ext_parameters=OrderedDict([('r_cut', '_RCUT'),
-            ('sigma', '_SIGM')]))   # initialise with superclass
+        super().__init__('Css', from_ft=from_ft)    # initialise with superclass
+
+class Ccc(_ShearStrainVorticity):
+    """
+    Naming displacement vorticity files.
+    """
+
+    def __init__(self, from_ft=False):
+        """
+        Architecture of file name.
+
+        Parameters
+        ----------
+        from_ft : bool
+            Calculation of displacement vorticity in real space (False) or in
+            Fourier space (True).
+        """
+
+        super().__init__('Ccc', from_ft=from_ft)    # initialise with superclass
 
 class Cuu(_CorFile):
     """
