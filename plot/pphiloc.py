@@ -97,7 +97,7 @@ from active_particles.init import get_env
 
 from os import getcwd
 from os import environ as envvar
-envvar['SHOW'] = 'True'
+if __name__ == '__main__': envvar['SHOW'] = 'True'
 from os.path import join as joinpath
 
 from active_particles.analysis.varn import _int_max, _box_size, _Nbins,\
@@ -139,6 +139,8 @@ _contours = 20      # default contour level value
 
 _font_size = 15         # default font size for the plot
 _colormap = 'inferno'   # default plot colormap
+
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 
