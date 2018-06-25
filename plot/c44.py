@@ -61,22 +61,22 @@ Y_ZERO : float
 	DEFAULT: 0
 Y_MIN : float
     Minimum C44 value.
-    DEFAULT: active_particles.plot.c44._y_min
+    DEFAULT: active_particles.analysis.css._y_min_c44
 Y_MAX : float
     Maximum C44 value.
-    DEFAULT: active_particles.plot.c44._y_max
+    DEFAULT: active_particles.analysis.css._y_max_c44
 R_MIN : float
     Minimum radius over average particle separation value.
-    DEFAULT: active_particles.plot.c44._r_min
+    DEFAULT: active_particles.analysis.css._r_min_c44
 R_MAX : float
     Maximum radius over average particle separation value.
-    DEFAULT: active_particles.plot.c44._r_max
+    DEFAULT: active_particles.analysis.css._r_max_c44
 POINTS_X : int
     Number of radii at which to evaluate integrated strain correlation.
-    DEFAULT: active_particles.plot.c44._points_x
+    DEFAULT: active_particles.analysis.css._points_x_c44
 POINTS_THETA : int
     Number of angles to evaluate integrated strain correlation.
-    DEFAULT: active_particles.plot.c44._points_theta
+    DEFAULT: active_particles.analysis.css._points_theta_c44
 FONT_SIZE : int
     Plot font size.
     DEFAULT: active_particles.plot.c44._font_size
@@ -100,13 +100,13 @@ COLORMAP : string
     DEFAULT: active_particles.plot.c44._colormap
 SLOPE [FITTING_LINE mode] : float
 	Initial slope for fitting line.
-	DEFAULT: active_particles.plot.c44._slope0
+	DEFAULT: active_particles.analysis.css._slope0_c44
 SLOPE_MIN [FITTING_LINE mode] : float
 	Minimum slope for fitting line.
-	DEFAULT: active_particles.plot.c44._slope_min
+	DEFAULT: active_particles.analysis.css._slope_min_c44
 SLOPE_MAX [FITTING_LINE mode] : float
 	Maximum slope for fitting line.
-	DEFAULT: active_particles.plot.c44._slope_max
+	DEFAULT: active_particles.analysis.css._slope_max_c44
 """
 
 import active_particles.naming as naming
@@ -115,14 +115,16 @@ from active_particles.init import get_env
 
 from os import getcwd
 from os import environ as envvar
-envvar['SHOW'] = 'True'
+if __name__ == '__main__': envvar['SHOW'] = 'True'
 from os.path import join as joinpath
 
-from active_particles.analysis.correlations import CorGrid
+from active_particles.analysis.css import Css2DtoC44, _slope0_c44 as _slope0,\
+    _slope_min_c44 as _slope_min, _slope_max_c44 as _slope_max,\
+    _points_x_c44 as _points_x, _points_theta_c44 as _points_theta,\
+    _y_min_c44 as _y_min, _y_max_c44 as _y_max,\
+    _r_min_c44 as _r_min, _r_max_c44 as _r_max
 from active_particles.plot.plot import list_colormap
 from active_particles.plot.mpl_tools import FittingLine
-
-from active_particles.analysis.css import _r_cut
 
 from math import ceil
 
@@ -136,66 +138,9 @@ from matplotlib.gridspec import GridSpec
 import matplotlib.patches as mpatches
 from matplotlib.lines import Line2D
 
-class Css2DtoC44:
-    """
-    Calculates C44 as projection of 2D shear strain correlations on
-    cos(4\\theta).
-    """
-
-    def __init__(self, box_size, points_x, points_theta,
-        r_min, r_max):
-        """
-        Sets parameters for C44 integration.
-
-        Parameters
-        ----------
-        box_size : float
-            Size of the square box to consider.
-        points_x : int
-            Number of radii at which to evaluate integrated strain correlation.
-        points_theta : int
-            Number of angles to evaluate integrated strain correlation.
-        r_min : float
-            Minimum radius.
-        r_max : float
-            Maximum radius.
-        """
-
-        self.box_size = box_size
-
-        self.points_x = points_x
-        self.points_theta = points_theta
-
-        self.r_min = r_min
-        self.r_max = r_max
-        self.c44_x = np.linspace(self.r_min, self.r_max, self.points_x)
-
-    def get_C44(self, Css2D):
-        """
-        From 2D strain correlations Css2D, returns values of C44 at
-        self.points_x radii between r_max and r_min.
-
-        Parameters
-        ----------
-        Css2D : 2D array-like
-            Shear strain correlation grid.
-
-        Returns
-        -------
-        C44 : 2D Numpy array
-            List of [r, C44(r)].
-        """
-
-        self.css2Dgrid = CorGrid(Css2D, self.box_size)  # shear strain 2D CorGrid object
-        self.c44 = np.array(list(map(
-            lambda r: [r, self.css2Dgrid.integrate_over_angles(r,
-            projection=lambda theta: np.cos(4*theta)/np.pi,
-            points_theta=self.points_theta)],
-            self.c44_x)))
-
-        return self.c44
-
 # DEFAULT VARIABLES
+
+_r_cut = 2	# default cut-off radius for coarse graining function
 
 _font_size = 10     # default plot font size
 _marker_size = 20   # default plot marker size
@@ -208,17 +153,7 @@ _hspace = 0.05  # default plots height space
 
 _colormap = 'jet'   # default plot colormap
 
-_slope0 = -2    # default initial slope for fitting line slider
-_slope_min = -5 # default minimum slope for fitting line slider
-_slope_max = 0  # default maximum slope for fitting line slider
-
-_points_x = 100     # default number of radii at which to evaluate integrated strain correlation
-_points_theta = 100 # default number of angles to evaluate integrated strain correlation
-
-_y_min = 1e-4   # default minimum C44 value
-_y_max = 2e-1   # default maximum C44 value
-_r_min = 1      # default minimum radius over average particle separation value
-_r_max = 20     # default maximum radius over average particle separation value
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 

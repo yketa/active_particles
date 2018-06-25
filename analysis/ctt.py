@@ -1,10 +1,12 @@
 """
 Module ctt calculates or plots mean squared cross and dot products of
-normalised wave vectors and displacement Fourier transform, as well as strain
-correlations from these variables.
+normalised wave vectors and displacement Fourier transform, strain
+correlations from these variables, and density correlations from calculated
+displacement grids.
 
-Files are saved according to active_particles.naming.Ctt (cross product) and
-active_particles.naming.Cll (dot product) naming standard.
+Files are saved according to active_particles.naming.Ctt (cross product),
+active_particles.naming.Cll (dot product) and active_particles.naming.Cnn
+(density correlations) naming standards.
 
 Environment modes
 -----------------
@@ -103,35 +105,35 @@ R_MAX_CSS [STRAIN_CORRELATIONS mode] : float
 	DEFAULT: active_particles.analysis.css._r_max
 POINTS_X_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
 	Number of radii at which to evaluate integrated strain correlation.
-	DEFAULT: active_particles.plot.c44._points_x
+	DEFAULT: active_particles.analysis.css._points_x_c44
 POINTS_THETA_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
 	Number of angles to evaluate integrated strain correlation.
-	DEFAULT: active_particles.plot.c44._points_theta
+	DEFAULT: active_particles.analysis.css._points_theta_c44
 Y_MIN_C44 [STRAIN_CORRELATIONS mode] : float
 	Minimum plot value for C44.
-	DEFAULT: active_particles.plot.c44._y_min
+	DEFAULT: active_particles.analysis.css._y_min_c44
 Y_MAX_C44 [STRAIN_CORRELATIONS mode] : float
 	Maximum plot value for C44.
-	DEFAULT: active_particles.plot.c44._y_max
+	DEFAULT: active_particles.analysis.css._y_max_c44
 R_MIN_C44 [STRAIN_CORRELATIONS mode] : float
 	Minimum radius in average particle separation for C44 calculation.
-	DEFAULT: active_particles.plot.c44._r_min
+	DEFAULT: active_particles.analysis.css._r_min_c44
 R_MAX_C44 [STRAIN_CORRELATION mode] : float
 	Maximum radius in average particle separation for C44 calculation.
-	DEFAULT: active_particles.plot.c44._r_max
+	DEFAULT: active_particles.analysis.css._r_max_c44
 SLOPE_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : slope
 	Initial slope for fitting line.
-	DEFAULT: active_particles.plot.c44._slope0
+	DEFAULT: active_particles.analysis.css._slope0_c44
 SLOPE_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
 	Minimum slope for fitting line.
-	DEFAULT: active_particles.plot.c44._slope_min
+	DEFAULT: active_particles.analysis.css._slope_min_c44
 SLOPE_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
 	Maximum slope for fitting line.
-	DEFAULT: active_particles.plot.c44._slope_max
+	DEFAULT: active_particles.analysis.css._slope_max_c44
 
 Output
 ------
-[COMPUTE MODE]
+[COMPUTE mode]
 > Prints execution time.
 > Saves wave vectors grid, 2D grid and 1D cylindrical average of mean squared
 cross products of normalised wave vectors and displacement Fourier transform
@@ -150,17 +152,15 @@ import active_particles.naming as naming
 from active_particles.init import get_env, slurm_output
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
-	FFT2Dfilter, divide_arrays
+	divide_arrays
 
 from active_particles.analysis.cuu import displacement_grid, Cnn
-from active_particles.analysis.css import _r_max as _r_max_css
+from active_particles.analysis.css import StrainCorrelations, Css2DtoC44,\
+	_r_max as _r_max_css, _c_min, _c_max, _slope0_c44,\
+	_slope_min_c44, _slope_max_c44, _points_x_c44, _points_theta_c44,\
+	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
-from active_particles.plot.c44 import Css2DtoC44, _points_x as _points_x_c44,\
-	_points_theta as _points_theta_c44, _y_min as _y_min_c44,\
-	_y_max as _y_max_c44, _r_min as _r_min_c44, _r_max as _r_max_c44,\
-	_slope0 as _slope0_c44, _slope_min as _slope_min_c44,\
-	_slope_max as _slope_max_c44
 
 from os import getcwd
 from os import environ as envvar
@@ -185,6 +185,16 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import Slider
+
+# DEFAULT VARIABLES
+
+_r_min = 1		# default minimum wave length for plots
+
+_slope0 = 2		# default initial slope for fitting line
+_slope_min = 0	# default minimum slope for fitting line
+_slope_max = 4	# default maximum slope for fitting line
+
+# FUNCTIONS AND CLASSES
 
 def plot_product(product, ax):
 	"""
@@ -251,7 +261,7 @@ def plot_dot(ax):
 
 	return dot
 
-class StrainCorrelations:
+class StrainCorrelationsCMSD(StrainCorrelations):
 	"""
 	Manipulate and plot strain correlations, computed from dot and cross
 	products of normalised wave vector and displacement Fourier transform.
@@ -286,29 +296,6 @@ class StrainCorrelations:
 				*self.kxsq*self.kysq,
 				self.ksq)
 			+ self.k_cross_FFTugrid2D_sqnorm*self.ksq/4)	# Fourier transform of strain correlations
-
-	def strain_correlations(self, r_cut=0):
-		"""
-		Compute strain correlations from inverse fast Fourier transform of
-		self.strain_correlations_FFT with low wave lengths cut at r_cut.
-
-		Parameters
-		----------
-		r_cut : float
-			Wave length cut-off radius, equivalent to coarse-graining cut-off
-			radius.
-
-		Returns
-		-------
-		sc : Numpy array
-			Strain correlations.
-		"""
-
-		sc = (FFT2Dfilter(self.strain_correlations_FFT,
-			wave_vectors=self.wave_vectors)
-			.cut_low_wave_lengths(r_cut)
-			.get_signal()).real
-		return sc/sc[0, 0]	# correlation normalisation
 
 	def plot(self, box_size, r_max_css, av_p_sep,
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
@@ -437,20 +424,6 @@ class StrainCorrelations:
 
 	# METHODS CALLED BY SELF.PLOT()
 
-	def strain_correlations_corgrid(self):
-		"""
-		Define strain correlations grid, with wave length cut-off radius
-		self.r_cut equivalent to coarse-graining cut-off radius.
-
-		Returns
-		-------
-		corgrid : active_particles.analysis.correlations.CorGrid
-			Strain correlations CorGrid object.
-		"""
-
-		sc = self.strain_correlations(r_cut=self.r_cut)	# strain correlations grid
-		return CorGrid(sc, self.box_size, display_size=2*self.r_max_css)
-
 	def css2Dtoc44(self, css2D):
 		"""
 		Returns strain correlations projected on cos(4 \\theta) from strain
@@ -481,14 +454,6 @@ class StrainCorrelations:
             self.toC44.c44_x/2)))
 		c44[:, 1] /= css
 		return c44
-
-	def update_r_cut(self, val):
-		"""
-		Updates cut-off radius on slider change.
-		"""
-
-		self.r_cut = self.slider.val	# new cut-off radius
-		self.draw()						# updates figure
 
 	def update_r_cut_line(self, event):
 		"""
@@ -630,7 +595,7 @@ def plot():
 
 		cor_name = r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$'	# name of the plotted correlation
 
-		sc = StrainCorrelations(wave_vectors,
+		sc = StrainCorrelationsCMSD(wave_vectors,
 		    k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
 		to_return += (sc,)
 		sc.plot(parameters['box_size'], r_max_css,
@@ -719,16 +684,7 @@ def plot():
 
 	return to_return
 
-# DEFAULT VARIABLES
-
-_r_min = 1		# default minimum wave length for plots
-
-_c_min = -0.2	# default minimum value for correlations
-_c_max = 1		# default maximum value for correlations
-
-_slope0 = 2		# default initial slope for fitting line
-_slope_min = 0	# default minimum slope for fitting line
-_slope_max = 4	# default maximum slope for fitting line
+# SCRIPT
 
 if __name__ == '__main__':  # executing as script
 
