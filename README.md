@@ -27,13 +27,13 @@ __Remark:__ This is not an installation _stricto sensu_, all scripts can be used
 ## Useful commands
 
 * `ap_python`: Python executable in the __active_particles__ conda environment.
-* `ap_update`: Pull git repository.
+* `ap_update`: Pull git repository and source [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh).
 
 ## Usage
 
 All modules (or almost) contain a detailed documentation in their header, accessible through Python with the built-in function `help(module_name)`. Scripts' headers should contain a detailed list of parameters to set as environment variables when executing them.
 
-For example, to launch the script [`analysis/cuu.py`](https://github.com/yketa/active_particles/blob/master/analysis/cuu.py) — which computes displacement correlations — with parameters:
+For example, to launch the script [`analysis/cuu.py`](https://github.com/yketa/active_particles/blob/master/analysis/cuu.py) — which computes displacement correlations — one can use the environment variable `AP_CUU` set by [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh). With parameters:
 
 * compute displacement correlations = True,
 * lag time = 10,
