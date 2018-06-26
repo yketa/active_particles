@@ -5,6 +5,9 @@ as their correlations.
 Files are saved according to active_particles.naming.Css (shear strain) and
 active_particles.naming.Ccc (displacement vorticity) standards.
 
+A brief description of the algorithm can be found at:
+https://yketa.github.io/UBC_2018_Wiki/#Shear%20strain%20and%20vorticity%20fields
+
 Environment modes
 -----------------
 COMPUTE : bool

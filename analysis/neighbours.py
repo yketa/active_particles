@@ -2,6 +2,9 @@
 Module neighbours defines the object NeighboursGrid, which is initiated by
 calculating the neighbours grid and allows one to then access neighbouring
 particles of any point.
+
+A brief description of the algorithm can be found at:
+https://yketa.github.io/UBC_2018_Wiki/#Neighbours%20grids
 """
 
 import numpy as np

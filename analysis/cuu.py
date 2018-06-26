@@ -7,6 +7,9 @@ active_particles.naming.Cdd (displacement norm correlation),
 active_particles.naming.Cee (displacement direction correlation) and
 active_particles.naming.Cnn (density correlation).
 
+A brief description of the algorithm can be found at:
+https://yketa.github.io/UBC_2018_Wiki/#Displacement%20correlations
+
 Environment modes
 -----------------
 COMPUTE : bool

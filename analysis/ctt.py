@@ -8,6 +8,9 @@ Files are saved according to active_particles.naming.Ctt (cross product),
 active_particles.naming.Cll (dot product) and active_particles.naming.Cnn
 (density correlations) naming standards.
 
+A brief description of the algorithm can be found at:
+https://yketa.github.io/UBC_2018_Wiki/#Collective%20mean%20square%20displacements
+
 Environment modes
 -----------------
 COMPUTE : bool
