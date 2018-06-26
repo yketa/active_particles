@@ -61,12 +61,12 @@ INTERVAL_MAXIMUM : int
 	Maximum number of intervals of length dt considered in correlations
 	calculations.
 	DEFAULT: 1
-R_CUT : float
+R_CUT [not(FROM_FT) mode] : float
 	Cut-off radius for coarse graining function.
 	NOTE: Value of R_CUT is then multiplied by average particle diameter from
 	      simulation parameters file.
 	DEFAULT: active_particles.analysis.css._r_cut
-SIGMA : float
+SIGMA [not(FROM_FT) mode] : float
 	Length scale of the spatial extent of the coarse graining function.
 	DEFAULT: R_CUT
 N_CASES : int
