@@ -7,8 +7,6 @@ This repository contains scripts, for simulation and analysis purposes, develope
 
 Simulation scripts rely on the [HOOMD-blue](https://glotzerlab.engin.umich.edu/hoomd-blue/) simulation toolkit to perform molecular dynamics simulation of active particles.
 
-All scripts (or almost) contain a detailed documentation in their header, accessible through Python with the built-in function `help(module_name)`.
-
 ## Requirements
 
 * __active_particles__ was tested on Mac OS X and Linux, thus the installation script should work on these OS only.
@@ -30,6 +28,29 @@ __Remark:__ This is not an installation _stricto sensu_, all scripts can be used
 
 * `ap_python`: Python executable in the __active_particles__ conda environment.
 * `ap_update`: Pull git repository.
+
+## Usage
+
+All modules (or almost) contain a detailed documentation in their header, accessible through Python with the built-in function `help(module_name)`. Scripts' headers should contain a detailed list of parameters to set as environment variables when executing them.
+
+For example, to launch the script [`analysis/cuu.py`](https://github.com/yketa/active_particles/blob/master/analysis/cuu.py) — which computes displacement correlations — with parameters:
+
+* compute displacement correlations = True,
+* lag time = 10,
+* numbers of intervals of time considered = 10,
+
+and all other parameters set to default, the program is launched the following way
+```bash
+yketa@yketa: ~/active_particles_data/Dk8000_Vj1000_Rg2000_Nq1000_Ll0000 $ COMPUTE=True TIME=10 INTERVAL_MAXIMUM=10 $AP_CUU
+Execution time: 0:01:26.969770
+```
+and will output its execution time. Launching the program to plot the calculated data is done similarly
+```bash
+yketa@yketa: ~/active_particles_data/Dk8000_Vj1000_Rg2000_Nq1000_Ll0000 $ SHOW=True PLOT=True R_MAX=50 AXIS=LINLOG TIME=10 INTERVAL_MAXIMUM=10 $AP_CUU
+```
+and will make plotting windows appear.
+
+![Example of Cuu plot](https://github.com/yketa/active_particles/raw/master/docs/screenshot_cuu.png)
 
 ## Important modules
 
