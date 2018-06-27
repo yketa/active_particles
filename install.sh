@@ -15,12 +15,13 @@ This program will install the dependencies of the active_particles package and s
 
 # CREATE ACTIVE_PARTICLES CONDA ENVIRONMENT
 
-printf "Creating conda environment: active_particles_env\n"
+echo "Creating conda environment: active_particles_env"
+command -v conda >/dev/null 2>&1 || { echo >&2 "conda not installed. Please visit https://conda.io/miniconda.html. Aborting."; exit 0; }
 conda env create --force -f ${AP_DIR}/environment.yml
 
 # SET UP ACTIVE_PARTICLES
 
-printf "\nSetting up package.\n"
+echo "Setting up package."
 
 # add setup command to bash profile
 printf "
@@ -28,6 +29,11 @@ printf "
 . ${AP_DIR}/setup.sh\n\n" >> ~/.bash_profile
 # set up for this session
 . ${AP_DIR}/setup.sh
+
+# CREATING SIMULATION DIRECTORY
+
+echo "Creating simulation directory in home directory."
+mkdir -p $(ap_python -c "from active_particles.naming import sim_directory; print(sim_directory)")
 
 # DONE
 
