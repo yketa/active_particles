@@ -121,7 +121,7 @@ _dr = 3e-4      # default rotation diffusion constant
 _dr_min = 1e-5  # default minimum diffusion rotation constant
 _dr_max = 1e-2  # default maximum diffusion rotation constant
 
-_vzero = 1e-2  # default self-propulsion velocity
+_vzero = 1e-2   # default self-propulsion velocity
 
 _vzero_min = 1e-2   # default minimum self-propulsion velocity
 _vzero_max = 1e-1   # default maximum self-propulsion velocity
@@ -180,7 +180,7 @@ if __name__ == '__main__':  # executing as script
     excluded_directories = get_env('EXCLUDE', default='')               # directories to exclude
 
     parameters_file = get_env('PARAMETERS_FILE',
-        default= naming.parameters_file)    # simulations parameters file
+        default=naming.parameters_file) # simulations parameters file name
 
     density = get_env('DENSITY', default=_density, vartype=float)   # packing fraction of particles
     N = get_env('N', default=_N, vartype=int)                       # number of particles
