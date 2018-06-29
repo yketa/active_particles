@@ -334,6 +334,46 @@ class Cnn:
 		with open(joinpath(dir, self.filename), 'wb') as dump_file:
 			pickle.dump([self.cnn2D, self.cnn1D], dump_file)
 
+def c1Dtochi(c1D, box_size, r_min=None, r_max=None):
+	"""
+	From displacement-related variable cylindrically averaged correlations,
+	returns cooperativity integrated from r_min to r_max.
+
+	Parameters
+	----------
+	c1D : 1D array
+        Correlation 1D average.
+        NOTE: This has to be of the form (r, c1D(r)) with c1D(r) the averaged
+        2D grid at radius r.
+	box_size : float
+		Simulation box size.
+	r_min : float
+		Lower bound of cooperativity integral. (default: None)
+		NOTE: r_min=None corresponds to r_min=min(c1D[:, 0])
+	r_max : float
+		Higher bound of cooperativity integral. (default: None)
+		NOTE: r_max=None corresponds to r_max=max(c1D[:, 0])
+
+	Returns
+	-------
+	chi : float
+		Cooperativity.
+	"""
+
+	c1D = np.array(sorted(c1D, key=lambda el: el[0]))
+
+	if r_min == None: r_min = np.min(c1D[:, 0])
+	if r_max == None: r_max = np.max(c1D[:, 0])
+
+	c1Drmin = np.interp(r_min, c1D[:, 0], c1D[:, 1])	# value of c1D at r_min by linear interpolation
+	c1Drmax = np.interp(r_max, c1D[:, 0], c1D[:, 1])	# value of c1D at r_max by linear interpolation
+
+	r, c = np.transpose([[r, c] for r, c in c1D if r >= r_min and r <= r_max])	# values of radii and c1D at these radii in integration interval
+	r = np.array([r_min, *r, r_max])											# radii with r_min and r_max
+	c = np.array([c1Drmin, *c, c1Drmax])										# c1D values with ones at r_min and r_max
+
+	return np.trapz(2*np.pi*r*c, r)/(box_size**2)
+
 def plot_correlation(C, C2D, C1D, C1Dcor, C_min, C_max, naming_standard,
     **directional_correlations):
     """
@@ -524,7 +564,7 @@ if __name__ == '__main__':  # executing as script
     prep_frames = ceil(parameters['prep_steps']/parameters['period_dump'])	# number of preparation frames (FIRE energy minimisation)
 
     Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
-		vartype=int)        # number of boxes in each direction to compute the shear strain and displacement vorticity grid
+		vartype=int)        # number of boxes in each direction with which to compute the displacement grid
     dL = box_size/Ncases    # boxes separation
 
     Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in unwrapped trajectory file
