@@ -12,13 +12,13 @@ Environment modes
 -----------------
 X_VARIABLE : string
     Plot x-coordinate variable.
-     _____________________________________________________________
-    | Mode    | Variable                    | x-coordinate        |
-    |_________|_____________________________|_____________________|
-    | 'dr'    | Rotation diffusion constant | \\tau = \\log(1/dr) |
-    |_________|_____________________________|_____________________|
-    | 'vzero' | self-propelling velocity    | vzero               |
-    |_________|_____________________________|_____________________|
+     ______________________________________________________
+    | Mode    | Variable                    | x-coordinate |
+    |_________|_____________________________|______________|
+    | 'dr'    | Rotation diffusion constant | \\tau = 1/dr |
+    |_________|_____________________________|______________|
+    | 'vzero' | self-propelling velocity    | vzero        |
+    |_________|_____________________________|______________|
     DEFAULT: dr
 
 Environment parameters
@@ -30,8 +30,8 @@ EXCLUDE : string
     Simulation directories in DATA_DIRECTORY to exclude from the plot.
     DEFAULT:
 PARAMETERS_FILE : string
-    Simulation parameters file.
-    DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
+    Simulation parameters file name.
+    DEFAULT: active_particles.naming.parameters_file
 DENSITY : float
     Packing fraction of particles.
     DEFAULT: active_particles.plot.pphiloc._density
