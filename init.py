@@ -66,7 +66,7 @@ def get_env(var_name, default=None, vartype=str):
         return to_vartype(envvar[var_name], default=default, vartype=vartype)
     except: return default
 
-def get_env_list(var_name, delimiter=';', default=None, vartype=str):
+def get_env_list(var_name, delimiter=':', default=None, vartype=str):
     """
     Returns list from environment variable containing values delimited with
     delimiter to be converted to vartype data type or taken to be default if
