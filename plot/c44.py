@@ -203,7 +203,8 @@ if __name__ == '__main__':  # executing as script
 
     font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)       # plot font size
     marker_size = get_env('MARKER_SIZE', default=_marker_size, vartype=int) # plot marker size
-    mpl.rcParams.update({'font.size': font_size, 'lines.markersize': marker_size})
+    mpl.rcParams.update({'font.size': font_size,
+        'lines.markersize': marker_size})
 
     ratio_legend = get_env('RATIO_LEGEND', default=_ratio_legend,
         vartype=float)                                                      # width ratio between legend and figure

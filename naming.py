@@ -422,7 +422,7 @@ class Ccc(_ShearStrainVorticity):
 
 class Cuu(_CorFile):
     """
-    Naming displacmeent correlation files.
+    Naming displacement correlation files.
     """
 
     def __init__(self):
