@@ -11,6 +11,33 @@ from os import environ as envvar
 import sys
 import atexit
 
+def to_vartype(input, default=None, vartype=str):
+    """
+    Returns input converted to vartype or default if the conversion fails.
+
+    Parameters
+    ----------
+    input : *
+        Input value (of any type).
+    default : *
+        Default value to return if conversion fails.
+    vartype : data type
+        Desired data type. (default: string)
+
+    Returns
+    -------
+    output : vartype or type(default)
+        Input converted to vartype data type or default.
+    """
+
+    if vartype == bool and input == 'False': return False   # special custom case
+
+    try:
+        try:
+            return vartype(input)
+        except ValueError: return vartype(eval(input))
+    except: return default
+
 def get_env(var_name, default=None, vartype=str):
     """
     Returns environment variable with desired data type.
@@ -24,23 +51,51 @@ def get_env(var_name, default=None, vartype=str):
     var_name : string
         Name of environment variable.
     default : *
-        Default value to return if environment variable does not exist or does
-        not evaluate. (default: None)
+        Default value to return if environment variable does not exist or if
+        conversion fails. (default: None)
     vartype : data type
         Desired data type. (default: string)
+
+    Returns
+    -------
+    var : vartype or type(default)
+        Environment variable converted to vartype data type of default.
     """
 
-    try:
-        if vartype == bool and envvar[var_name] == 'False': # special custom case for which we want to return False
-                return False
-        try:
-            return vartype(envvar[var_name])
-        except ValueError:
-            try:
-                return vartype(eval(envvar[var_name]))
-            except ValueError: raise KeyError
-    except KeyError:
-        return default
+    return to_vartype(envvar[var_name], default=default, vartype=vartype)
+
+def get_env_list(var_name, delimiter=';', default=None, vartype=str):
+    """
+    Returns list from environment variable containing values delimited with
+    delimiter to be converted to vartype data type or taken to be default if
+    the conversion fails.
+    NOTE: Returns empty list if the environment variable does not exist or is
+    an empty string.
+
+    Parameters
+    ----------
+    var_name : string
+        Name of environment variable.
+    delimiter : string
+        Pattern which delimits values to be evaluated in environment variable.
+    default : *
+        Default value to return if individual value in environment variable
+        does not exist or if conversion fails. (default: None)
+    vartype : data type
+        Desired data type. (default: string)
+
+    Returns
+    -------
+    var_list : list of vartype of type(default)
+        List of individual environment variables values converted to vartype
+        data type or default.
+    """
+
+    if not(var_name in envvar) or envvar[var_name] == '': return []
+    return list(map(
+        lambda var: to_vartype(var, default=default, vartype=vartype),
+        envvar[var_name].split(delimiter)
+        ))
 
 class StdOut:
     """
