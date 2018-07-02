@@ -59,10 +59,10 @@ def list_colormap(value_list, colormap='jet'):
     """
 
     cmap = plt.get_cmap(colormap)                               # colormap
-    norm = colors.Normalize(vmin=0, vmax=len(value_list) - 1)   # normalise colormap according to list index
+    norm = colors.Normalize(vmin=0, vmax=len(value_list) + 1)   # normalise colormap according to list index
     scalarMap = cmx.ScalarMappable(norm=norm, cmap=cmap)        # associates scalar to color
 
-    return {value_list[index]: scalarMap.to_rgba(index)
+    return {value_list[index]: scalarMap.to_rgba(index + 1)
         for index in range(len(value_list))}
 
 def list_markers(value_list, marker_list=_markers):
