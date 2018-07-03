@@ -10,7 +10,7 @@ active_particles.naming.VarN naming standard.
 
 Environment modes
 -----------------
-X_VARIABLE : string
+VARIABLE : string
     Plot x-coordinate variable.
      ______________________________________________________
     | Mode    | Variable                    | x-coordinate |
@@ -20,6 +20,9 @@ X_VARIABLE : string
     | 'vzero' | self-propelling velocity    | vzero        |
     |_________|_____________________________|______________|
     DEFAULT: dr
+PECLET : bool
+    Plot as function of the Péclet number Pe = vzero/dr.
+    DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -146,7 +149,8 @@ if __name__ == '__main__':  # executing as script
 
     # VARIABLES DEFINITIONS
 
-    mode = get_env('X_VARIABLE', default='dr')  # plotting mode
+    mode = get_env('VARIABLE', default='dr')                # plotting mode
+    peclet = get_env('PECLET', default=True, vartype=bool)  # display Péclet number rather than mode variable
 
     if mode == 'dr':
 
@@ -157,9 +161,11 @@ if __name__ == '__main__':  # executing as script
         var_min = get_env('DR_MIN', default=_dr_min, vartype=float) # minimum rotation diffusion constant
         var_max = get_env('DR_MAX', default=_dr_max, vartype=float) # maximum rotation diffusion constant
 
-        x_func = lambda x: np.log10(1/x)    # x-coordinate as function of plot variable
-
-        x_label = r'$\log( \tau_r \equiv \tilde{\nu}_r^{-1})$'  # x-coordinate label
+        if peclet:
+            x_func = lambda x: np.log10(vzero/x)                    # x-coordinate as function of plot variable
+        else:
+            x_func = lambda x: np.log10(1/x)                        # x-coordinate as function of plot variable
+            x_label = r'$\log(\tau_r \equiv \tilde{\nu}_r^{-1})$'   # x-coordinate label
 
     elif mode == 'vzero':
 
@@ -170,11 +176,15 @@ if __name__ == '__main__':  # executing as script
         var_min = get_env('VZERO_MIN', default=_vzero_min, vartype=float)   # minimum self-propulsion velocity
         var_max = get_env('VZERO_MAX', default=_vzero_max, vartype=float)   # maximum self-propulsion velocity
 
-        x_func = lambda x: x    # x-coordinate as function of plot variable
-
-        x_label = r'$\tilde{v}$'  # x-coordinate label
+        if peclet:
+            x_func = lambda x: np.log10(x/dr)   # x-coordinate as function of plot variable
+        else:
+            x_func = lambda x: np.log10(x)      # x-coordinate as function of plot variable
+            x_label = r'$\log(\tilde{v})$'      # x-coordinate label
 
     else: raise ValueError('Mode %s is not known.' % mode)  # mode is not known
+
+    if peclet: x_label = r'$\log(Pe)$'  # x-coordinate label
 
     data_dir = get_env('DATA_DIRECTORY', default=naming.sim_directory)  # data directory
     excluded_directories = get_env('EXCLUDE', default='')               # directories to exclude
