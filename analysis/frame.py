@@ -113,6 +113,9 @@ FRAME_HORIZONTAL_SIZE : float
 FRAME_DEFINITION [SAVE mode] : float
     Definition of image (in dots per inches (dpi)).
     DEFAULT: active_particles.analysis.frame._frame_def
+FONT_SIZE : int
+    Font size.
+    DEFAULT: active_particles.analysis.frame._font_size
 FIGURE_NAME [SAVE mode] : string
     Custom figure name.
     DEFAULT: according to naming standard
@@ -175,6 +178,8 @@ _frame_def = 80 # default definition of images (in dots per inches (dpi))
 _arrow_width = 1e-3                         # default width of the arrows
 _arrow_head_width = _arrow_width*3e2        # default width of the arrows' head
 _arrow_head_length = _arrow_head_width*1.5  # default length of the arrows' head
+
+_font_size = 20 # font size
 
 # FUNCTIONS AND CLASSES
 
@@ -589,8 +594,9 @@ if __name__ == '__main__':  # executing as script
     mpl.rcParams['figure.figsize'] = (frame_hor, frame_ver)
 
     frame_def = get_env('FRAME_DEFINITION', default=_frame_def,
-        vartype=float)  # definition of image (in dots per inches (dpi))
-    mpl.rcParams['savefig.dpi'] = frame_def
+        vartype=float)                                                  # definition of image (in dots per inches (dpi))
+    font_size = get_env('FONT_SIZE', default=_font_size, vartype=float) # font size
+    mpl.rcParams.update({'savefig.dpi': frame_def, 'font.size': font_size})
 
     arrow_width = get_env('ARROW_WIDTH', default=_arrow_width,
         vartype=float)  # width of the arrows
@@ -598,6 +604,8 @@ if __name__ == '__main__':  # executing as script
         vartype=float)  # width of the arrows' head
     arrow_head_length = get_env('HEAD_LENGTH', default=_arrow_head_length,
         vartype=float)  # length of the arrows' head
+
+
 
     # LEGEND SUPTITLE
 
