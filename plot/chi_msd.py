@@ -42,7 +42,7 @@ CORRELATION : string
     |______|______________________________________________________|
     | Cdd  | displacement norm                                    |
     |______|______________________________________________________|
-    | Cee  | displacment direction                                |
+    | Cee  | displacement direction                               |
     |______|______________________________________________________|
     DEFAULT: Cuu
 DRDT : bool
