@@ -314,7 +314,6 @@ if __name__ == '__main__':  # executing as script
 
     if peclet: x_label = r'$Pe$'    # x-coordinate label
 
-
     cor = get_env('CORRELATION', default='Cuu') # correlation variable
 
     if cor == 'Cuu':    # cooperativities from
