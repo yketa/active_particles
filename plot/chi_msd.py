@@ -1,6 +1,6 @@
 """
-Module chi_msd plots cooperativities, maximum cooperativites, times of
-maximum cooperativites and mean square displacements for either different
+Module chi_msd plots cooperativities, maximum cooperativities, times of
+maximum cooperativities and mean square displacements for either different
 persistence times at fixed self-propelling velocity or different
 self-propelling velocities at fixed persistence time.
 
@@ -10,14 +10,14 @@ active_particles.naming.Cuu standard (for cooperativities from displacement
 correlations), or active_particles.naming.Cww standard (for cooperativities
 from displacement relative to centre of mass displacement correlations), or
 active_particles.naming.Cdd standard (for cooperativities from displacement
-norm correlations), or active_particles.naming.Cee (for cooperativites from
+norm correlations), or active_particles.naming.Cee (for cooperativities from
 displacement direction correlations), and the active_particles.naming.Msd (mean
 square displacements).
 
 Environment modes
 -----------------
 VARIABLE : string
-    Plot of maximum cooperativites and times of maximum cooperativity
+    Plot of maximum cooperativities and times of maximum cooperativity
     x-coordinate variable.
      _____________________________________________________________________
     | Mode    | Variable                    | x-coordinate if not(PECLET) |
@@ -28,11 +28,11 @@ VARIABLE : string
     |_________|_____________________________|_____________________________|
     DEFAULT: dr
 PECLET : bool
-    Plot maximum cooperativites and times of maximum cooperativity as functions
-    of the Péclet number Pe = vzero/dr.
+    Plot maximum cooperativities and times of maximum cooperativity as
+    functions of the Péclet number Pe = vzero/dr.
     DEFAULT: True
 CORRELATION : string
-    Correlations from which to calculate cooperativites.
+    Correlations from which to calculate cooperativities.
      _____________________________________________________________
     | Mode | Correlations                                         |
     |______|______________________________________________________|
@@ -111,7 +111,7 @@ VZERO_C ['vzero' and FIT mode] : float
     Transition self-propelling velocity.
     DEFAULT: active_particles.plot.chi_msd._vzero_c
 BOX_SIZE : float
-	Size of the square box to consider.
+	Size of the square box which was considered.
 	DEFAULT: simulation box size
 X_ZERO : float
 	1st coordinate of the centre of the square box to consider.
@@ -265,6 +265,232 @@ _chimax_ys = 'log'  # default maximum cooperativity plot y-scale
 _msd_xs = 'log'     # default mean square displacement plot x-scale
 _msd_ys = 'log'     # default mean square displacement plot y-scale
 
+# FUNCTIONS AND CLASSES
+
+class ChiMsd:
+    """
+    Search and read correlations files, calculate cooperativities.
+    Also search and read mean square displacement files.
+    """
+
+    def __init__(self, data_dir, dir_standard, dir_attributes,
+        var, var_min, var_max, excluded_dir=''):
+        """
+        Create list of directories to consider and compute plot variable values
+        associated to them.
+
+        Parameters
+        ----------
+        data_dir : string
+            Data directory.
+        dir_standard : active_particles.naming._File standard
+            Simulation directory naming object.
+        dir_attributes : hash table
+            Attributes to be displayed in directory names.
+        var : string
+            Plot variable name.
+        var_min : float
+            Minimum plot variable value.
+        var_max : float
+            Maximum plot variable value.
+        excluded_dir : string
+            Names directories to be ignored. (default: '')
+        """
+
+        self.data_dir = data_dir
+        self.dir_standard = dir_standard
+        self.dir_attributes = dir_attributes
+        self.excluded_dir = excluded_dir
+
+        self.var = var
+        self.var_min = var_min
+        self.var_max = var_max
+
+        self.dirs = []              # directories to consider
+        self.var_hash = {}          # hash table of plot variable value with directory names as keys
+        self.var_list = []          # list of plot variable value in the considered interval
+        self.var0_list = []         # list of plot variable value out of the considered interval
+        self.isinvarinterval = {}   # hash table of booleans indicating if the directory name as key corresponds to a plot variable value in the considered interval
+
+        for dir in self.dir_standard.get_files(
+            directory=self.data_dir, **self.dir_attributes):                    # directories corresponding to attributes
+            if not(dir in self.excluded_dir):
+                self.dirs += [dir]
+                self.var_hash[dir], = self.dir_standard.get_data(dir, self.var) # var value corresponding to directory
+                self.isinvarinterval[dir] =\
+                    self.var_hash[dir] >= self.var_min\
+                    and self.var_hash[dir] <= self.var_max                      # var value in considered interval
+                if self.isinvarinterval[dir]:
+                    self.var_list += [self.var_hash[dir]]
+                else: self.var0_list += [self.var_hash[dir]]
+
+        self.var_list = sorted(OrderedDict.fromkeys(self.var_list))     # erase duplicates and sort
+        self.var0_list = sorted(OrderedDict.fromkeys(self.var0_list))   # erase duplicates and sort
+
+        self.calculate_msd = False  # calculate mean square displacements with cooperativities
+
+    def calculate(self, cor_standard, cor_attributes, r_min, r_max,
+        parameters_file, box_size=None, multiply_with_dr=True):
+        """
+        Calculate cooperativities, maximum cooperativities and times of
+        maximum cooperativites.
+        Also calculates mean square displacements.
+
+        Parameters
+        ----------
+        cor_standard : active_particles.naming._File standard
+            Correlation files naming object.
+        cor_attributes : hash table
+            Attributes to be displayed in correlation file names.
+        r_min : float
+            Minimum radius for correlations integration.
+        r_max : float
+            Maximum radius for correlations integration.
+        parameters_file : string
+            Simulations parameters file name.
+        box_size : float or None
+            Size of the square box which was considered. (default: None)
+            NOTE: if None, then the size is taken as the simulation box size.
+        multiply_with_dr : bool
+            Consider the product of rotation diffusion constant and lag time
+            rather than just lag time. (default: True)
+        """
+
+        self.cor_standard = cor_standard
+        self.cor_attributes = cor_attributes
+
+        self.r_min = r_min
+        self.r_max = r_max
+
+        self.parameters_file = parameters_file
+
+        self.box_size = box_size
+        self.multiply_with_dr = multiply_with_dr
+
+        self.time_step = {}                     # hash table of directories' simulation time step
+        self.chi = {}                           # hash table of list of lag times and corresponding cooperativities
+        self.dtmax = {}                         # hash table of time of maximum cooperativities
+        self.chimax = {}                        # hash table of maximum cooperativities
+        self.islocalmax = {}                    # hash table of booleans indicating if the time of maximum cooperativity is a local maximum
+        if self.calculate_msd: self.msd = {}    # hash table of lists of lag times and corresponding mean square displacement and associated standard error
+
+        for dir in self.dirs:
+
+            # COOPERATIVITY
+
+            with open(
+                joinpath(self.data_dir, dir, self.parameters_file), 'rb')\
+                as param_file:
+                parameters = pickle.load(param_file)    # simulation parameters hash table
+
+            if self.box_size == None: L = parameters['box_size']
+            else: L = self.box_size # box size
+
+            pdts = parameters['period_dump']*parameters['time_step']    # time corresponding to one dump length of time
+            if self.multiply_with_dr: pdts *= parameters['dr']          # plot dr*dt rather than dt
+
+            chidir = []                                                         # list of lag times and corresponding cooperativities for current directory
+            for cor_filename in self.cor_standard.get_files(
+                directory=joinpath(self.data_dir, dir), **self.cor_attributes): # loop over correlations files in directory
+
+                with open(joinpath(self.data_dir, dir, cor_filename), 'rb')\
+                    as cor_file:
+                    c1D = pickle.load(cor_file)[1]                          # 1D correlation
+                chidir += [[
+                    pdts*self.cor_standard.get_data(cor_filename, 'dt')[0],
+                    c1Dtochi(c1D, L, r_min=self.r_min, r_max=self.r_max)]]  # cooperativity
+
+            if not(chidir): continue    # no cooperativities files with requested attributes
+
+            self.time_step[dir] = parameters['time_step']       # simulation time step
+            self.dtmax[dir], self.chimax[dir] = max(chidir,
+                key=lambda el: el[1])                           # time of maximum cooperativity and maximum cooperativity
+            self.chi[dir] = np.transpose(sorted(chidir,
+                key=lambda el: el[0]))                          # cooperativity
+            self.islocalmax[dir] =\
+                self.dtmax[dir] > min(self.chi[dir][:, 0])\
+                and self.dtmax[dir] < max(self.chi[dir][:, 0])  # is dtmax a local maximum
+
+            if not(self.calculate_msd): continue    # do not calculate mean square displacements
+
+            # MEAN SQUARE DISPLACEMENT
+
+            for msd_filename in self.msd_standard.get_files(
+                directory=joinpath(self.data_dir, dir), **self.msd_attributes): # loop over mean square displacements files in directory
+                init_frame = self.msd_standard.get_data(
+                    msd_filename, 'init_frame')[0]                              # initial frame
+
+                if not(self.init_frame_msd)\
+                    or init_frame in self.init_frame_msd:
+
+                    self.msd[(dir, init_frame)] = np.genfromtxt(
+                        fname=joinpath(self.data_dir, dir, msd_filename),
+                        delimiter=',', skip_header=True)    # mean square displacement
+
+                    if self.divide_by_dt:
+                        self.msd[(dir, init_frame)][:, 1] /=\
+                            self.msd[(dir, init_frame)][:, 0]
+                        self.msd[(dir, init_frame)][:, 2] /=\
+                            self.msd[(dir, init_frame)][:, 0]
+
+                    if self.multiply_with_dr:
+                        self.msd[(dir, init_frame)][:, 0] *= parameters['dr']
+
+        self.time_step_list = sorted(OrderedDict.fromkeys(
+            self.time_step.values()))   # list of time steps
+
+    def calculate_with_msd(self, cor_standard, cor_attributes, r_min, r_max,
+        msd_standard, msd_attributes, init_frame_msd, parameters_file,
+        box_size=None, multiply_with_dr=True, divide_by_dt=True):
+        """
+        Calculate cooperativities, maximum cooperativities and times of
+        maximum cooperativites.
+        Also calculates mean square displacements.
+
+        Parameters
+        ----------
+        cor_standard : active_particles.naming._File standard
+            Correlation files naming object.
+        cor_attributes : hash table
+            Attributes to be displayed in correlation file names.
+        r_min : float
+            Minimum radius for correlations integration.
+        r_max : float
+            Maximum radius for correlations integration.
+        msd_standard : active_particles.naming._File standard
+            Mean square displacement files naming object.
+        msd_attributes : hash table
+            Attributes to be displayed in mean square displacement file names.
+        init_frame_msd : list of int
+            Calculate only mean square displacements calculated with initial
+            frame from this list except if this list is empty.
+        parameters_file : string
+            Simulations parameters file name.
+        box_size : float or None
+            Size of the square box which was considered. (default: None)
+            NOTE: if None, then the size is taken as the simulation box size.
+        multiply_with_dr : bool
+            Consider the product of rotation diffusion constant and lag time
+            rather than just lag time. (default: True)
+        divide_by_dt : bool
+            Divide mean square displacement by lag time. (default: True)
+        """
+
+        self.calculate_msd = True
+
+        self.msd_standard = msd_standard
+        self.msd_attributes = msd_attributes
+        self.init_frame_msd = init_frame_msd
+
+        self.divide_by_dt = divide_by_dt
+
+        self.calculate(cor_standard, cor_attributes, r_min, r_max,
+            parameters_file, box_size=box_size,
+            multiply_with_dr=multiply_with_dr)
+
+        self.init_frame_list = sorted(OrderedDict.fromkeys(
+            [init_frame for dir, init_frame in self.msd]))  # list of mean square displacements initial frames
+
 # SCRIPT
 
 if __name__ == '__main__':  # executing as script
@@ -347,7 +573,7 @@ if __name__ == '__main__':  # executing as script
     density = get_env('DENSITY', default=_density, vartype=float)   # packing fraction of particles
     N = get_env('N', default=_N, vartype=int)                       # number of particles
 
-    box_size = get_env('BOX_SIZE', vartype=float)     # size of the square box to consider
+    box_size = get_env('BOX_SIZE', vartype=float)     # size of the square box which was considered
     centre = (get_env('X_ZERO', default=0, vartype=float),
 		get_env('Y_ZERO', default=0, vartype=float))  # centre of the box
 
@@ -369,7 +595,7 @@ if __name__ == '__main__':  # executing as script
 
     # NAMING
 
-    common_attributes = {**attributes, 'density': density, 'N': N}  # attributes displayed in filenames
+    common_attributes = {**attributes, 'density': density, 'N': N}  # attributes to be displayed in file names
     attributes_cor = {**common_attributes, 'init_frame': init_frame_cor,
         'int_max': int_max_cor, 'Ncases': Ncases_cor, 'box_size': box_size,
         'x_zero': centre[0], 'y_zero': centre[1]}                   # attributes displayed in filenames specifically for correlations
@@ -416,87 +642,19 @@ if __name__ == '__main__':  # executing as script
 
     # CALCULATION
 
-    dirs = []                                                           # directories to consider
-    var_hash, var_list, var0_list = {}, [], []
-    isinvarinterval = {}
-    for dir in naming_simdir.get_files(
-        directory=data_dir, **common_attributes):                       # directories corresponding to attributes
-        if not(dir in excluded_directories):
-            dirs += [dir]
-            var_hash[dir], = naming_simdir.get_data(dir, var)           # var value corresponding to directory
-            isinvarinterval[dir] =\
-                var_hash[dir] >= var_min and var_hash[dir] <= var_max   # var value in considered interval
-            if isinvarinterval[dir]:
-                var_list += [var_hash[dir]]
-            else: var0_list += [var_hash[dir]]
-
-    time_step = {}
-    chi, dtmax, chimax = {}, {}, {}
-    islocalmax = {}
-    msd = {}
-    for dir in dirs:
-
-        # COOPERATIVITY
-
-        with open(joinpath(data_dir, dir, parameters_file), 'rb')\
-            as param_file:
-            parameters = pickle.load(param_file)
-        if box_size == None:
-            L = parameters['box_size']
-        else: L = box_size                                          # simulation box size
-        pdts = parameters['period_dump']*parameters['time_step']    # time corresponding to one dump length of time
-        if multiply_with_dr: pdts *= parameters['dr']               # plot dr*dt rather than dt
-
-        chidir = []
-        for cor_filename in naming_cor.get_files(
-            directory=joinpath(data_dir, dir), **attributes_cor):   # loop over correlations files in directory
-
-            with open(joinpath(data_dir, dir, cor_filename), 'rb') as cor_file:
-                c1D = pickle.load(cor_file)[1]                  # 1D correlation
-            chidir += [[pdts*naming_cor.get_data(cor_filename, 'dt')[0],
-                c1Dtochi(c1D, L, r_min=r_min, r_max=r_max)]]    # cooperativity
-
-        if not(chidir):                                                     # no cooperativities files with requested attributes
-            continue                                                        # continue to next directory (do not look for mean square displacements)
-
-        time_step[dir] = parameters['time_step']                        # simulation time step
-        dtmax[dir], chimax[dir] = max(chidir, key=lambda el: el[1])     # time of maximum cooperativity and maximum cooperativity
-        chi[dir] = np.transpose(sorted(chidir, key=lambda el: el[0]))   # cooperativity
-        islocalmax[dir] =\
-            dtmax[dir] > min(chi[dir][:, 0])\
-            and dtmax[dir] < max(chi[dir][:, 0])                        # is dtmax a local maximum
-
-        # MEAN SQUARE DISPLACEMENT
-
-        for msd_filename in naming_msd.get_files(
-            directory=joinpath(data_dir, dir), **attributes_msd):   # loop over mean square displacements files in directory
-
-            init_frame = naming_msd.get_data(msd_filename, 'init_frame')[0] # initial frame
-            if not(init_frame_msd) or init_frame in init_frame_msd:
-                msd[(dir, init_frame)] = np.genfromtxt(
-                    fname=joinpath(data_dir, dir, msd_filename),
-                    delimiter=',', skip_header=True)                        # mean square displacement
-                if divide_by_dt:                                            # divide mean square displacement by lag time
-                    msd[(dir, init_frame)][:, 1] /=\
-                        msd[(dir, init_frame)][:, 0]
-                    msd[(dir, init_frame)][:, 2] /=\
-                        msd[(dir, init_frame)][:, 0]
-                if multiply_with_dr:                                        # plot as function of dr*dt rather than dt
-                    msd[(dir, init_frame)][:, 0] *= parameters['dr']
-
+    chimsd = ChiMsd(data_dir, naming_simdir, common_attributes,
+        var, var_min, var_max, excluded_dir=excluded_directories)   # cooperativities and mean square displacements calculator
+    chimsd.calculate_with_msd(naming_cor, attributes_cor, r_min, r_max,
+        naming_msd, attributes_msd, init_frame_msd, parameters_file,
+        box_size=box_size, multiply_with_dr=multiply_with_dr,
+        divide_by_dt=divide_by_dt)                                  # calculate cooperativities and mean square displacements
 
     # PLOT
 
-    var_list = sorted(OrderedDict.fromkeys(var_list))                   # list of plotting variable value in considered interval
-    var0_list = sorted(OrderedDict.fromkeys(var0_list))                 # list of plotting variable value out of considered interval
-    time_step_list = sorted(OrderedDict.fromkeys(time_step.values()))   # list of time steps
-    init_frame_list = sorted(OrderedDict.fromkeys(
-        [init_frame for dir, init_frame in msd]))                       # list of mean square displacements initial frames
-
-    colors = {**list_colormap(var_list, colormap=colormap),
-        **list_colormap(var0_list, colormap=colormap0)} # plot colors hash table
-    markers = list_markers(time_step_list)              # plot markers hash table
-    linestyles = list_linestyles(init_frame_list)       # plot linestyles hash table
+    colors = {**list_colormap(chimsd.var_list, colormap=colormap),
+        **list_colormap(chimsd.var0_list, colormap=colormap0)}  # plot colors hash table
+    markers = list_markers(chimsd.time_step_list)               # plot markers hash table
+    linestyles = list_linestyles(chimsd.init_frame_list)        # plot linestyles hash table
 
     # CHI, CHIMAX, DTMAX
 
@@ -540,25 +698,27 @@ if __name__ == '__main__':  # executing as script
     lines_fig_chi = list(map(
         lambda var_value: Line2D([0], [0], color=colors[var_value], lw=2,
             label='%s = %.0e' % (var_label, var_value)),
-        var_list))
+        chimsd.var_list))
     lines_fig_chi += [Line2D([0], [0], lw=0, label='')]
     lines_fig_chi += list(map(
         lambda time_step: Line2D([0], [0], marker=markers[time_step],
             color='black', label=r'$dt=%.0e$' % time_step),
-        time_step_list))
+        chimsd.time_step_list))
     ax_legend.legend(handles=lines_fig_chi, loc='center', ncol=ncol_legend)
 
-    for dir in chi:
-        if isinvarinterval[dir]:
+    for dir in chimsd.chi:
+        if chimsd.isinvarinterval[dir]:
 
-            time_step_value = time_step[dir]
-            var_value = var_hash[dir]
+            time_step_value = chimsd.time_step[dir]
+            var_value = chimsd.var_hash[dir]
             plot_parameters = {'color': colors[var_value],
                 'marker': markers[time_step_value]}
 
-            ax_chi.plot(*chi[dir], **plot_parameters)
-            ax_dtmax.plot(x_func(var_value), dtmax[dir], **plot_parameters)
-            ax_chimax.plot(x_func(var_value), chimax[dir], **plot_parameters)
+            ax_chi.plot(*chimsd.chi[dir], **plot_parameters)
+            ax_dtmax.plot(x_func(var_value), chimsd.dtmax[dir],
+                **plot_parameters)
+            ax_chimax.plot(x_func(var_value), chimsd.chimax[dir],
+                **plot_parameters)
 
     if fit_max: # fit maximum cooperativity and time of maximum cooperativity as power law of dt or dr*dt
 
@@ -566,20 +726,20 @@ if __name__ == '__main__':  # executing as script
 
         dtmax_lt_varc, dtmax_gt_varc = [], []
         chimax_lt_varc, chimax_gt_varc = [], []
-        for dir in chi:
-            if isinvarinterval[dir]:
+        for dir in chimsd.chi:
+            if chimsd.isinvarinterval[dir]:
 
-                var_value = var_hash[dir]
+                var_value = chimsd.var_hash[dir]
                 if var_value < var_c:
                     dtmax_lt_varc += [[np.log(x_func(var_value)),
-                        np.log(dtmax[dir])]]
+                        np.log(chimsd.dtmax[dir])]]
                     chimax_lt_varc += [[np.log(x_func(var_value)),
-                        np.log(chimax[dir])]]
+                        np.log(chimsd.chimax[dir])]]
                 elif var_value > var_c:
                     dtmax_gt_varc += [[np.log(x_func(var_value)),
-                        np.log(dtmax[dir])]]
+                        np.log(chimsd.dtmax[dir])]]
                     chimax_gt_varc += [[np.log(x_func(var_value)),
-                        np.log(chimax[dir])]]
+                        np.log(chimsd.chimax[dir])]]
 
         dtmax_lt_varc = np.transpose(dtmax_lt_varc)
         dtmax_gt_varc = np.transpose(dtmax_gt_varc)
@@ -648,7 +808,7 @@ if __name__ == '__main__':  # executing as script
 
     # CHI, MSD
 
-    if msd: # if there are mean square displacements to plot
+    if chimsd.msd:  # if there are mean square displacements to plot
 
         fig_msd = plt.figure()
         fig_msd.subplots_adjust(wspace=wspace, hspace=hspace)
@@ -674,7 +834,7 @@ if __name__ == '__main__':  # executing as script
         lines_ax_msd_chi = list(map(
             lambda time_step: Line2D([0], [0], marker=markers[time_step],
                 color='black', label=r'$dt=%.0e$' % time_step),
-            time_step_list))
+            chimsd.time_step_list))
         ax_msd_chi.legend(handles=lines_ax_msd_chi, loc='best')
 
         ax_msd = plt.subplot(gs[1])
@@ -689,7 +849,7 @@ if __name__ == '__main__':  # executing as script
             lambda init_frame: Line2D([0], [0],
                 linestyle=linestyles[init_frame],
                 color='black', label=r'$S_{init}=%.1e$' % init_frame),
-            init_frame_list))
+            chimsd.init_frame_list))
         ax_msd.legend(handles=lines_ax_msd, loc='best')
 
         ax_legend_msd = plt.subplot(gs[2])
@@ -697,18 +857,21 @@ if __name__ == '__main__':  # executing as script
         lines_fig_msd = list(map(
             lambda var_value: Line2D([0], [0], color=colors[var_value], lw=2,
                 label='%s = %.0e' % (var_label, var_value)),
-            sorted(var_list + var0_list)))
+            sorted(chimsd.var_list + chimsd.var0_list)))
         ax_legend_msd.legend(handles=lines_fig_msd,
             loc='center', ncol=ncol_legend)
 
-        for dir in chi:
-            ax_msd_chi.plot(*chi[dir], color=colors[var_hash[dir]],
-                marker=markers[time_step[dir]])
-        for dir, init_frame in msd:
+        for dir in chimsd.chi:
+            ax_msd_chi.plot(*chimsd.chi[dir],
+                color=colors[chimsd.var_hash[dir]],
+                marker=markers[chimsd.time_step[dir]])
+        for dir, init_frame in chimsd.msd:
             ax_msd.errorbar(
-                msd[(dir, init_frame)][:, 0], msd[(dir, init_frame)][:, 1],
-                yerr=msd[(dir, init_frame)][:, 2],
-                color=colors[var_hash[dir]], linestyle=linestyles[init_frame])
+                chimsd.msd[(dir, init_frame)][:, 0],
+                chimsd.msd[(dir, init_frame)][:, 1],
+                yerr=chimsd.msd[(dir, init_frame)][:, 2],
+                color=colors[chimsd.var_hash[dir]],
+                linestyle=linestyles[init_frame])
 
     # SHOW
 
