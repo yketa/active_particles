@@ -10,6 +10,8 @@ from shutil import rmtree as rmr
 from os import environ as envvar
 import sys
 import atexit
+import pickle
+from collections import OrderedDict
 
 def to_vartype(input, default=None, vartype=str):
     """
@@ -180,3 +182,84 @@ def slurm_output(output_dir, naming_standard, attributes):
 
     stdout = StdOut()
     stdout.set(output_file)	# set output file as standard output
+
+def dir_list(data_dir, dir_standard, dir_attributes, var, var_min, var_max,
+    parameters_file, excluded_dir='', include_out=True):
+    """
+    Search in data_dir for simulation directories with dir_standard naming
+    standard which display dir_attributes attributes, not in excluded_dir,
+    which contain simulation parameters file parameters_file, for which
+    variable var is in the interval [var_min, var_max].
+
+    Parameters
+    ----------
+    data_dir : string
+        Data directory.
+    dir_standard : active_particles.naming._File standard
+        Simulation directory naming object.
+    dir_attributes : hash table
+        Attributes to be displayed in directory names.
+    parameters_file : string
+        Simulations parameters file name.
+    var : string
+        Variable name.
+    var_min : float
+        Minimum variable value.
+    var_max : float
+        Maximum variable value.
+    excluded_dir : string
+        Names of directories to be ignored. (default: '')
+    include_out : bool
+        Include directories displaying dir_attributes attributes, but with
+        variable var outside of the [var_min, var_max] interval, in directories
+        list.
+
+    Returns
+    -------
+    dirs : list of string
+        [include_out == True]  : Directories with variable var in considered
+                                 interval.
+        [include_out == False] ; All directories.
+    var_hash : hash table
+        Hash table of variable value with directory names in dirs as keys.
+    var_list : list of float
+        List of variable values in considered interval.
+    var0_list : list of float
+        [include_out == True]  : []
+        [include_out == False] : List of variable values out of considered
+                                 interval.
+    isinvarinterval : hash table
+        [include_out == True]  : {}
+        [include_out == False] : hash table of booleans indicating if the
+                                 directory name as key corresponds to a
+                                 variable value in the considered interval.
+    """
+
+    dirs = []
+    var_hash = {}
+    var_list = []           # list of variable value in the considered interval
+    var0_list = []          # list of variable value out of the considered interval
+    isinvarinterval = {}    # hash table of booleans indicating if the directory name as key corresponds to a variable value in the considered interval
+
+    for dir in dir_standard.get_files(directory=data_dir, **dir_attributes):    # directories corresponding to attributes
+        if not(dir in excluded_dir):
+
+            with open(joinpath(data_dir, dir, parameters_file), 'rb')\
+                as param_file:
+                var_value = pickle.load(param_file)[var]    # variable value
+
+            if var_value >= var_min and var_value <= var_max:
+                if include_out: isinvarinterval[dir] = True # variable value in considered interval
+                var_list += [var_value]
+            else:
+                if not(include_out): continue               # ignore directory if not(include_out)
+                isinvarinterval[dir] = False                # variable value not in considered interval
+                var0_list += [var_value]
+
+            dirs += [dir]
+            var_hash[dir] = var_value
+
+    var_list = sorted(OrderedDict.fromkeys(var_list))   # erase duplicates and sort
+    var0_list = sorted(OrderedDict.fromkeys(var0_list)) # erase duplicates and sort
+
+    return dirs, var_hash, var_list, var0_list, isinvarinterval
