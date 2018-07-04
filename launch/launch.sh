@@ -19,10 +19,10 @@
 #   DEFAULT: script name
 # PARTITION : string
 #   Partition for the resource allocation.
-#   DEFAULT: gpu
+#   DEFAULT: vis
 # GRES : string
 #   Generic consumable resources.
-#   DEFAULT: gpu:k80:1
+#   DEFAULT:
 # OUT_FILE : string
 #   Standard output file.
 #   DEFAULT: /dev/null (output file is supposed to be managed in script itself)
@@ -30,8 +30,8 @@
 #   Maximum ntasks to be invoked on each core.
 #   DEFAULT: 1
 
-OUT_DIR=${OUT_DIR-$(python -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
-mkdir -p $OUT_DIR                                                                                         # create if not existing
+OUT_DIR=${OUT_DIR-$(ap_python -c 'from active_particles.naming import out_directory; print(out_directory)')}  # output directory
+mkdir -p $OUT_DIR                                                                                             # create if not existing
 
 COMMAND=$1  # command to execute script
 if [[ -z "$COMMAND" ]]; then
@@ -48,7 +48,7 @@ shift
 ENVVAR=$@   # environment variables for script execution
 
 if [[ ! -z "$DATA" ]]; then # data directory name submitted
-  SIM_DIR=$(python -c 'from active_particles.naming import sim_directory; print(sim_directory)')
+  SIM_DIR=$(ap_python -c 'from active_particles.naming import sim_directory; print(sim_directory)')
   ENVVAR="DATA_DIRECTORY=${SIM_DIR}/${DATA} $ENVVAR"
 fi
 
