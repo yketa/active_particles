@@ -46,7 +46,7 @@ CORRELATION : string
     |______|______________________________________________________|
     DEFAULT: Cuu
 DRDT : bool
-    Plots the product of the rotation diffusion constant and lag time rather
+    Use the product of the rotation diffusion constant and lag time rather
     than the bare lag time.
     DEFAULT: True
 MSDDT : bool
@@ -126,7 +126,7 @@ INTERVAL_MAXIMUM_COR : int
     Maximum number of intervals of length dt considered for correlations.
     DEFAULT: active_particles.plot.chi_msd._int_max_cor
 N_CASES : int
-    Number of boxes in each direction with which the displacement grid is
+    Number of boxes in each direction with which the displacement grid was
     computed.
     DEFAULT: active_particles.plot.chi_msd._Ncases_cor
 INITIAL_FRAME_MSD : int separated by ':'
