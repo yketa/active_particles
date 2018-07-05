@@ -195,9 +195,8 @@ MSD_YS : string
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, get_env_list
+from active_particles.init import get_env, get_env_list, dir_list
 
-from os import getcwd
 from os import environ as envvar
 if __name__ == '__main__': envvar['SHOW'] = 'True'
 from os.path import join as joinpath
@@ -273,7 +272,7 @@ class ChiMsd:
     Also search and read mean square displacement files.
     """
 
-    def __init__(self, data_dir, dir_standard, dir_attributes,
+    def __init__(self, data_dir, dir_standard, dir_attributes, parameters_file,
         var, var_min, var_max, excluded_dir=''):
         """
         Create list of directories to consider and compute plot variable values
@@ -287,6 +286,8 @@ class ChiMsd:
             Simulation directory naming object.
         dir_attributes : hash table
             Attributes to be displayed in directory names.
+        parameters_file : string
+            Simulations parameters file name.
         var : string
             Plot variable name.
         var_min : float
@@ -294,7 +295,7 @@ class ChiMsd:
         var_max : float
             Maximum plot variable value.
         excluded_dir : string
-            Names directories to be ignored. (default: '')
+            Names of directories to be ignored. (default: '')
         """
 
         self.data_dir = data_dir
@@ -302,35 +303,23 @@ class ChiMsd:
         self.dir_attributes = dir_attributes
         self.excluded_dir = excluded_dir
 
+        self.parameters_file = parameters_file
+
         self.var = var
         self.var_min = var_min
         self.var_max = var_max
 
-        self.dirs = []              # directories to consider
-        self.var_hash = {}          # hash table of plot variable value with directory names as keys
-        self.var_list = []          # list of plot variable value in the considered interval
-        self.var0_list = []         # list of plot variable value out of the considered interval
-        self.isinvarinterval = {}   # hash table of booleans indicating if the directory name as key corresponds to a plot variable value in the considered interval
-
-        for dir in self.dir_standard.get_files(
-            directory=self.data_dir, **self.dir_attributes):                    # directories corresponding to attributes
-            if not(dir in self.excluded_dir):
-                self.dirs += [dir]
-                self.var_hash[dir], = self.dir_standard.get_data(dir, self.var) # var value corresponding to directory
-                self.isinvarinterval[dir] =\
-                    self.var_hash[dir] >= self.var_min\
-                    and self.var_hash[dir] <= self.var_max                      # var value in considered interval
-                if self.isinvarinterval[dir]:
-                    self.var_list += [self.var_hash[dir]]
-                else: self.var0_list += [self.var_hash[dir]]
-
-        self.var_list = sorted(OrderedDict.fromkeys(self.var_list))     # erase duplicates and sort
-        self.var0_list = sorted(OrderedDict.fromkeys(self.var0_list))   # erase duplicates and sort
+        (self.dirs, self.var_hash, self.var_list, self.var0_list,
+            self.isinvarinterval) = dir_list(
+                self.data_dir, self.dir_standard, self.dir_attributes,
+                self.var, self.var_min, self.var_max,
+                self.parameters_file, excluded_dir=self.excluded_dir,
+                include_out=True)
 
         self.calculate_msd = False  # calculate mean square displacements with cooperativities
 
     def calculate(self, cor_standard, cor_attributes, r_min, r_max,
-        parameters_file, box_size=None, multiply_with_dr=True):
+        box_size=None, multiply_with_dr=True):
         """
         Calculate cooperativities, maximum cooperativities and times of
         maximum cooperativites.
@@ -346,8 +335,6 @@ class ChiMsd:
             Minimum radius for correlations integration.
         r_max : float
             Maximum radius for correlations integration.
-        parameters_file : string
-            Simulations parameters file name.
         box_size : float or None
             Size of the square box which was considered. (default: None)
             NOTE: if None, then the size is taken as the simulation box size.
@@ -362,8 +349,6 @@ class ChiMsd:
         self.r_min = r_min
         self.r_max = r_max
 
-        self.parameters_file = parameters_file
-
         self.box_size = box_size
         self.multiply_with_dr = multiply_with_dr
 
@@ -372,7 +357,6 @@ class ChiMsd:
         self.dtmax = {}                         # hash table of time of maximum cooperativities
         self.chimax = {}                        # hash table of maximum cooperativities
         self.islocalmax = {}                    # hash table of booleans indicating if the time of maximum cooperativity is a local maximum
-        if self.calculate_msd: self.msd = {}    # hash table of lists of lag times and corresponding mean square displacement and associated standard error
 
         for dir in self.dirs:
 
@@ -440,8 +424,8 @@ class ChiMsd:
             self.time_step.values()))   # list of time steps
 
     def calculate_with_msd(self, cor_standard, cor_attributes, r_min, r_max,
-        msd_standard, msd_attributes, init_frame_msd, parameters_file,
-        box_size=None, multiply_with_dr=True, divide_by_dt=True):
+        msd_standard, msd_attributes, init_frame_msd, box_size=None,
+        multiply_with_dr=True, divide_by_dt=True):
         """
         Calculate cooperativities, maximum cooperativities and times of
         maximum cooperativites.
@@ -464,8 +448,6 @@ class ChiMsd:
         init_frame_msd : list of int
             Calculate only mean square displacements calculated with initial
             frame from this list except if this list is empty.
-        parameters_file : string
-            Simulations parameters file name.
         box_size : float or None
             Size of the square box which was considered. (default: None)
             NOTE: if None, then the size is taken as the simulation box size.
@@ -484,9 +466,10 @@ class ChiMsd:
 
         self.divide_by_dt = divide_by_dt
 
+        self.msd = {}   # hash table of lists of lag times and corresponding mean square displacement and associated standard error
+
         self.calculate(cor_standard, cor_attributes, r_min, r_max,
-            parameters_file, box_size=box_size,
-            multiply_with_dr=multiply_with_dr)
+            box_size=box_size, multiply_with_dr=multiply_with_dr)
 
         self.init_frame_list = sorted(OrderedDict.fromkeys(
             [init_frame for dir, init_frame in self.msd]))  # list of mean square displacements initial frames
@@ -643,11 +626,11 @@ if __name__ == '__main__':  # executing as script
     # CALCULATION
 
     chimsd = ChiMsd(data_dir, naming_simdir, common_attributes,
-        var, var_min, var_max, excluded_dir=excluded_directories)   # cooperativities and mean square displacements calculator
+        parameters_file, var, var_min, var_max,
+        excluded_dir=excluded_directories)                              # cooperativities and mean square displacements calculator
     chimsd.calculate_with_msd(naming_cor, attributes_cor, r_min, r_max,
-        naming_msd, attributes_msd, init_frame_msd, parameters_file,
-        box_size=box_size, multiply_with_dr=multiply_with_dr,
-        divide_by_dt=divide_by_dt)                                  # calculate cooperativities and mean square displacements
+        naming_msd, attributes_msd, init_frame_msd, box_size=box_size,
+        multiply_with_dr=multiply_with_dr, divide_by_dt=divide_by_dt)   # calculate cooperativities and mean square displacements
 
     # PLOT
 
@@ -769,8 +752,7 @@ if __name__ == '__main__':  # executing as script
         ax_dtmax.plot(np.exp(dtmax_lt_varc[0]),
             np.exp(dtmax_lt_varc_int)
                 *(np.exp(dtmax_lt_varc[0])**dtmax_lt_varc_slo),
-            color='black',
-            linestyle='-.',
+            color='black', linestyle='-.',
             label=r'$%s \propto (%s)^{%.1e \pm %.1e}$'
                 % (ax_dtmax.get_ylabel().replace('$', ''),
                     x_label.replace('$', ''),
@@ -778,8 +760,7 @@ if __name__ == '__main__':  # executing as script
         ax_dtmax.plot(np.exp(dtmax_gt_varc[0]),
             np.exp(dtmax_gt_varc_int)
                 *(np.exp(dtmax_gt_varc[0])**dtmax_gt_varc_slo),
-            color='black',
-            linestyle='--',
+            color='black', linestyle='--',
             label=r'$%s \propto (%s)^{%.1e \pm %.1e}$'
                 % (ax_dtmax.get_ylabel().replace('$', ''),
                     x_label.replace('$', ''),
@@ -787,16 +768,14 @@ if __name__ == '__main__':  # executing as script
         ax_chimax.plot(np.exp(chimax_lt_varc[0]),
             np.exp(chimax_lt_varc_int)
                 *(np.exp(chimax_lt_varc[0])**chimax_lt_varc_slo),
-            color='black',
-            linestyle='-.',
+            color='black', linestyle='-.',
             label=r'$%s \propto (%s)^{%.1e \pm %.1e}$'
                 % ('\\chi(\\Delta t^*)', x_label.replace('$', ''),
                     chimax_lt_varc_slo, chimax_lt_varc_std))
         ax_chimax.plot(np.exp(chimax_gt_varc[0]),
             np.exp(chimax_gt_varc_int)
                 *(np.exp(chimax_gt_varc[0])**chimax_gt_varc_slo),
-            color='black',
-            linestyle='--',
+            color='black', linestyle='--',
             label=r'$%s \propto (%s)^{%.1e \pm %.1e}$'
                 % ('\\chi(\\Delta t^*)', x_label.replace('$', ''),
                     chimax_gt_varc_slo, chimax_gt_varc_std))
