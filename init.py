@@ -12,6 +12,7 @@ import sys
 import atexit
 import pickle
 from collections import OrderedDict
+from numbers import Number
 
 def to_vartype(input, default=None, vartype=str):
     """
@@ -263,3 +264,20 @@ def dir_list(data_dir, dir_standard, dir_attributes, var, var_min, var_max,
     var0_list = sorted(OrderedDict.fromkeys(var0_list)) # erase duplicates and sort
 
     return dirs, var_hash, var_list, var0_list, isinvarinterval
+
+def isnumber(variable):
+    """
+    Returns True if variable is a number, False otherwise.
+
+    Parameters
+    ----------
+    variable : *
+        Variable to check.
+
+    Returns
+    -------
+    variableisnumber : bool
+        Is variable a number?
+    """
+
+    return isinstance(variable, Number)
