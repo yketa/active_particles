@@ -361,7 +361,7 @@ if __name__ == '__main__':  # executing as script
 
     # VARIABLES DEFINITIONS
 
-    mode = get_env('VARIABLE', default='dr')                # plotting mode
+    mode = get_env('VARIABLE', default='dr')                # plotting variable
     peclet = get_env('PECLET', default=True, vartype=bool)  # display Péclet number rather than mode variable
 
     if mode == 'dr':

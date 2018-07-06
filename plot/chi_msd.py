@@ -480,7 +480,7 @@ if __name__ == '__main__':  # executing as script
 
     # VARIABLES DEFINITIONS
 
-    mode = get_env('VARIABLE', default='dr')                # plotting mode
+    mode = get_env('VARIABLE', default='dr')                # plotting variable
     peclet = get_env('PECLET', default=True, vartype=bool)  # display Péclet number rather than mode variable
 
     if mode == 'dr':
@@ -581,9 +581,9 @@ if __name__ == '__main__':  # executing as script
     common_attributes = {**attributes, 'density': density, 'N': N}  # attributes to be displayed in file names
     attributes_cor = {**common_attributes, 'init_frame': init_frame_cor,
         'int_max': int_max_cor, 'Ncases': Ncases_cor, 'box_size': box_size,
-        'x_zero': centre[0], 'y_zero': centre[1]}                   # attributes displayed in filenames specifically for correlations
+        'x_zero': centre[0], 'y_zero': centre[1]}                   # attributes displayed in file names specifically for correlations
     attributes_msd = {**common_attributes, 'int_max': int_max_msd,
-        'int_period': int_period_msd}                               # attributes displayed in filenames specifically for mean square displacements
+        'int_period': int_period_msd}                               # attributes displayed in file names specifically for mean square displacements
     naming_msd = naming.Msd()                                       # mean square displacements naming object
     naming_simdir = naming.AHB2D()                                  # simulation directory naming object
 
