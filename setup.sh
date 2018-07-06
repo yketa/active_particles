@@ -27,6 +27,7 @@ export AP_VARN="$AP_PYTHON ${AP_DIR}/analysis/varn.py"
 # PLOTS
 alias ap_c44="$AP_PYTHON ${AP_DIR}/plot/c44.py"
 alias ap_chi_msd="$AP_PYTHON ${AP_DIR}/plot/chi_msd.py"
+alias ap_comparison="$AP_PYTHON ${AP_DIR}/plot/comparison.py"
 alias ap_corlcort="$AP_PYTHON ${AP_DIR}/plot/corlcort.py"
 alias ap_pphiloc="$AP_PYTHON ${AP_DIR}/plot/pphiloc.py"
 
