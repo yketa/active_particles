@@ -621,8 +621,8 @@ if __name__ == '__main__':  # executing as script
             u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
             DDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
                 lambda time: displacement_related_grids(parameters['box_size'],
-                box_size, centre, Ncases, time, dt, w_traj, u_traj)
-                , times)), (1, 0, 2, 3, 4)))                # lists of displacement variables
+                box_size, centre, Ncases, time, dt, w_traj, u_traj),
+                times)), (1, 0, 2, 3, 4)))						# lists of displacement variables
 
         Dgrid = DDgrid[:, :, :, 0]  				# list of displacement norm grids
         Cdd2D = corField2D_scalar_average(Dgrid)	# displacement norm correlation grids
