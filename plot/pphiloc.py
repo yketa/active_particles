@@ -96,9 +96,8 @@ COLORMAP : string
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env
+from active_particles.init import get_env, dir_list
 
-from os import getcwd
 from os import environ as envvar
 if __name__ == '__main__': envvar['SHOW'] = 'True'
 from os.path import join as joinpath
@@ -110,6 +109,8 @@ import numpy as np
 np.seterr(divide='ignore')
 
 import pickle
+
+from collections import OrderedDict
 
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
@@ -143,13 +144,122 @@ _contours = 20      # default contour level value
 _font_size = 15         # default font size for the plot
 _colormap = 'inferno'   # default plot colormap
 
+# FUNCTIONS AND CLASSES
+
+class Philoc:
+    """
+    Search and read local densities file, compute local densities histogram.
+    """
+
+    def __init__(self, data_dir, dir_standard, dir_attributes, parameters_file,
+        var, var_min, var_max, excluded_dir=''):
+        """
+        Create list of directories to consider and compute plot variable values
+        associated to them.
+
+        Parameters
+        ----------
+        data_dir : string
+            Data directory.
+        dir_standard : active_particles.naming._File standard
+            Simulation directory naming object.
+        dir_attributes : hash table
+            Attributes to be displayed in directory names.
+        parameters_file : string
+            Simulations parameters file name.
+        var : string
+            Plot variable name.
+        var_min : float
+            Minimum plot variable value.
+        var_max : float
+            Maximum plot variable value.
+        excluded_dir : string
+            Names of directories to be ignored. (default: '')
+        """
+
+        self.data_dir = data_dir
+        self.dir_standard = dir_standard
+        self.dir_attributes = dir_attributes
+        self.excluded_dir = excluded_dir
+
+        self.parameters_file = parameters_file
+
+        self.var = var
+        self.var_min = var_min
+        self.var_max = var_max
+
+        self.dirs, self.var_hash, self.var_list, _, _ = dir_list(
+            self.data_dir, self.dir_standard, self.dir_attributes,
+            self.var, self.var_min, self.var_max,
+            self.parameters_file, excluded_dir=self.excluded_dir,
+            include_out=False)
+
+    def calculate(self, varN_standard, varN_attributes, Nbins, phimax):
+        """
+        Calculate local densities histogram.
+
+        Parameters
+        ----------
+        varN_standard : active_particles.naming._File standard
+            Local densities files naming object.
+        varN_attributes : hash table
+            Attributes to be displayed in local densities file names.
+        Nbins : int
+            Number of bins for the histogram.
+        phimax : float
+            Maximum local density for histogram.
+        """
+
+        self.varN_standard = varN_standard
+        self.varN_attributes = varN_attributes
+        self.Nbins = Nbins
+        self.phimax = phimax
+
+        self.time_step = {}     # hash table of directories' simulation time step
+        self.histogram3D = []   # local densities histogram
+        self.philocmax = {}     # hash table of most probable local density with directory name as keys
+
+        for dir in sorted(self.dirs):
+            try:
+                varN_filename, = self.varN_standard.get_files(
+                    directory=joinpath(self.data_dir, dir),
+                    **self.varN_attributes)
+            except ValueError: continue
+
+            with open(
+                joinpath(self.data_dir, dir, self.parameters_file), 'rb')\
+                as param_file:
+                self.time_step[dir] = pickle.load(param_file)['time_step']  # simulation parameters hash table
+
+            with open(joinpath(self.data_dir, dir, varN_filename),
+                'rb') as varN_file:
+
+                var_value = np.full(self.Nbins,
+                    fill_value=self.var_hash[dir])  # plot variable value
+
+                densities = pickle.load(varN_file)  # list of local densities
+                bins, histogram = get_histogram(densities,
+                    self.Nbins, self.phimax)        # histogram of local densities with corresponding bins
+
+                histogram = np.log10(histogram)
+
+                histogram3D_dir = np.transpose(
+                    [var_value, bins, histogram]).tolist()
+                self.histogram3D += histogram3D_dir
+                _, self.philocmax[dir], _ = max(histogram3D_dir,
+                    key=lambda el: el[2])
+
+        self.histogram3D = np.transpose(self.histogram3D)
+        self.time_step_list = sorted(OrderedDict.fromkeys(
+            self.time_step.values()))   # list of time steps
+
 # SCRIPT
 
 if __name__ == '__main__':  # executing as script
 
     # VARIABLES DEFINITIONS
 
-    mode = get_env('VARIABLE', default='dr')                # plotting mode
+    mode = get_env('VARIABLE', default='dr')                # plotting variable
     peclet = get_env('PECLET', default=True, vartype=bool)  # display Péclet number rather than mode variable
 
     if mode == 'dr':
@@ -228,35 +338,12 @@ if __name__ == '__main__':  # executing as script
 
     # CALCULATION
 
-    dirs = [dir
-        for dir in naming_simdir.get_files(directory=data_dir, **attributes)
-        if not(dir in excluded_directories) and
-        naming_simdir.get_data(dir, var)[0] >= var_min and
-        naming_simdir.get_data(dir, var)[0] <= var_max] # directories to consider
+    philoc = Philoc(data_dir, naming_simdir, attributes, parameters_file,
+        var, var_min, var_max, excluded_dir=excluded_directories)   # local densities histogram calculator
+    philoc.calculate(naming_varN, attributes, Nbins, phimax)        # calculate local densities histogram
 
-    histogram3D = [] # plot histogram
-    for dir in sorted(dirs):
-        try:
-            varN_filename, = naming_varN.get_files(
-                directory=joinpath(data_dir, dir), **attributes)
-        except ValueError: continue
-
-        with open(joinpath(data_dir, dir, parameters_file),
-            'rb') as param_file, open(joinpath(data_dir, dir, varN_filename),
-            'rb') as varN_file:
-
-            parameters = pickle.load(param_file)                            # simulation parameters
-            var_value = np.full(Nbins, fill_value=x_func(parameters[var]))  # plot variable value
-
-            densities = pickle.load(varN_file)                          # list of local densities
-            bins, histogram = get_histogram(densities, Nbins, phimax)   # histogram of local densities with corresponding bins
-
-            histogram = np.log10(histogram)
-            histogram[histogram < pphilocmin] = pphilocmin
-
-            histogram3D += np.transpose([var_value, bins, histogram]).tolist()
-
-    histogram3D = np.array(histogram3D)
+    philoc.histogram3D[0] = x_func(philoc.histogram3D[0])                   # apply x_func to plot variable
+    philoc.histogram3D[2][philoc.histogram3D[2] < pphilocmin] = pphilocmin  # set minimum histogram value as pphilocmin
 
     # PLOT
 
@@ -273,10 +360,10 @@ if __name__ == '__main__':  # executing as script
         orientation='vertical')
     cb.set_label(r'$\log P(\phi_{loc})$', labelpad=20, rotation=270)
 
-    ax.tricontourf(histogram3D[:, 0], histogram3D[:, 1], histogram3D[:, 2],
-        contours, cmap=cmap, norm=norm)             # local density histogram
+    ax.tricontourf(*philoc.histogram3D, contours, cmap=cmap, norm=norm) # local density histogram
     ax.plot(
-        histogram3D[:, 0], np.full(histogram3D.shape[0], fill_value=density),
+        philoc.histogram3D[0],
+        np.full(philoc.histogram3D.shape[1], fill_value=density),
         linestyle='--', color='red', linewidth=4)   # average density line
 
     ax.set_title(
