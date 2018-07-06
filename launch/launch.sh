@@ -30,7 +30,7 @@
 #   Maximum ntasks to be invoked on each core.
 #   DEFAULT: 1
 
-OUT_DIR=${OUT_DIR-$(ap_python -c 'from active_particles.naming import out_directory; print(out_directory)')}  # output directory
+OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
 mkdir -p $OUT_DIR                                                                                             # create if not existing
 
 COMMAND=$1  # command to execute script
@@ -48,7 +48,7 @@ shift
 ENVVAR=$@   # environment variables for script execution
 
 if [[ ! -z "$DATA" ]]; then # data directory name submitted
-  SIM_DIR=$(ap_python -c 'from active_particles.naming import sim_directory; print(sim_directory)')
+  SIM_DIR=$($AP_PYTHON -c 'from active_particles.naming import sim_directory; print(sim_directory)')
   ENVVAR="DATA_DIRECTORY=${SIM_DIR}/${DATA} $ENVVAR"
 fi
 

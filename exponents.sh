@@ -9,12 +9,12 @@
 
 letters_to_float(){
 	# Converts litteral expression to float expression.
-	ap_python -c "from active_particles.exponents import letters_to_float; print(letters_to_float('$1'))"
+	$AP_PYTHON -c "from active_particles.exponents import letters_to_float; print(letters_to_float('$1'))"
 }
 export -f letters_to_float
 
 float_to_letters(){
 	# Converts float expression to litteral expression.
-	ap_python -c "from active_particles.exponents import float_to_letters; print(float_to_letters($1))"
+	$AP_PYTHON -c "from active_particles.exponents import float_to_letters; print(float_to_letters($1))"
 }
 export -f float_to_letters
