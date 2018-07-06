@@ -2,6 +2,8 @@
 Module plot provides useful functions for plots.
 """
 
+from collections import OrderedDict
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cmx
@@ -58,6 +60,8 @@ def list_colormap(value_list, colormap='jet'):
         Hash table of colors.
     """
 
+    value_list = sorted(OrderedDict.fromkeys(value_list))
+
     cmap = plt.get_cmap(colormap)                               # colormap
     norm = colors.Normalize(vmin=0, vmax=len(value_list) + 1)   # normalise colormap according to list index
     scalarMap = cmx.ScalarMappable(norm=norm, cmap=cmap)        # associates scalar to color
@@ -83,6 +87,8 @@ def list_markers(value_list, marker_list=_markers):
         Hash table of markers.
     """
 
+    value_list = sorted(OrderedDict.fromkeys(value_list))
+
     return {value_list[index]: marker_list[index]
         for index in range(len(value_list))}
 
@@ -104,6 +110,8 @@ def list_linestyles(value_list, linestyle_list=_linestyles):
     linestyles : hash table
         Hash table of line styles.
     """
+
+    value_list = sorted(OrderedDict.fromkeys(value_list))
 
     return {value_list[index]: linestyle_list[index]
         for index in range(len(value_list))}
