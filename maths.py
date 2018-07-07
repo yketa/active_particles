@@ -650,3 +650,24 @@ class FFT2Dfilter:
         """
 
         return self.cut_low_wave_frequencies(np.divide(2*np.pi, threshold))
+
+def count(arrays, max_norm):
+    """
+    Returns number of arrays in array which norm is lesser than or equal to
+    max_norm in infite norm.
+
+    Parameters
+    ----------
+    arrays : 2D array-like
+        Arrays.
+    max_norm : float
+        Maximum norm.
+
+    Returns
+    -------
+    N : int
+        Number of arrays which norm is lesser than or equal to max_norm in
+        infinite norm.
+    """
+
+    return np.sum((abs(np.array(arrays)) <= max_norm).all(axis=-1))
