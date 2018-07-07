@@ -143,10 +143,11 @@ vorticity.
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, slurm_output
+from active_particles.init import get_env, slurm_output, linframes
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions, wave_vectors_2D,\
 	FFT2Dfilter
+from active_particles.quantities import nD0_active
 
 from active_particles.analysis.neighbours import NeighboursGrid
 from active_particles.analysis.correlations import corField2D_scalar_average
@@ -154,6 +155,7 @@ from active_particles.analysis.correlations import CorGrid
 from active_particles.analysis.coarse_graining import GaussianCG,\
 	CoarseGraining
 from active_particles.analysis.cuu import displacement_grid, Cnn
+from active_particles.analysis.number import count_particles
 
 from os import getcwd
 from os import environ as envvar
@@ -393,6 +395,22 @@ def strain_vorticity_fftsqnorm_grid(box_size, new_box_size, centre, Ncases,
 
 	return np.conj(FFTsgrid)*FFTsgrid, np.conj(FFTcgrid)*FFTcgrid
 
+def suptitle():
+	"""
+	Returns suptitles for figures.
+	"""
+
+	return (
+		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e,$'
+		% (parameters['N'], parameters['density'], parameters['vzero'],
+		parameters['dr'])
+		+ r'$\bar{N}=%.2e, \Delta t=%.2e, nD_0 \Delta t=%.2e$'
+		% (Nmean, dt*parameters['period_dump']*parameters['time_step'],
+		nD0*dt*parameters['period_dump']*parameters['time_step'])
+		+ '\n' + r'$L=%.2e, x_0=%.2e, y_0=%.2e,$' % (box_size, *centre)
+		+ r'$S_{init}=%.2e$' % init_frame
+		+ r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+
 def plot(grid, corr, box_size, var, naming_standard):
 	"""
 	Plots variable grid and correlations.
@@ -430,13 +448,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 	fig.subplots_adjust(wspace=0.4)	# width space
 	fig.subplots_adjust(hspace=0.3)	# height space
 
-	fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']) + '\n' +
-		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-		dt*parameters['period_dump']*parameters['time_step']) +
-		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases) +
-		r'$, r_{cut}=%.2e, \sigma=%.2e$' % (r_cut, sigma))
+	fig.suptitle(suptitle()
+		+ r'$, r_{cut}=%.2e, \sigma=%.2e$' % (r_cut, sigma))
 
 	# VARIABLE GRID
 
@@ -499,13 +512,8 @@ def plot(grid, corr, box_size, var, naming_standard):
 	fig_gc.subplots_adjust(wspace=0.4)	# width space
 	fig_gc.subplots_adjust(hspace=0.3)	# height space
 
-	fig_gc.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']) + '\n' +
-		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-		dt*parameters['period_dump']*parameters['time_step']) +
-		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases) +
-		r'$, r_{cut}=%.2e, \sigma=%.2e$' % (r_cut, sigma))
+	fig_gc.suptitle(suptitle()
+		+ r'$, r_{cut}=%.2e, \sigma=%.2e$' % (r_cut, sigma))
 
 	ax_grid.set_xlabel(r'$x$')
 	ax_grid.set_ylabel(r'$y$')
@@ -600,9 +608,13 @@ class StrainCorrelations:
 
 		self.r_cut = 0	# cut-off radius
 
+		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
+
 		# CSS FIGURE
 
 		self.fig_css, self.ax_css = plt.subplots()
+		self.ax_css.set_title(
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
 
 		grid = self.strain_correlations_corgrid()	# correlation grid
 
@@ -629,6 +641,8 @@ class StrainCorrelations:
 		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
 			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
 			min=Cmin, max=Cmax)
+		self.grid_circle.ax_grid.set_title(
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
 
 		# C44 FIGURE
 
@@ -645,6 +659,7 @@ class StrainCorrelations:
 			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
 
 		self.fig_c44, self.ax_c44 = plt.subplots()
+		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)
 		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
 		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
 
@@ -700,6 +715,12 @@ class StrainCorrelations:
 		Updates line position and strain correlations grid according to cut-off
 		radius self.r_cut.
 		"""
+
+		self.ax_css.set_title(
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
+		self.grid_circle.ax_grid.set_title(
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
+		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)				# update title
 
 		grid = self.strain_correlations_corgrid()		# new grid
 		self.grid_plot.set_data(grid.display_grid.grid)	# plot grid
@@ -789,8 +810,7 @@ def plot_fft():
 	sc = StrainCorrelations(wave_vectors, FFTsgridsqnorm)
 	to_return = (sc,)
 
-	sc.plot(parameters['box_size'], r_max,
-		parameters['box_size']/np.sqrt(parameters['N']),
+	sc.plot(parameters['box_size'], r_max, box_size/np.sqrt(Nmean),
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44)
@@ -799,15 +819,8 @@ def plot_fft():
 
 	sc.fig_css.set_size_inches(16, 16)
 
-	sc.fig_css.suptitle(
-		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']) + '\n' +
-		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-		dt*parameters['period_dump']*parameters['time_step']) +
-		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+	sc.fig_css.suptitle(suptitle())
 
-	sc.ax_css.set_title('2D ' + cor_name)
 	sc.ax_css.set_xlabel(r'$x$')
 	sc.ax_css.set_ylabel(r'$y$')
 	sc.colormap.set_label(cor_name, labelpad=20, rotation=270)
@@ -816,13 +829,7 @@ def plot_fft():
 
 	fig_gc, (ax_grid, ax_plot), cb_gc = sc.grid_circle.get_fig_ax_cmap()
 
-	fig_gc.suptitle(
-		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']) + '\n' +
-		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-		dt*parameters['period_dump']*parameters['time_step']) +
-		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+	fig_gc.suptitle(suptitle())
 
 	fig_gc.set_size_inches(16, 16)		# figure size
 	fig_gc.subplots_adjust(wspace=0.4)	# width space
@@ -830,7 +837,6 @@ def plot_fft():
 
 	ax_grid.set_xlabel(r'$x$')
 	ax_grid.set_ylabel(r'$y$')
-	ax_grid.set_title('2D ' + cor_name)
 	cb_gc.set_label(cor_name, labelpad=20, rotation=270)
 
 	ax_plot.set_xlabel(r'$\theta$')
@@ -838,13 +844,7 @@ def plot_fft():
 
 	# C44 FIGURE
 
-	sc.fig_c44.suptitle(
-		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']) + '\n' +
-		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-		dt*parameters['period_dump']*parameters['time_step']) +
-		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+	sc.fig_c44.suptitle(suptitle())
 
 	sc.fig_c44.set_size_inches(16, 16)	# figure size
 
@@ -875,6 +875,9 @@ if __name__ == '__main__':	# executing as script
 
 	data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
+	wrap_file_name = get_env('WRAPPED_FILE',
+		default=joinpath(data_dir, naming.wrapped_trajectory_file))	# wrapped trajectory file (.gsd)
+
 	dt = get_env('TIME', default=-1, vartype=int)	# lag time for displacement
 
 	init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)	# frame to consider as initial
@@ -904,6 +907,8 @@ if __name__ == '__main__':	# executing as script
 
 	dt = Nframes + dt if dt <= 0 else dt	# length of the interval of time for which displacements are calculated
 
+	times = linframes(init_frame, Nentries - dt, int_max)	# frames at which shear strain is calculated
+
 	from_ft = get_env('FROM_FT', default=False, vartype=bool)	# calculation of shear strain and vorticity in real space (False) or in Fourier space (True)
 
 	# NAMING
@@ -931,15 +936,8 @@ if __name__ == '__main__':	# executing as script
 
 		# VARIABLE DEFINITIONS
 
-		wrap_file_name = get_env('WRAPPED_FILE',
-			default=joinpath(data_dir, naming.wrapped_trajectory_file))		# wrapped trajectory file (.gsd)
 		unwrap_file_name = get_env('UNWRAPPED_FILE',
 			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
-
-		times = np.array(list(OrderedDict.fromkeys(map(
-			lambda x: int(x),
-			np.linspace(init_frame, Nentries - dt - 1, int_max)
-			))))	# frames at which shear strain will be calculated
 
 		if not(from_ft):	# calculation of shear strain and vorticity in real space
 
@@ -1024,6 +1022,13 @@ if __name__ == '__main__':	# executing as script
 		else:				# shear strain in Fourier space
 			with open(joinpath(data_dir, Css_filename), 'rb') as Css_dump_file:
 				FFTsgridsqnorm = pickle.load(Css_dump_file)
+
+		with open(wrap_file_name, 'rb') as wrap_file:
+			w_traj = Gsd(wrap_file, prep_frames=prep_frames)		# wrapped trajectory object
+			Nmean = np.mean(count_particles(
+				w_traj, *times, box_size=box_size, centre=centre))	# average number of particles in box
+		nD0 = nD0_active(
+			Nmean, parameters['vzero'], parameters['dr'], box_size)	# product of particle density and active diffusion constant
 
 	if get_env('PLOT', default=False, vartype=bool) or\
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
