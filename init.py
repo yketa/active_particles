@@ -6,13 +6,20 @@ analysis.
 from os.path import join as joinpath
 from os.path import exists as pathexists
 from os import makedirs
-from shutil import rmtree as rmr
 from os import environ as envvar
+from shutil import rmtree as rmr
+
 import sys
+
 import atexit
+
 import pickle
+
 from collections import OrderedDict
+
 from numbers import Number
+
+import numpy as np
 
 def to_vartype(input, default=None, vartype=str):
     """
@@ -281,3 +288,28 @@ def isnumber(variable):
     """
 
     return isinstance(variable, Number)
+
+def linframes(init_frame, tot_frames, max_frames):
+    """
+    Returns linearly spaced indexes in [|init_frame; tot_frames - 1|], with a
+    maximum of max_frames indexes.
+
+    Parameters
+    ----------
+    init_frame : int
+        Index of initial frame.
+    tot_frames : int
+        Total number of frames.
+    max_frames : int
+        Maximum number of frames.
+
+    Returns
+    -------
+    frames : 1D Numpy array
+        Array of frame numbers in ascending order.
+    """
+
+    return np.array(list(OrderedDict.fromkeys(map(
+        int,
+        np.linspace(init_frame, tot_frames - 1, max_frames, dtype=int)
+        ))))
