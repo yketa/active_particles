@@ -605,8 +605,6 @@ if __name__ == '__main__':  # executing as script
     arrow_head_length = get_env('HEAD_LENGTH', default=_arrow_head_length,
         vartype=float)  # length of the arrows' head
 
-
-
     # LEGEND SUPTITLE
 
     def suptitle(frame):
