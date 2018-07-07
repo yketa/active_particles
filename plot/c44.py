@@ -118,6 +118,8 @@ from os import environ as envvar
 if __name__ == '__main__': envvar['SHOW'] = 'True'
 from os.path import join as joinpath
 
+from active_particles.quantities import nD0_active, nD0_thermal
+
 from active_particles.analysis.css import Css2DtoC44, _slope0_c44 as _slope0,\
     _slope_min_c44 as _slope_min, _slope_max_c44 as _slope_max,\
     _points_x_c44 as _points_x, _points_theta_c44 as _points_theta,\
@@ -272,8 +274,8 @@ if __name__ == '__main__':  # executing as script
             % (parameters['period_dump']*parameters['time_step']*dt))
 
     if get_env('TEMPERATURE', default=False, vartype=bool): # TEMPERATURE mode
-        nD0 = (2*parameters['kT']*parameters['N'])/(
-            parameters['damp_bro']*parameters['a']*(parameters['box_size']**2))
+        nD0 = nD0_thermal(parameters['N'], parameters['kT'],
+            parameters['damp_bro']*parameters['a'], parameters['box_size'])
         legend0 = [mpatches.Patch(color='none',
             label=r'$nD_0 = \frac{2 k_B T N}{\lambda a L^2} = %.2e$' % nD0)]
         legend0 += list(map(lambda dt: Line2D([0], [0], color=colors[dt],
@@ -281,8 +283,8 @@ if __name__ == '__main__':  # executing as script
             % (dt*parameters['time_step']*parameters['period_dump']*nD0)),
             dt_list))
     else:
-        nD0 = (parameters['N']*(parameters['vzero']**2))/(2*parameters['dr']
-            *(parameters['box_size']**2))
+        nD0 = nD0_active(parameters['N'], parameters['vzero'],
+            parameters['dr'], parameters['box_size'])
         legend0 = [mpatches.Patch(color='none', label=
             r'$nD_0 = \frac{Nv_0^2}{2\nu_r L^2} = %.2e$' % nD0)]
         legend0 += list(map(lambda dt: Line2D([0], [0], color=colors[dt],
