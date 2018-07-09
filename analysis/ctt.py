@@ -720,7 +720,6 @@ if __name__ == '__main__':  # executing as script
 
     Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
 		vartype=int)        # number of boxes in each direction to compute the displacement grid
-    dL = box_size/Ncases    # boxes separation
 
     Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in unwrapped trajectory file
     init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
@@ -769,15 +768,15 @@ if __name__ == '__main__':  # executing as script
             u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
             Ugrid = list(map(
                 lambda time: displacement_grid(parameters['box_size'],
-                box_size, centre, Ncases, time, dt, w_traj, u_traj, dL),
+                box_size, centre, Ncases, time, dt, w_traj, u_traj),
                 times))											# lists of displacement variables
 
         Cnn_object = Cnn(Ugrid, box_size)	# density correlation object
         Cnn2D = Cnn_object.cnn2D			# 2D density correlation grid
         Cnn1D = Cnn_object.cnn1D			# 1D averaged density correlation grid
 
-        wave_vectors = wave_vectors_2D(Ncases, Ncases, d=dL)			# wave vectors grid
-        wave_vectors_norm = np.sqrt(np.sum(wave_vectors**2, axis=-1))	# wave vectors norm grid
+        wave_vectors = wave_vectors_2D(Ncases, Ncases, d=box_size/Ncases)	# wave vectors grid
+        wave_vectors_norm = np.sqrt(np.sum(wave_vectors**2, axis=-1))		# wave vectors norm grid
 
         k_cross_FFTUgrid, k_dot_FFTUgrid = np.transpose(
 			list(map(lambda grid: kFFTgrid(grid), Ugrid)),
