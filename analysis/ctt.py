@@ -152,10 +152,11 @@ according to active_particles.naming.Cll standards in DATA_DIRECTORY.
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, slurm_output
+from active_particles.init import get_env, slurm_output, linframes
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
 	divide_arrays
+from active_particles.quantities import nD0_active
 
 from active_particles.analysis.cuu import displacement_grid, Cnn
 from active_particles.analysis.css import StrainCorrelations, Css2DtoC44,\
@@ -164,6 +165,7 @@ from active_particles.analysis.css import StrainCorrelations, Css2DtoC44,\
 	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
+from active_particles.analysis.number import count_particles
 
 from os import getcwd
 from os import environ as envvar
@@ -288,7 +290,7 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.wave_vectors = wave_vectors
 		self.kxsq = np.array(self.wave_vectors)[:, :, 0]**2	# squared wave vectors x-coordinates
 		self.kysq = np.array(self.wave_vectors)[:, :, 1]**2	# squared wave vectors y-coordinates
-		self.ksq = self.kxsq + self.kysq					# squared wave vectors norm
+		self.ksq = self.kxsq + self.kysq					# squared wave vectors norms
 
 		self.k_cross_FFTugrid2D_sqnorm = k_cross_FFTugrid2D_sqnorm
 		self.k_dot_FFTugrid2D_sqnorm = k_dot_FFTugrid2D_sqnorm
@@ -357,6 +359,8 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 
 		self.r_cut = 0	# cut-off radius
 
+		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
+
 		# STRAIN CORRELATIONS
 
 		grid = self.strain_correlations_corgrid()	# correlation grid
@@ -402,6 +406,8 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
 			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
 			min=Cmin, max=Cmax)
+		self.grid_circle.ax_grid.set_title(
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
 
 		# C44 FIGURE
 
@@ -418,6 +424,7 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
 
 		self.fig_c44, self.ax_c44 = plt.subplots()
+		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)
 		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
 		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
 
@@ -476,6 +483,10 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		radius self.r_cut.
 		"""
 
+		self.grid_circle.ax_grid.set_title(
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
+		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)				# update title
+
 		grid = self.strain_correlations_corgrid()		# new grid
 		self.grid_plot.set_data(grid.display_grid.grid)	# plot grid
 		self.grid_plot.figure.canvas.draw()				# update plot
@@ -488,6 +499,22 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.c44 = self.css2Dtoc44(grid.grid)		# update C44 values
 		self.line_c44.set_ydata(self.c44[:, 1])		# plot C44
 		self.line_c44.figure.canvas.draw()			# update plot
+
+def suptitle():
+	"""
+	Returns suptitles for figures.
+	"""
+
+	return (
+		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e,$'
+		% (parameters['N'], parameters['density'], parameters['vzero'],
+		parameters['dr'])
+		+ r'$\bar{N}=%.2e, \Delta t=%.2e, nD_0 \Delta t=%.2e$'
+		% (Nmean, dt*parameters['period_dump']*parameters['time_step'],
+		nD0*dt*parameters['period_dump']*parameters['time_step'])
+		+ '\n' + r'$L=%.2e, x_0=%.2e, y_0=%.2e,$' % (box_size, *centre)
+		+ r'$S_{init}=%.2e$' % init_frame
+		+ r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
 
 def plot():
 	"""
@@ -523,12 +550,7 @@ def plot():
 	fig.subplots_adjust(wspace=0.3)
 	fig.subplots_adjust(hspace=0.3)
 
-	fig.suptitle(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-		% (parameters['N'], parameters['density'], parameters['vzero'],
-		parameters['dr']) + '\n' +
-		r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-		dt*parameters['period_dump']*parameters['time_step']) +
-		r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+	fig.suptitle(suptitle())
 
 	gs = GridSpec(2, 2)
 
@@ -614,13 +636,7 @@ def plot():
 		sc.fig.subplots_adjust(wspace=0.3)
 		sc.fig.subplots_adjust(hspace=0.3)
 
-		sc.fig.suptitle(
-			r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-			% (parameters['N'], parameters['density'], parameters['vzero'],
-			parameters['dr']) + '\n' +
-			r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-			dt*parameters['period_dump']*parameters['time_step']) +
-			r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+		sc.fig.suptitle(suptitle())
 
 		sc.ax_sc.set_title('2D ' + cor_name)
 		sc.ax_sc.set_xlabel(r'$x$')
@@ -636,13 +652,7 @@ def plot():
 
 		fig_gc, (ax_grid, ax_plot), cb_gc = sc.grid_circle.get_fig_ax_cmap()
 
-		fig_gc.suptitle(
-			r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-			% (parameters['N'], parameters['density'], parameters['vzero'],
-			parameters['dr']) + '\n' +
-			r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-			dt*parameters['period_dump']*parameters['time_step']) +
-			r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+		fig_gc.suptitle(suptitle())
 
 		fig_gc.set_size_inches(16, 16)		# figure size
 		fig_gc.subplots_adjust(wspace=0.4)	# width space
@@ -650,7 +660,6 @@ def plot():
 
 		ax_grid.set_xlabel(r'$x$')
 		ax_grid.set_ylabel(r'$y$')
-		ax_grid.set_title('2D ' + cor_name)
 		cb_gc.set_label(cor_name, labelpad=20, rotation=270)
 
 		ax_plot.set_xlabel(r'$\theta$')
@@ -658,13 +667,7 @@ def plot():
 
 		# C44 FIGURE
 
-		sc.fig_c44.suptitle(
-			r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-			% (parameters['N'], parameters['density'], parameters['vzero'],
-			parameters['dr']) + '\n' +
-			r'$S_{init}=%.2e, \Delta t=%.2e$' % (init_frame,
-			dt*parameters['period_dump']*parameters['time_step']) +
-			r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+		sc.fig_c44.suptitle(suptitle())
 
 		sc.fig_c44.set_size_inches(16, 16)	# figure size
 
@@ -695,6 +698,9 @@ if __name__ == '__main__':  # executing as script
 
     data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
+    wrap_file_name = get_env('WRAPPED_FILE',
+        default=joinpath(data_dir, naming.wrapped_trajectory_file))	# wrapped trajectory file (.gsd)
+
     dt = get_env('TIME', default=-1, vartype=int)	# lag time for displacement
 
     init_frame = get_env('INITIAL_FRAME', default=-1, vartype=int)	# frame to consider as initial
@@ -722,6 +728,10 @@ if __name__ == '__main__':  # executing as script
 
     dt = Nframes + dt if dt <= 0 else dt	# length of the interval of time for which displacements are calculated
 
+    times = linframes(init_frame, Nentries - dt, int_max)	# frames at which shear strain is calculated
+
+	# NAMING
+
     attributes = {'density': parameters['density'],
 		'vzero': parameters['vzero'], 'dr': parameters['dr'],
 		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
@@ -747,8 +757,6 @@ if __name__ == '__main__':  # executing as script
 
 		# VARIABLE DEFINITIONS
 
-        wrap_file_name = get_env('WRAPPED_FILE',
-			default=joinpath(data_dir, naming.wrapped_trajectory_file))		# wrapped trajectory file (.gsd)
         unwrap_file_name = get_env('UNWRAPPED_FILE',
 			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
@@ -818,6 +826,13 @@ if __name__ == '__main__':  # executing as script
             (_, k_dot_FFTugrid2D_sqnorm,
 				k_dot_FFTugrid1D_sqnorm) = pickle.load(Cll_dump_file)
             Cnn2D, Cnn1D = pickle.load(Cnn_dump_file)
+
+        with open(wrap_file_name, 'rb') as wrap_file:
+            w_traj = Gsd(wrap_file, prep_frames=prep_frames)		# wrapped trajectory object
+            Nmean = np.mean(count_particles(
+				w_traj, *times, box_size=box_size, centre=centre))	# average number of particles in box
+        nD0 = nD0_active(
+			Nmean, parameters['vzero'], parameters['dr'], box_size)	# product of particle density and active diffusion constant
 
     if get_env('PLOT', default=False, vartype=bool) or\
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
