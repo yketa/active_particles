@@ -91,6 +91,9 @@ R_MAX [PLOT or SHOW mode] : float
 DISPLAY_GRID [COMPUTE and not(FROM_FT) mode] : int
 	Index of map in list of variable maps to display.
 	DEFAULT : 0
+FONT_SIZE : int
+    Plot font size.
+    DEFAULT: active_particles.analysis.css._font_size
 POINTS_X_C44 [FROM_FT and PLOT mode] : int
 	Number of radii at which to evaluate integrated strain correlation.
 	DEFAULT: active_particles.analysis.css._points_x_c44
@@ -192,6 +195,8 @@ _r_max = 20	# default half size of the box showed for 2D correlation
 
 _c_min = -0.2	# default minimum value for correlations
 _c_max = 1		# default maximum value for correlations
+
+_font_size = 10	# default plot font size
 
 _slope0_c44 = -2    # default initial slope for fitting line slider
 _slope_min_c44 = -5 # default minimum slope for fitting line slider
@@ -354,10 +359,10 @@ def strain_vorticity_fftsqnorm_grid(box_size, new_box_size, centre, Ncases,
 	----------
 	box_size : float
 		Length of the system's square box.
-    new_box_size : float
+	new_box_size : float
 		Length of the considered system's square box.
-    centre : float array
-        Centre of the box.
+	centre : float array
+		Centre of the box.
 	Ncases : int
 		Number of boxes in each direction to compute the displacements.
 	time : int
@@ -584,10 +589,10 @@ class StrainCorrelations:
 		av_p_sep : float
 			Average particle separation.
 		points_x_c44 : int
-            Number of radii at which to evaluate integrated strain correlation.
+			Number of radii at which to evaluate integrated strain correlation.
 			(default: active_particles.plot.c44._points_x)
-        points_theta_c44 : int
-            Number of angles to evaluate integrated strain correlation.
+		points_theta_c44 : int
+			Number of angles to evaluate integrated strain correlation.
 			(default: active_particles.plot.c44._points_theta)
 		y_min_c44 : float
 			Minimum plot value for C44.
@@ -595,11 +600,11 @@ class StrainCorrelations:
 		y_max_c44 : float
 			Maximum plot value for C44.
 			(default: active_particles.plot.c44._y_max)
-        r_min_c44 : float
-            Minimum radius in average particle separation for C44 calculation.
+		r_min_c44 : float
+			Minimum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_min)
-        r_max_c44 : float
-            Maximum radius in average particle separation for C44 calculation.
+		r_max_c44 : float
+			Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_max)
 		"""
 
@@ -1034,6 +1039,9 @@ if __name__ == '__main__':	# executing as script
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
 
 		# PLOT
+
+		font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)       # plot font size
+		mpl.rcParams.update({'font.size': font_size})
 
 		r_max = get_env('R_MAX', default=_r_max, vartype=float)	# half size of the box showed for 2D correlation
 		r_max = box_size/2 if r_max < 0 else r_max
