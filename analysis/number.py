@@ -32,5 +32,5 @@ def count_particles(w_traj, *frames, box_size=None, centre=(0, 0)):
 
     return list(map(
         lambda frame: count(w_traj.position(frame, centre=centre),
-            box_size if box_size != None else w_traj.box_size(time=frame)),
+            (box_size if box_size != None else w_traj.box_size(time=frame))/2),
         frames))
