@@ -760,11 +760,6 @@ if __name__ == '__main__':  # executing as script
         unwrap_file_name = get_env('UNWRAPPED_FILE',
 			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
-        times = np.array(list(OrderedDict.fromkeys(map(
-			lambda x: int(x),
-			np.linspace(init_frame, Nentries - dt - 1, int_max)
-			))))	# frames at which shear strain will be calculated
-
         # DISPLACEMENT AND DENSITY CORRELATIONS
 
         with open(wrap_file_name, 'rb') as wrap_file,\
