@@ -20,14 +20,20 @@ git clone https://github.com/yketa/active_particles
 source active_particles/install.sh
 ```
 
-[`install.sh`](https://github.com/yketa/active_particles/blob/master/install.sh) creates a specific conda environment, sources [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh) — which adds the directory containing __active_particles__ to the Python path, and sets up commands, environment variables and functions — and writes to `~/.bash_profile` so the latter is done at each login.
+[`install.sh`](https://github.com/yketa/active_particles/blob/master/install.sh) creates a specific conda environment, sources [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh) — which adds the directory containing __active_particles__ to the Python path, and sets up aliases, environment variables and functions to be used in the command line — and writes to `~/.bash_profile` so the latter is done at each login.
 
 __Remark:__ This is not an installation _stricto sensu_, all scripts can be used as they come without running [`install.sh`](https://github.com/yketa/active_particles/blob/master/install.sh). However, running it then using the defined commands and environment variables makes sure everything works as expected.
 
-## Useful commands
+## Useful aliases
 
-* `ap_python`: Python executable in the __active_particles__ conda environment.
+* `ap_python`: Python executable installed in the __active_particles__ conda environment.
+* `ap_mprof`: `mprof` command of [`memory_profiler`](https://github.com/pythonprofilers/memory_profiler), useful for monitoring memory consumption of processes, installed in the __active_particles__ conda environment.
 * `ap_update`: Pull git repository and source [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh).
+
+## Notable scripts
+
+* [`setup.sh`](https://github.com/yketa/active_particles/blob/master/setup.sh) sets up aliases, environment variables and functions to be used in the command line.
+* [`naming.py`](https://github.com/yketa/active_particles/blob/master/naming.py) contains all the standards for naming all data files and directories.
 
 ## Usage
 
@@ -52,6 +58,3 @@ and will make plotting windows appear.
 
 ![Example of Cuu plot](https://github.com/yketa/active_particles/raw/master/docs/screenshot_cuu.png)
 
-## Important modules
-
-* [`active_particles.naming`](https://github.com/yketa/active_particles/blob/master/naming.py) contains all the standards for naming all data files and directories.

@@ -7,6 +7,7 @@
 export AP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" # path to active_particles package
 export AP_PYTHON=$(. activate active_particles_env; which python) # python executable to use with active_particles
 alias ap_python="$AP_PYTHON"
+alias ap_mprof="$(. activate active_particles_env; which mprof)"  # python memory profiling tool
 alias ap_update="( cd $AP_DIR ; git pull ; . setup.sh )"          # alias to update active_particles git repository
 
 # PYTHON

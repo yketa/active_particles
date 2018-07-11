@@ -3,13 +3,16 @@
 AP_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"  # path to active_particles package
 
 printf "
-active_particles
-----------------
-Yann-Edwin Keta, University of British Columbia, 2018
+                     __________________
+                    |                  |
+                    | active_particles |
+                    |__________________|
 
-****************
+    Yann-Edwin Keta, University of British Columbia, 2018
+    *---------------------------------------------------*
 
-This program will install the dependencies of the active_particles package and set it up.
+This installation script will install the dependencies of the
+active_particles package and set it up.
 
 "
 
@@ -18,6 +21,11 @@ This program will install the dependencies of the active_particles package and s
 echo "Creating conda environment: active_particles_env"
 command -v conda >/dev/null 2>&1 || { echo >&2 "conda not installed. Please visit https://conda.io/miniconda.html. Aborting."; exit 0; }
 conda env create --force -f ${AP_DIR}/environment.yml
+
+# INSTALLING MEMORY PROFILING TOOL
+
+echo "Installing memory profiling tool: memory_profiler" # https://github.com/pythonprofilers/memory_profiler
+(. activate active_particles_env; pip install -U memory_profiler)
 
 # SET UP ACTIVE_PARTICLES
 
