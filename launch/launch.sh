@@ -79,14 +79,14 @@ if [[ -z "$@" ]]; then
   exit 0
 fi
 
-SCRIPT="${DATA:+DATA_DIRECTORY=$DATA }$@" # script to execute
-if [[ ! -z '${MPROF+MPROF}' ]]; then      # run with mprof
+SCRIPT=( ${DATA:+DATA_DIRECTORY=$DATA } $@ )  # script to execute
+if [[ ! -z "${MPROF+MPROF}" ]]; then          # run with mprof
   for ((i=0; i<${#SCRIPT[@]}; i++)); do
-    if [[ "${SCRIPT[$i]}" =~ "=" ]]; then
+    if [[ ! "${SCRIPT[$i]}" =~ "=" ]]; then
       break
     fi
   done
-  SCRIPT="${SCRIPT[@]::$i} $AP_MPROF run ${SCRIPT[@]:$i}"
+  SCRIPT=( ${SCRIPT[@]::$i} $AP_MPROF run ${SCRIPT[@]:$i} )
 fi
 
 OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
@@ -110,5 +110,5 @@ if [[ ! -z '${MPROF+MPROF}' ]]; then
 fi
 (>&2 echo)
 
-$SCRIPT  # launching script
+${SCRIPT[@]}  # launching script
 EOF
