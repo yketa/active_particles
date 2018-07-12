@@ -88,6 +88,7 @@ if [[ ! -z "${MPROF+MPROF}" ]]; then          # run with mprof
   done
   SCRIPT=( ${SCRIPT[@]::$i} $AP_MPROF run ${SCRIPT[@]:$i} )
 fi
+SCRIPT=${SCRIPT[@]}
 
 OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
 mkdir -p $OUT_DIR                                                                                             # create if not existing
@@ -110,5 +111,5 @@ if [[ ! -z '${MPROF+MPROF}' ]]; then
 fi
 (>&2 echo)
 
-${SCRIPT[@]}  # launching script
+$SCRIPT # launching script
 EOF
