@@ -36,8 +36,8 @@ OPTIONS
         DEFAULT: 1
   -m    Real memory required per node.
         DEFAULT: (not specified)
-  -d    Error output directory.
-        DEFAULT: active_particles.naming.out_directory
+  -d    Data directory.
+        DEFAULT: (not specified)
 EOF
 
 }
@@ -79,7 +79,15 @@ if [[ -z "$@" ]]; then
   exit 0
 fi
 
-SCRIPT="${MPROF+$AP_MPROF run }${DATA:+DATA_DIRECTORY=$DATA }$@" # script to execute
+SCRIPT="${DATA:+DATA_DIRECTORY=$DATA }$@" # script to execute
+if [[ ! -z '${MPROF+MPROF}' ]]; then      # run with mprof
+  for ((i=0; i<${#SCRIPT[@]}; i++)); do
+    if [[ "${SCRIPT[$i]}" =~ "=" ]]; then
+      break
+    fi
+  done
+  SCRIPT="${SCRIPT[@]::$i} $AP_MPROF run ${SCRIPT[@]:$i}"
+fi
 
 OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
 mkdir -p $OUT_DIR                                                                                             # create if not existing
