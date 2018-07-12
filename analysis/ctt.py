@@ -732,9 +732,9 @@ if __name__ == '__main__':  # executing as script
 	# NAMING
 
     attributes = {'density': parameters['density'],
-		'vzero': parameters['vzero'], 'dr': parameters['dr'],
-		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
-		'int_max': int_max, 'Ncases': Ncases, 'box_size': box_size,
+        'vzero': parameters['vzero'], 'dr': parameters['dr'],
+        'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
+        'int_max': int_max, 'Ncases': Ncases, 'box_size': box_size,
         'x_zero': centre[0], 'y_zero': centre[1]}		# attributes displayed in filenames
     naming_Ctt = naming.Ctt()                           # Ctt naming object
     Ctt_filename, = naming_Ctt.filename(**attributes)   # Ctt filename
@@ -754,7 +754,7 @@ if __name__ == '__main__':  # executing as script
 
         startTime = datetime.now()
 
-		# VARIABLE DEFINITIONS
+        # VARIABLE DEFINITIONS
 
         unwrap_file_name = get_env('UNWRAPPED_FILE',
 			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
