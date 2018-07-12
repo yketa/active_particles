@@ -106,9 +106,6 @@ ${MEM:+#SBATCH --mem=$MEM}                    # real memory required per node
 
 (>&2 printf '%-17s: %s\n' 'SUBMIT DIRECTORY' '$(pwd)')  # submit directory in error output file
 (>&2 printf '%-17s: %s\n' 'SCRIPT' '$SCRIPT')           # SCRIPT in error output file
-if [[ ! -z '${MPROF+MPROF}' ]]; then
-  (>&2 printf 'Run with mprof.')                        # script is run with mprof
-fi
 (>&2 echo)
 
 $SCRIPT # launching script
