@@ -409,12 +409,13 @@ def suptitle():
 		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e,$'
 		% (parameters['N'], parameters['density'], parameters['vzero'],
 		parameters['dr'])
-		+ r'$\bar{N}=%.2e, \Delta t=%.2e, nD_0 \Delta t=%.2e$'
+		+ r'$\bar{N}=%.2e, \Delta t=%.2e, nD_0 \Delta t=%.2e, L=%.2e$'
 		% (Nmean, dt*parameters['period_dump']*parameters['time_step'],
-		nD0*dt*parameters['period_dump']*parameters['time_step'])
-		+ '\n' + r'$L=%.2e, x_0=%.2e, y_0=%.2e,$' % (box_size, *centre)
+		nD0*dt*parameters['period_dump']*parameters['time_step'], box_size)
+		+ '\n' + r'$x_0=%.2e, y_0=%.2e,$' % centre
 		+ r'$S_{init}=%.2e$' % init_frame
-		+ r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+		+ r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases)
+		+ r'$, dL = %.2e a$' % (np.sqrt(Nmean)/Ncases))
 
 def plot(grid, corr, box_size, var, naming_standard):
 	"""
@@ -853,7 +854,7 @@ def plot_fft():
 
 	sc.fig_c44.set_size_inches(16, 16)	# figure size
 
-	sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
+	sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{\bar{N}})$')
 	sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
 		+ ' ' + cor_name + r'$(r, \theta)$'
 		+ ' ' + r'$\cos4\theta$'
