@@ -1,56 +1,88 @@
 #! /bin/bash
 #
-# This bash shell script submits jobs to a Slurm job scheduler, setting
-# environment variables specific to the script.
-#
-# Jobs are launched as follows:
-# [SLURM PARAMETERS] bash launch.sh [COMMAND] [SCRIPT] [ENVIRONMENT VARIABLES]
-#
-# Slurm parameters
-# ----------------
-# OUT_DIR : string
-#   Error output directory.
-#   DEFAULT: active_particles.naming.out_directory
-# CHAIN : int
-#   Begin execution after job with job ID CHAIN has succesfully executed.
-#   DEFAULT: None
-# JOB_NAME : string
-#   Job name on Slurm scheduler
-#   DEFAULT: script name
-# PARTITION : string
-#   Partition for the resource allocation.
-#   DEFAULT: vis
-# GRES : string
-#   Generic consumable resources.
-#   DEFAULT:
-# OUT_FILE : string
-#   Standard output file.
-#   DEFAULT: /dev/null (output file is supposed to be managed in script itself)
-# NTASKS : int
-#   Maximum ntasks to be invoked on each core.
-#   DEFAULT: 1
+# Submit job to a Slurm job scheduler.
 
-OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
-mkdir -p $OUT_DIR                                                                                             # create if not existing
+usage(){  # help menu
 
-COMMAND=$1  # command to execute script
-if [[ -z "$COMMAND" ]]; then
-  echo 'No command submitted.'
-  exit 0
-fi
-shift
-SCRIPT=$1   # script
-if [[ -z "$SCRIPT" ]]; then
+cat << EOF
+Submit job to a Slurm job scheduler.
+
+SYNOPSIS
+
+  launch.sh [options] [script]
+
+OPTIONS
+
+  [without arguments]
+  -h    Display help menu.
+  -r    Run with mprof memory profiler.
+        (see https://github.com/pythonprofilers/memory_profiler)
+
+  [with arguments]
+  -j    Job name on Slurm scheduler.
+        DEFAULT: script name after last '/'
+  -o    Error output directory.
+        DEFAULT: active_particles.naming.out_directory
+  -f    Standard output file.
+        DEFAULT: /dev/null (output file is supposed to be managed in script
+        itself)
+  -c    Begin execution after job with this ID has succesfully executed.
+        DEFAULT: (not specified)
+  -p    Partition for the resource allocation.
+        DEFAULT: vis
+  -g    Generic consumable resources.
+        DEFAULT:
+  -n    Maximum ntasks to be invoked on each core.
+        DEFAULT: 1
+  -m    Real memory required per node.
+        DEFAULT: (not specified)
+  -d    Error output directory.
+        DEFAULT: active_particles.naming.out_directory
+EOF
+
+}
+
+while getopts "hj:o:f:c:p:g:n:m:d:r" OPTION; do
+  case $OPTION in
+
+    h)  # help menu
+      usage ; exit ;;
+    j)  # job name
+      JOB_NAME=$OPTARG ;;
+    o)  # error output directory
+      OUT_DIR=$OPTARG ;;
+    f)  # error output file
+      OUT_FILE=$OPTARG ;;
+    c)  # chained job
+      CHAIN=$OPTARG ;;
+    p)  # partition
+      PARTITION=$OPTARG ;;
+    g)  # generic consumable resources
+      GRES=$OPTARG ;;
+    n)  # maximum ntasks
+      NTASKS=$OPTARG ;;
+    m)  # real memory
+      MEM=$OPTARG ;;
+    d)  # data directory
+      SIM_DIR=$($AP_PYTHON -c 'from active_particles.naming import sim_directory; print(sim_directory)')
+      DATA="${SIM_DIR}/$OPTARG"
+      ;;
+    r)  # run with mprof
+      MPROF= ;;
+
+  esac
+done
+shift $(expr $OPTIND - 1)
+
+if [[ -z "$@" ]]; then
   echo 'No script submitted.'
   exit 0
 fi
-shift
-ENVVAR=$@   # environment variables for script execution
 
-if [[ ! -z "$DATA" ]]; then # data directory name submitted
-  SIM_DIR=$($AP_PYTHON -c 'from active_particles.naming import sim_directory; print(sim_directory)')
-  ENVVAR="DATA_DIRECTORY=${SIM_DIR}/${DATA} $ENVVAR"
-fi
+SCRIPT="${MPROF+$AP_MPROF run }${DATA:+DATA_DIRECTORY=$DATA }$@" # script to execute
+
+OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
+mkdir -p $OUT_DIR                                                                                             # create if not existing
 
 # SUBMIT JOB
 sbatch ${CHAIN:+-d afterok:$CHAIN} <<EOF
@@ -61,14 +93,14 @@ sbatch ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #SBATCH --output=${OUT_FILE-/dev/null}        # standard output file
 #SBATCH --error=${OUT_DIR}/%j.out             # standard error output file
 #SBATCH --ntasks-per-node=${NTASKS-1}         # maximum ntasks to be invoked on each core
-
-export $ENVVAR  # setting environment variables
+${MEM:+#SBATCH --mem=$MEM}                    # real memory required per node
 
 (>&2 printf '%-17s: %s\n' 'SUBMIT DIRECTORY' '$(pwd)')  # submit directory in error output file
-(>&2 printf '%-17s: %s\n' 'COMMAND' '$COMMAND')         # COMMAND in error output file
 (>&2 printf '%-17s: %s\n' 'SCRIPT' '$SCRIPT')           # SCRIPT in error output file
-(>&2 printf '%-17s: %s\n' 'ENVIRON' '$ENVVAR')          # ENVVAR in error output file
+if [[ ! -z '${MPROF+MPROF}' ]]; then
+  (>&2 printf 'Run with mprof.')                        # script is run with mprof
+fi
 (>&2 echo)
 
-$COMMAND $SCRIPT  # launching script
+$SCRIPT  # launching script
 EOF
