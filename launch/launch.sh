@@ -90,22 +90,40 @@ if [[ ! -z "${MPROF+MPROF}" ]]; then          # run with mprof
 fi
 SCRIPT=${SCRIPT[@]}
 
+# JOB PARAMETERS
+
 OUT_DIR=${OUT_DIR-$($AP_PYTHON -c 'from active_particles.naming import out_directory; print(out_directory)')} # output directory
 mkdir -p $OUT_DIR                                                                                             # create if not existing
 
+JOB_NAME=${JOB_NAME-${SCRIPT##*/}}  # job name
+PARTITION=${PARTITION-vis}          # partition for the resource allocation
+GRES=${GRES-}                       # generic consumable resources
+OUT_FILE=${OUT_FILE-/dev/null}      # standard output file
+NTASKS=${NTASKS-1}                  # maximum ntasks to be invoked on each core
+MEM=${MEM-}                         # real memory required per node
+
 # SUBMIT JOB
+
 sbatch ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #! /bin/bash
-#SBATCH --job-name=${JOB_NAME-${SCRIPT##*/}}  # job name
-#SBATCH --partition=${PARTITION-vis}          # partition for the resource allocation
-#SBATCH --gres=${GRES-}                       # generic consumable resources
-#SBATCH --output=${OUT_FILE-/dev/null}        # standard output file
-#SBATCH --error=${OUT_DIR}/%j.out             # standard error output file
-#SBATCH --ntasks-per-node=${NTASKS-1}         # maximum ntasks to be invoked on each core
-${MEM:+#SBATCH --mem=$MEM}                    # real memory required per node
+#SBATCH --job-name=$JOB_NAME
+#SBATCH --partition=$PARTITION
+#SBATCH --gres=$GRES
+#SBATCH --output=$OUT_FILE
+#SBATCH --error=${OUT_DIR}/%j.out # standard error output file named after job ID
+#SBATCH --ntasks-per-node=$NTASKS
+${MEM:+#SBATCH --mem=$MEM}
 
-(>&2 printf '%-17s: %s\n' 'SUBMIT DIRECTORY' '$(pwd)')  # submit directory in error output file
-(>&2 printf '%-17s: %s\n' 'SCRIPT' '$SCRIPT')           # SCRIPT in error output file
+# PRINT JOB PARAMETERS TO ERROR OUTPUT FILE
+(>&2 printf '%-17s: %s\n' 'SUBMIT DIRECTORY' '$(pwd)')
+(>&2 printf '%-17s: %s\n' 'JOB NAME' '$JOB_NAME')
+(>&2 printf '%-17s: %s\n' 'PARTITION' '$PARTITION')
+(>&2 printf '%-17s: %s\n' 'GRES' '$GRES')
+(>&2 printf '%-17s: %s\n' 'OUTPUT FILE' '$OUT_FILE')
+(>&2 printf '%-17s: %s\n' 'TASKS PER NODE' '$NTASKS')
+(>&2 printf '%-17s: %s\n' 'MEMORY REQUIRED' '$MEM')
+(>&2 echo)
+(>&2 printf '%-17s: %s\n' 'SCRIPT' '$SCRIPT')
 (>&2 echo)
 
 $SCRIPT # launching script
