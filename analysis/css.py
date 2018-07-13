@@ -112,6 +112,9 @@ R_MIN_C44 [FROM_FT and PLOT mode] : float
 R_MAX_C44 [FROM_FT and PLOT mode] : float
 	Maximum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_max_c44
+SMOOTH [FROM_FT and PLOT mode] : float
+	C44 smoothing length scale.
+	DEFAULT: 0
 SLOPE_C44 [FROM_FT and PLOT mode] : slope
 	Initial slope for fitting line.
 	DEFAULT: active_particles.analysis.css._slope0_c44
@@ -149,7 +152,7 @@ import active_particles.naming as naming
 from active_particles.init import get_env, slurm_output, linframes
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import relative_positions, wave_vectors_2D,\
-	FFT2Dfilter
+	FFT2Dfilter, gaussian_smooth_1D
 from active_particles.quantities import nD0_active
 
 from active_particles.analysis.neighbours import NeighboursGrid
@@ -577,7 +580,8 @@ class StrainCorrelations:
 	def plot(self, box_size, r_max_css, av_p_sep,
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
-		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44):
+		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
+		smooth=0):
 		"""
 		Plots strain correlations with slider for cut-off radius.
 
@@ -607,6 +611,8 @@ class StrainCorrelations:
 		r_max_c44 : float
 			Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_max)
+		smooth : float
+			C44 smoothing length scale. (default: 0)
 		"""
 
 		self.box_size = box_size
@@ -659,6 +665,7 @@ class StrainCorrelations:
 		self.y_max_c44 = y_max_c44
 		self.r_min_c44 = r_min_c44
 		self.r_max_c44 = r_max_c44
+		self.smooth = smooth
 
 		self.toC44 = Css2DtoC44(self.box_size,
 			self.points_x_c44, self.points_theta_c44,
@@ -698,6 +705,8 @@ class StrainCorrelations:
 		----------
 		Css2D : array-like
 			Strain correlations grid.
+		smooth : float
+			C44 smoothing length scale. (default: 0)
 
 		Returns
 		-------
@@ -706,7 +715,7 @@ class StrainCorrelations:
 			cos(4 \\theta) at this position.
 		"""
 
-		return self.toC44.get_C44(css2D)	# list of [r, C44(r)]
+		return self.toC44.get_C44(css2D, smooth=self.smooth)	# list of [r, C44(r)]
 
 	def update_r_cut(self, val):
 		"""
@@ -772,7 +781,7 @@ class Css2DtoC44:
         self.r_max = r_max
         self.c44_x = np.linspace(self.r_min, self.r_max, self.points_x)
 
-    def get_C44(self, Css2D):
+    def get_C44(self, Css2D, smooth=0):
         """
         From 2D strain correlations Css2D, returns values of C44 at
         self.points_x radii between r_max and r_min.
@@ -781,6 +790,8 @@ class Css2DtoC44:
         ----------
         Css2D : 2D array-like
             Shear strain correlation grid.
+		smooth : float
+			C44 smoothing length scale. (default: 0)
 
         Returns
         -------
@@ -790,12 +801,13 @@ class Css2DtoC44:
 
         self.css2Dgrid = CorGrid(Css2D, self.box_size)  # shear strain 2D CorGrid object
         self.c44 = np.array(list(map(
-            lambda r: [r, self.css2Dgrid.integrate_over_angles(r,
-            projection=lambda theta: np.cos(4*theta)/np.pi,
-            points_theta=self.points_theta)],
+            lambda r: self.css2Dgrid.integrate_over_angles(r,
+            	projection=lambda theta: np.cos(4*theta)/np.pi,
+            	points_theta=self.points_theta),
             self.c44_x)))
 
-        return self.c44
+        return np.array(list(map(lambda x, y: [x, y],
+			*(self.c44_x, gaussian_smooth_1D(self.c44_x, self.c44, smooth)))))
 
 def plot_fft():
 	"""
@@ -819,7 +831,8 @@ def plot_fft():
 	sc.plot(parameters['box_size'], r_max, box_size/np.sqrt(Nmean),
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
-		r_min_c44=r_min_c44, r_max_c44=r_max_c44)
+		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
+		smooth=smooth)
 
 	# CSS FIGURE
 
@@ -858,7 +871,8 @@ def plot_fft():
 	sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
 		+ ' ' + cor_name + r'$(r, \theta)$'
 		+ ' ' + r'$\cos4\theta$'
-		+ (r'$/C_{\rho\rho}(r/2)$' if divide_by_cnn else ''))
+		+ (r'$/C_{\rho\rho}(r/2)$' if divide_by_cnn else '')
+		+ ' ' + (r'($\sigma_{smooth}/a=%.2e$)' % smooth if smooth!=0 else ''))
 	sc.ax_c44.set_xlim([r_min_c44, r_max_c44])
 	sc.ax_c44.set_ylim([y_min_c44, y_max_c44])
 	sc.ax_c44.set_yscale('log')
@@ -1069,6 +1083,8 @@ if __name__ == '__main__':	# executing as script
 
 			r_min_c44 = get_env('R_MIN_C44', default=_r_min_c44, vartype=float)	# minimum radius in average particle separation for C44 calculation
 			r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
+
+			smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 smoothing length scale
 
 			if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 

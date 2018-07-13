@@ -99,6 +99,9 @@ POINTS_X : int
 POINTS_THETA : int
     Number of angles to evaluate integrated strain correlation.
     DEFAULT: active_particles.analysis.css._points_theta_c44
+SMOOTH ['fourier' mode] : float
+	C44 smoothing length scale.
+	DEFAULT: 0
 FONT_SIZE : int
     Plot font size.
     DEFAULT: active_particles.plot.c44._font_size
@@ -296,6 +299,8 @@ if __name__ == '__main__':  # executing as script
 
     elif mode == 'fourier':
 
+        smooth = get_env('SMOOTH', default=0, vartype=float)    # C44 smoothing length scale
+
         files = naming_Css.get_files(directory=data_dir, **attributes)          # files corresponding to parameters
         dt_list = np.array(list(map(
             lambda file: naming_Css.get_data(file, 'dt'), files))).flatten()    # list of lag times corresponding to files
@@ -307,7 +312,8 @@ if __name__ == '__main__':  # executing as script
                 FFTsgridsqnorm = pickle.load(Css_dump_file)
             C44[dt] = toC44.get_C44(
                 StrainCorrelations(wave_vectors, FFTsgridsqnorm)
-                .strain_correlations(r_cut=r_cut_fourier))
+                .strain_correlations(r_cut=r_cut_fourier),
+                smooth=smooth)
 
     elif mode == 'cmsd':
 
