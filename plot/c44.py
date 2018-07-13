@@ -426,6 +426,8 @@ if __name__ == '__main__':  # executing as script
         title += r'$\tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (
             parameters['vzero'], parameters['dr'])
     title += r'$, L=%.2e, x_0=%.2e, y_0=%.2e$' % (box_size, *centre)
+    if mode == 'fourier' and 'SMOOTH' in envvar:
+        title += r'$, \sigma_{smooth}/a=%.2e$' % smooth
     title += '\n'
     title += r'$S_{init}=%.2e, S_{max}=%.2e,$' % (init_frame, int_max)
     title += (r'$N_{cases}=%.2e, dL=%.2e a$'
