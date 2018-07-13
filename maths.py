@@ -671,3 +671,38 @@ def count(arrays, max_norm):
     """
 
     return np.sum((abs(np.array(arrays)) <= max_norm).all(axis=-1))
+
+def gaussian_smooth_1D(X, Y, sigma):
+    """
+    From y-coordinates Y at corresponding x-coordinates X, this function
+    returns smoothed y-coordinates with smoothing function exp(-(x/sigma)^2).
+
+    Parameters
+    ----------
+    X : array-like
+        x-coordinates.
+    Y : array-like
+        y-coordinates.
+    sigma : float
+        Smoothing length scale.
+
+    Returns
+    -------
+    smoothedY : array-like
+        Smoothed y-coordinates.
+    """
+
+    if sigma == 0 or sigma == None: return Y    # do not smooth
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    smoothing_function = lambda x: np.exp(-(x/sigma)**2)
+    smoothedY = np.empty(len(Y))
+
+    for index in range(len(Y)):
+        smoothing_coefficients = list(map(smoothing_function, X - X[index]))
+        smoothedY[index] =\
+            np.sum(Y*smoothing_coefficients)/np.sum(smoothing_coefficients)
+
+    return smoothedY
