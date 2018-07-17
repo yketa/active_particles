@@ -280,7 +280,7 @@ class GridCircle:
         self.circle_centre = np.array(circle_centre)
         self.radius = 0                                     # radius of the circle
         self.points_theta = points_theta
-        self.theta = np.linspace(0, 2*np.pi, points_theta)  # points used for calculations
+        self.theta = np.linspace(0, 2*np.pi, points_theta)
 
         self.show_slider = show_slider
 
