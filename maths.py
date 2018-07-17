@@ -4,6 +4,8 @@ Module maths provides useful mathematic tools.
 
 import numpy as np
 
+from scipy import interpolate
+
 from copy import deepcopy
 
 def relative_positions(positions, point, box_size):
@@ -267,8 +269,10 @@ class Grid:
         self.shape = self.grid.shape    # shape of the grid
 
         self.extent = extent
-        self.sep_boxes_x = (self.extent[1] - self.extent[0])/self.grid.shape[0] # distance between consecutive boxes in x (first) direction
-        self.sep_boxes_y = (self.extent[3] - self.extent[2])/self.grid.shape[1] # distance between consecutive boxes in y (second) direction
+        self.box_size = np.array([
+            self.extent[1] - self.extent[0],
+            self.extent[-1] - self.extent[-2]])
+        self.sep_boxes_x, self.sep_boxes_y = self.box_size/self.shape   # distance between consecutive boxes in each direction
 
     def __getitem__(self, *key):
         """
@@ -532,7 +536,13 @@ def step_function(X, Y):
 
 class FFT2Dfilter:
     """
-    Filter signal from Fourier components obtained via fast Fourier transform.
+    Filter 2D signal from Fourier components obtained via fast Fourier
+    transform.
+
+    /!\ WARNING /!\
+    Using bandlimiting low-pass filters self.cut_high_wave_frequencies and
+    self.cut_low_wave_lengths may cause ringing artifacts (see
+    https://en.wikipedia.org/wiki/Ringing_artifacts).
     """
 
     def __init__(self, signalFFT, d=1, **kwargs):
@@ -651,6 +661,33 @@ class FFT2Dfilter:
 
         return self.cut_low_wave_frequencies(np.divide(2*np.pi, threshold))
 
+    def gaussian_filter(self, sigma):
+        """
+        Multiply signal FFT with Gaussian function
+        exp(-2\\pi\\sigma^2\\vec{k^2}) of wave vectors \\vec{k}, such that the
+        resulting signal is a convolution of the original signal with the
+        normalised Gaussian function 2\\pi\\sigma^2 exp(-\\vec{r}^2/2\\sigma^2)
+        of space variable \\vec{r}.
+
+        Parameters
+        ----------
+        sigma : float
+            Standard deviation \\sigma of the convoluting Gaussian function.
+
+        Returns
+        -------
+        filteredFFT : active_particles.maths.FFT2Dfilter
+            Filtered Fourier components.
+        """
+
+        filteredFFT = deepcopy(self)
+
+        gaussian_coefficients = np.exp(
+            -2*np.pi*(sigma**2)*np.sum(self.wave_vectors**2, axis=-1))
+        filteredFFT.signalFFT *= gaussian_coefficients
+
+        return filteredFFT
+
 def count(arrays, max_norm):
     """
     Returns number of arrays in array which norm is lesser than or equal to
@@ -672,19 +709,24 @@ def count(arrays, max_norm):
 
     return np.sum((abs(np.array(arrays)) <= max_norm).all(axis=-1))
 
-def gaussian_smooth_1D(X, Y, sigma):
+def gaussian_smooth_1D(X, Y, sigma, *x):
     """
     From y-coordinates Y at corresponding x-coordinates X, this function
-    returns smoothed y-coordinates with smoothing function exp(-(x/sigma)^2).
+    returns smoothed y-coordinates with smoothing function exp(-(x/sigma)^2)
+    at x-coordinates x.
 
     Parameters
     ----------
     X : array-like
-        x-coordinates.
+        Input x-coordinates.
     Y : array-like
-        y-coordinates.
+        Input y-coordinates.
     sigma : float
         Smoothing length scale.
+        NOTE: if sigma == 0 or None, a linear interpolation is performed.
+    x : float
+        Output x-coordinates.
+        NOTE: if no x is passed, then smoothed y-coordinates are returned at X.
 
     Returns
     -------
@@ -692,17 +734,73 @@ def gaussian_smooth_1D(X, Y, sigma):
         Smoothed y-coordinates.
     """
 
-    if sigma == 0 or sigma == None: return Y    # do not smooth
-
     X = np.array(X)
     Y = np.array(Y)
 
-    smoothing_function = lambda x: np.exp(-(x/sigma)**2)
-    smoothedY = np.empty(len(Y))
+    if x == (): x = X
+    else: x = np.array(x)
 
-    for index in range(len(Y)):
-        smoothing_coefficients = list(map(smoothing_function, X - X[index]))
+    if sigma == 0 or sigma == None: # perform linear interpolation
+        return interpolate.interp1d(X, Y,
+            kind='linear', fill_value='extrapolate')(x)
+
+    smoothing_function = lambda x: np.exp(-(x/sigma)**2)
+    smoothedY = np.empty(len(x))
+
+    for index in range(len(x)):
+        smoothing_coefficients = list(map(smoothing_function, X - x[index]))
         smoothedY[index] =\
             np.sum(Y*smoothing_coefficients)/np.sum(smoothing_coefficients)
 
     return smoothedY
+
+def gaussian_smooth_2D(X, Y, Z, sigma, *xy):
+    """
+    From z-coordinates Z at corresponding pairs of x-coordinates X and
+    y-coordinates Y, this function returns smoothed z-coordinates with
+    smoothing function exp(-(x^2 + y^2)/sigma^2) at xy-coordinates xy.
+
+    Parameters
+    ----------
+    X : array-like
+        Input x-coordinates.
+    Y : array-like
+        Input y-coordinates.
+    Z : array-like
+        Input z-coordinates.
+    sigma : float
+        Smoothing length scale.
+        NOTE: if sigma == 0 or None, a linear interpolation is performed.
+    xy : 2-uple of float
+        Output xy-coordinates as 2-uples (x, y).
+        NOTE: if no xy are passed, then smoothed xy-coordinates are returned
+              at X and Y.
+
+    Returns
+    -------
+    smoothedZ : array-like
+        Smoothed z-coordinates.
+    """
+
+    XY = np.vstack((X, Y)).T
+    Z = np.array(Z)
+
+    if xy == (): xy = XY
+    else: xy = np.array(xy)
+
+    if sigma == 0 or sigma == None: # perform linear interpolation
+        return np.array(list(map(
+            lambda x, y: interpolate.griddata(XY, Z, [(x, y)],
+                method='linear')[0],
+            *xy.T)))
+
+    smoothing_function = lambda x, y: np.exp(-(x**2 + y**2)/(sigma**2))
+    smoothedZ = np.empty(len(xy))
+
+    for index in range(len(xy)):
+        smoothing_coefficients = list(map(smoothing_function,
+            *(XY - xy[index]).T))
+        smoothedZ[index] =\
+            np.sum(Z*smoothing_coefficients)/np.sum(smoothing_coefficients)
+
+    return smoothedZ
