@@ -113,7 +113,7 @@ R_MAX_C44 [FROM_FT and PLOT mode] : float
 	Maximum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_max_c44
 SMOOTH [FROM_FT and PLOT mode] : float
-	C44 smoothing length scale.
+	C44 Gaussian smoothing length scale.
 	DEFAULT: 0
 SLOPE_C44 [FROM_FT and PLOT mode] : slope
 	Initial slope for fitting line.
@@ -174,8 +174,6 @@ import numpy as np
 import pickle
 
 from operator import itemgetter
-
-from collections import OrderedDict
 
 from datetime import datetime
 
@@ -573,7 +571,7 @@ class StrainCorrelations:
 
 		sc = (FFT2Dfilter(self.strain_correlations_FFT,
 			wave_vectors=self.wave_vectors)
-			.cut_low_wave_lengths(r_cut)
+			.gaussian_filter(r_cut)
 			.get_signal()).real
 		return sc/sc[0, 0]	# correlation normalisation
 
@@ -612,13 +610,13 @@ class StrainCorrelations:
 			Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_max)
 		smooth : float
-			C44 smoothing length scale. (default: 0)
+			C44 Gaussian smoothing length scale. (default: 0)
 		"""
 
 		self.box_size = box_size
 		self.r_max_css = r_max_css
 
-		self.r_cut = 0	# cut-off radius
+		self.r_cut = 0	# cut-off radius for Fourier modes
 
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
 
@@ -705,8 +703,6 @@ class StrainCorrelations:
 		----------
 		Css2D : array-like
 			Strain correlations grid.
-		smooth : float
-			C44 smoothing length scale. (default: 0)
 
 		Returns
 		-------
@@ -791,7 +787,7 @@ class Css2DtoC44:
         Css2D : 2D array-like
             Shear strain correlation grid.
 		smooth : float
-			C44 smoothing length scale. (default: 0)
+			C44 Gaussian smoothing length scale. (default: 0)
 
         Returns
         -------
@@ -799,7 +795,7 @@ class Css2DtoC44:
             List of [r, C44(r)].
         """
 
-        self.css2Dgrid = CorGrid(Css2D, self.box_size)  # shear strain 2D CorGrid object
+        self.css2Dgrid = CorGrid(Css2D, self.box_size)	# shear strain 2D CorGrid object
         self.c44 = np.array(list(map(
             lambda r: self.css2Dgrid.integrate_over_angles(r,
             	projection=lambda theta: np.cos(4*theta)/np.pi,
@@ -828,7 +824,8 @@ def plot_fft():
 	sc = StrainCorrelations(wave_vectors, FFTsgridsqnorm)
 	to_return = (sc,)
 
-	sc.plot(parameters['box_size'], r_max, box_size/np.sqrt(Nmean),
+	av_p_sep = box_size/np.sqrt(Nmean)
+	sc.plot(parameters['box_size'], r_max, av_p_sep,
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
@@ -1084,7 +1081,7 @@ if __name__ == '__main__':	# executing as script
 			r_min_c44 = get_env('R_MIN_C44', default=_r_min_c44, vartype=float)	# minimum radius in average particle separation for C44 calculation
 			r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
 
-			smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 smoothing length scale
+			smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale
 
 			if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 
