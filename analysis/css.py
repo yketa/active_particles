@@ -115,6 +115,9 @@ R_MAX_C44 [FROM_FT and PLOT mode] : float
 SMOOTH [FROM_FT and PLOT mode] : float
 	C44 Gaussian smoothing length scale.
 	DEFAULT: 0
+R_CUT_FOURIER [FROM_FT and PLOT mode] : float
+    Initial wave length Gaussian cut-off radius.
+    DEFAULT: active_particles.analysis.css._r_cut_fourier
 SLOPE_C44 [FROM_FT and PLOT mode] : slope
 	Initial slope for fitting line.
 	DEFAULT: active_particles.analysis.css._slope0_c44
@@ -210,6 +213,8 @@ _y_min_c44 = 1e-4   # default minimum C44 value
 _y_max_c44 = 2e-1   # default maximum C44 value
 _r_min_c44 = 1      # default minimum radius over average particle separation value
 _r_max_c44 = 20     # default maximum radius over average particle separation value
+
+_r_cut_fourier = 0	# default initial wave length Gaussian cut-off radius
 
 # FUNCTIONS AND CLASSES
 
@@ -579,7 +584,7 @@ class StrainCorrelations:
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
 		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
-		smooth=0):
+		smooth=0, r_cut=0):
 		"""
 		Plots strain correlations with slider for cut-off radius.
 
@@ -611,13 +616,15 @@ class StrainCorrelations:
 			(default: active_particles.plot.c44._r_max)
 		smooth : float
 			C44 Gaussian smoothing length scale. (default: 0)
+		r_cut : float
+			Initial wave length Gaussian cut-off radius. (default: 0)
 		"""
 
 		self.box_size = box_size
 		self.r_max_css = r_max_css
 
-		self.r_cut = 0	# cut-off radius for Fourier modes
-
+		self.r_cut = r_cut
+		
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
 
 		# CSS FIGURE
@@ -642,8 +649,8 @@ class StrainCorrelations:
 		self.ax_slider = make_axes_locatable(self.ax_css).append_axes('bottom',
 			size='5%', pad=0.6)	# slider Axes
 
-		self.slider = Slider(self.ax_slider, r'$r_{cut}$', self.r_cut,
-			self.r_max_css, valinit=0)				# slider
+		self.slider = Slider(self.ax_slider, r'$r_{cut}$', 0,
+			self.r_max_css, valinit=self.r_cut)		# slider
 		self.slider.on_changed(self.update_r_cut)	# call update_r_cut when slider value is changed
 
 		# GRID CIRCLE FIGURE
@@ -829,7 +836,7 @@ def plot_fft():
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
-		smooth=smooth)
+		smooth=smooth, r_cut=r_cut_fourier)
 
 	# CSS FIGURE
 
@@ -1082,6 +1089,9 @@ if __name__ == '__main__':	# executing as script
 			r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
 
 			smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale
+
+			r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
+				vartype=float)	# initial wave length Gaussian cut-off radius
 
 			if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 
