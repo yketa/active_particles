@@ -682,6 +682,7 @@ class FFT2Dfilter:
         """
 
         filteredFFT = deepcopy(self)
+        if sigma == 0: return filteredFFT   # no filtering
 
         gaussian_coefficients = np.exp(
             -1/2*(sigma**2)*np.sum(self.wave_vectors**2, axis=-1))
