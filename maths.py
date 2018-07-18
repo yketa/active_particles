@@ -664,10 +664,11 @@ class FFT2Dfilter:
     def gaussian_filter(self, sigma):
         """
         Multiply signal FFT with Gaussian function
-        exp(-2\\pi\\sigma^2\\vec{k^2}) of wave vectors \\vec{k}, such that the
+        exp(-1/2 \\sigma^2\\vec{k^2}) of wave vectors \\vec{k}, such that the
         resulting signal is a convolution of the original signal with the
-        normalised Gaussian function 2\\pi\\sigma^2 exp(-\\vec{r}^2/2\\sigma^2)
-        of space variable \\vec{r}.
+        normalised Gaussian function
+        1/(2\\pi\\sigma^2) exp(-\\vec{r}^2/(2\\sigma^2)) of space variable
+        \\vec{r}.
 
         Parameters
         ----------
@@ -683,7 +684,7 @@ class FFT2Dfilter:
         filteredFFT = deepcopy(self)
 
         gaussian_coefficients = np.exp(
-            -2*np.pi*(sigma**2)*np.sum(self.wave_vectors**2, axis=-1))
+            -1/2*(sigma**2)*np.sum(self.wave_vectors**2, axis=-1))
         filteredFFT.signalFFT *= gaussian_coefficients
 
         return filteredFFT
