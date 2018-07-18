@@ -681,6 +681,8 @@ class StrainCorrelations:
 		"""
 
 		self.box_size = box_size
+		self.av_p_sep = av_p_sep
+
 		self.r_max_css = r_max_css
 
 		self.r_cut = r_cut
@@ -693,7 +695,7 @@ class StrainCorrelations:
 
 		self.fig_css, self.ax_css = plt.subplots()
 		self.ax_css.set_title(
-			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
+			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
 
 		Cmin = np.max((np.min(grid.grid), _c_min))
 		Cmax = np.max((np.min(grid.grid), _c_max))
@@ -709,9 +711,9 @@ class StrainCorrelations:
 		self.ax_slider = make_axes_locatable(self.ax_css).append_axes('bottom',
 			size='5%', pad=0.6)	# slider Axes
 
-		self.slider = Slider(self.ax_slider, r'$r_{cut}$', 0,
-			self.r_max_css, valinit=self.r_cut)		# slider
-		self.slider.on_changed(self.update_r_cut)	# call update_r_cut when slider value is changed
+		self.slider = Slider(self.ax_slider, r'$r_{cut}/a$', 0,
+			self.r_max_css/self.av_p_sep, valinit=self.r_cut)	# slider
+		self.slider.on_changed(self.update_r_cut)				# call update_r_cut when slider value is changed
 
 		# GRID CIRCLE FIGURE
 
@@ -719,11 +721,10 @@ class StrainCorrelations:
 			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
 			min=Cmin, max=Cmax)
 		self.grid_circle.ax_grid.set_title(
-			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
+			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
 
 		# C44 FIGURE
 
-		self.av_p_sep = av_p_sep
 		self.points_x_c44 = points_x_c44
 		self.points_theta_c44 = points_theta_c44
 		self.y_min_c44 = y_min_c44
@@ -737,7 +738,7 @@ class StrainCorrelations:
 			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
 
 		self.fig_c44, self.ax_c44 = plt.subplots()
-		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)
+		self.ax_c44.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
 		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
 		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
 
@@ -759,7 +760,7 @@ class StrainCorrelations:
 			self.points_x_theta, self.r_min_theta, self.r_max_theta)
 
 		self.fig_theta, self.ax_theta = plt.subplots()
-		self.ax_theta.set_title(r'$r_{cut} = %.2e$' % self.r_cut)
+		self.ax_theta.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
 		self.ax_theta.set_xlim([self.r_min_theta, self.r_max_theta])
 		self.ax_theta.set_ylim([self.y_min_theta, self.y_max_theta])
 
@@ -780,7 +781,7 @@ class StrainCorrelations:
 			Strain correlations CorGrid object.
 		"""
 
-		sc = self.strain_correlations(r_cut=self.r_cut)	# strain correlations grid
+		sc = self.strain_correlations(r_cut=self.r_cut*self.av_p_sep)	# strain correlations grid
 		return CorGrid(sc, self.box_size, display_size=2*self.r_max_css)
 
 	def css2Dtoc44(self, css2D):
@@ -835,11 +836,11 @@ class StrainCorrelations:
 		"""
 
 		self.ax_css.set_title(
-			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
+			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))	# update title
 		self.grid_circle.ax_grid.set_title(
-			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
-		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)				# update title
-		self.ax_theta.set_title(r'$r_{cut} = %.2e$' % self.r_cut)			# update title
+			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))		# update title
+		self.ax_c44.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)				# update title
+		self.ax_theta.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)				# update title
 
 		grid = self.strain_correlations_corgrid()		# new grid
 		self.grid_plot.set_data(grid.display_grid.grid)	# plot grid
