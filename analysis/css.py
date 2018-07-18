@@ -118,15 +118,44 @@ SMOOTH [FROM_FT and PLOT mode] : float
 R_CUT_FOURIER [FROM_FT and PLOT mode] : float
     Initial wave length Gaussian cut-off radius.
     DEFAULT: active_particles.analysis.css._r_cut_fourier
-SLOPE_C44 [FROM_FT and PLOT mode] : slope
-	Initial slope for fitting line.
+SLOPE_C44 [FROM_FT, PLOT and FITTING_LINE mode] : slope
+	Initial slope for fitting line in C44 figure.
 	DEFAULT: active_particles.analysis.css._slope0_c44
-SLOPE_MIN_C44 [FROM_FT and PLOT mode] : float
-	Minimum slope for fitting line.
+SLOPE_MIN_C44 [FROM_FT, PLOT and FITTING_LINE mode] : float
+	Minimum slope for fitting line in C44 figure.
 	DEFAULT: active_particles.analysis.css._slope_min_c44
-SLOPE_MAX_C44 [FROM_FT and PLOT mode] : float
-	Maximum slope for fitting line.
+SLOPE_MAX_C44 [FROM_FT, PLOT and FITTING_LINE mode] : float
+	Maximum slope for fitting line in C44 figure.
 	DEFAULT: active_particles.analysis.css._slope_max_c44
+THETA [FROM_FT and PLOT mode] : float
+	Angle at which to evaluate Css(r, theta) (in multiple of pi).
+	DEFAULT:  active_particles.analysis.css._theta
+POINTS_X_THETA [FROM_FT and PLOT mode] : int
+	Number of radii at which to evaluate Css(r, theta).
+	DEFAULT: POINTS_X_C44
+Y_MIN_THETA [FROM_FT and PLOT mode] : float
+	Minimum plot value for Css(r, theta).
+	DEFAULT: active_particles.analysis.css._y_min_theta
+Y_MAX_THETA [FROM_FT and PLOT mode] : float
+	Maximum plot value for Css(r, theta).
+	DEFAULT: active_particles.analysis.css._y_max_theta
+R_MIN_THETA [FROM_FT and PLOT mode] : float
+	Minimum radius in average particle separation for Css(r, theta)
+	calculation.
+	DEFAULT: active_particles.analysis.css._r_min_theta
+R_MAX_THETA [FROM_FT and PLOT mode] : float
+	Maximum radius in average particle separation for Css(r, theta)
+	calculation.
+	DEFAULT: active_particles.analysis.css._r_max_theta
+SLOPE_THETA [FROM_FT, PLOT and FITTING_LINE mode] : slope
+	Initial slope for fitting line in Css(r, theta) figure.
+	DEFAULT: SLOPE_C44
+SLOPE_MIN_THETA [FROM_FT, PLOT and FITTING_LINE mode] : float
+	Minimum slope for fitting line in Css(r, theta) figure.
+	DEFAULT: SLOPE_MIN_C44
+SLOPE_MAX_THETA [FROM_FT, PLOT and FITTING_LINE mode] : float
+	Maximum slope for fitting line in Css(r, theta) figure.
+	DEFAULT: SLOPE_MAX_C44
 
 Output
 ------
@@ -202,17 +231,24 @@ _c_max = 1		# default maximum value for correlations
 
 _font_size = 10	# default plot font size
 
-_slope0_c44 = -2    # default initial slope for fitting line slider
-_slope_min_c44 = -5 # default minimum slope for fitting line slider
-_slope_max_c44 = 0  # default maximum slope for fitting line slider
+_slope0_c44 = -2    # default initial slope for fitting line slider in C44 figure
+_slope_min_c44 = -5 # default minimum slope for fitting line slider in C44 figure
+_slope_max_c44 = 0  # default maximum slope for fitting line slider in C44 figure
 
 _points_x_c44 = 100     # default number of radii at which to evaluate integrated strain correlation
 _points_theta_c44 = 100 # default number of angles to evaluate integrated strain correlation
 
 _y_min_c44 = 1e-4   # default minimum C44 value
 _y_max_c44 = 2e-1   # default maximum C44 value
-_r_min_c44 = 1      # default minimum radius over average particle separation value
-_r_max_c44 = 20     # default maximum radius over average particle separation value
+_r_min_c44 = 1      # default minimum radius over average particle separation value for C44 figure
+_r_max_c44 = 20     # default maximum radius over average particle separation value for C44 figure
+
+_theta = 0	# default angle at which to evaluate Css(r, theta) (in multiple of pi)
+
+_y_min_theta = 1e-4	# default minimum Css(r, theta) value
+_y_max_theta = 2e-1	# default maximum Css(r, theta) value
+_r_min_theta = 1	# default minimum radius over average particle separation value for Css(r, theta) figure
+_r_max_theta = 20	# default maximum radius over average particle separation value for Css(r, theta) figure
 
 _r_cut_fourier = 0	# default initial wave length Gaussian cut-off radius
 
@@ -560,13 +596,14 @@ class StrainCorrelations:
 	def strain_correlations(self, r_cut=0):
 		"""
 		Computes strain correlations from inverse fast Fourier transform of
-		self.strain_correlations_FFT with low wave lengths cut at r_cut.
+		self.strain_correlations_FFT with low wave lengths Gaussian cut at
+		r_cut.
 
 		Parameters
 		----------
 		r_cut : float
-			Wave length cut-off radius, equivalent to coarse-graining cut-off
-			radius.
+			Wave length Gaussian cut-off radius, equivalent to coarse-graining
+			cut-off radius.
 
 		Returns
 		-------
@@ -584,7 +621,10 @@ class StrainCorrelations:
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
 		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
-		smooth=0, r_cut=0):
+		smooth=0, r_cut=0,
+		theta=0, points_x_theta=None,
+		y_min_theta=_y_min_theta, y_max_theta=_y_max_theta,
+		r_min_theta=_r_min_theta, r_max_theta=_r_max_theta):
 		"""
 		Plots strain correlations with slider for cut-off radius.
 
@@ -604,36 +644,56 @@ class StrainCorrelations:
 			(default: active_particles.plot.c44._points_theta)
 		y_min_c44 : float
 			Minimum plot value for C44.
-			(default: active_particles.plot.c44._y_min)
+			(default: active_particles.analysis.css._y_min_c44)
 		y_max_c44 : float
 			Maximum plot value for C44.
-			(default: active_particles.plot.c44._y_max)
+			(default: active_particles.analysis.css._y_max_c44)
 		r_min_c44 : float
 			Minimum radius in average particle separation for C44 calculation.
-			(default: active_particles.plot.c44._r_min)
+			(default: active_particles.analysis.css._r_min_c44)
 		r_max_c44 : float
 			Maximum radius in average particle separation for C44 calculation.
-			(default: active_particles.plot.c44._r_max)
+			(default: active_particles.analysis.css._r_max_c44)
 		smooth : float
 			C44 Gaussian smoothing length scale. (default: 0)
 		r_cut : float
 			Initial wave length Gaussian cut-off radius. (default: 0)
+		theta : float
+			Angle at which to plot Css(r, theta). (default: 0)
+		points_x_theta : int
+			Number of radii at which to evaluate Css(r, theta). (default: None)
+			NOTE: if points_x_theta == None, then it is taken equal to
+			      points_x_c44.
+		y_min_theta : float
+			Minimum plot value for Css(r, theta).
+			(default: active_particles.analysis.css._y_min_theta)
+		y_max_theta : float
+			Maximum plot value for Css(r, theta).
+			(default: active_particles.analysis.css._y_max_theta)
+		r_min_theta : float
+			Minimum radius in average particle separation for Css(r, theta)
+			calculation.
+			(default: active_particles.analysis.css._r_min_theta)
+		r_max_theta : float
+			Maximum radius in average particle separation for Css(r, theta)
+			calculation.
+			(default: active_particles.analysis.css._r_max_theta)
 		"""
 
 		self.box_size = box_size
 		self.r_max_css = r_max_css
 
 		self.r_cut = r_cut
-		
+
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
+
+		grid = self.strain_correlations_corgrid()	# correlation grid
 
 		# CSS FIGURE
 
 		self.fig_css, self.ax_css = plt.subplots()
 		self.ax_css.set_title(
 			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
-
-		grid = self.strain_correlations_corgrid()	# correlation grid
 
 		Cmin = np.max((np.min(grid.grid), _c_min))
 		Cmax = np.max((np.min(grid.grid), _c_max))
@@ -681,9 +741,31 @@ class StrainCorrelations:
 		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
 		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
 
-		self.c44 = self.css2Dtoc44(grid.grid)	# list of [r, C44(r)]
-		self.line_c44, = self.ax_c44.plot(self.c44[:, 0]/self.av_p_sep,
-			self.c44[:, 1])						# C44 plotting line
+		self.c44 = self.css2Dtoc44(grid.grid)				# list of [r, C44(r)]
+		self.line_c44, = self.ax_c44.plot(
+			self.c44[:, 0]/self.av_p_sep, self.c44[:, 1])	# C44 plotting line
+
+		# CSS(r, theta) FIGURE
+
+		self.theta = theta
+		self.points_x_theta = (points_x_theta if points_x_theta != None
+			else self.points_x_c44)
+		self.y_min_theta = y_min_theta
+		self.y_max_theta = y_max_theta
+		self.r_min_theta = r_min_theta
+		self.r_max_theta = r_max_theta
+
+		self.toCsstheta = Css2DtoCsstheta(self.box_size,
+			self.points_x_theta, self.r_min_theta, self.r_max_theta)
+
+		self.fig_theta, self.ax_theta = plt.subplots()
+		self.ax_theta.set_title(r'$r_{cut} = %.2e$' % self.r_cut)
+		self.ax_theta.set_xlim([self.r_min_theta, self.r_max_theta])
+		self.ax_theta.set_ylim([self.y_min_theta, self.y_max_theta])
+
+		self.csstheta = self.css2Dtocsstheta(grid.grid)				# list of [r, Css(r, theta)]
+		self.line_csstheta, = self.ax_theta.plot(
+			self.csstheta[:, 0]/self.av_p_sep, self.csstheta[:, 1])	# Css(r, theta) plotting line
 
 	# METHODS CALLED BY SELF.PLOT()
 
@@ -708,7 +790,7 @@ class StrainCorrelations:
 
 		Parameters
 		----------
-		Css2D : array-like
+		css2D : array-like
 			Strain correlations grid.
 
 		Returns
@@ -719,6 +801,24 @@ class StrainCorrelations:
 		"""
 
 		return self.toC44.get_C44(css2D, smooth=self.smooth)	# list of [r, C44(r)]
+
+	def css2Dtocsstheta(self, css2D):
+		"""
+		Returns strain correlations along half-line of origin (0, 0) and
+		inclination self.theta.
+
+		Parameters
+		----------
+		css2D : array-like
+			Strain correlations grid.
+
+		Returns
+		-------
+		csstheta : Numpy array
+			Array of radii r and values of strain correlations (r, theta).
+		"""
+
+		return self.toCsstheta.get_Csstheta(css2D, self.theta)
 
 	def update_r_cut(self, val):
 		"""
@@ -739,6 +839,7 @@ class StrainCorrelations:
 		self.grid_circle.ax_grid.set_title(
 			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
 		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)				# update title
+		self.ax_theta.set_title(r'$r_{cut} = %.2e$' % self.r_cut)			# update title
 
 		grid = self.strain_correlations_corgrid()		# new grid
 		self.grid_plot.set_data(grid.display_grid.grid)	# plot grid
@@ -749,6 +850,10 @@ class StrainCorrelations:
 		self.c44 = self.css2Dtoc44(grid.grid)		# update C44 values
 		self.line_c44.set_ydata(self.c44[:, 1])		# plot C44
 		self.line_c44.figure.canvas.draw()			# update plot
+
+		self.csstheta = self.css2Dtocsstheta(grid.grid)		# update Css(r, theta) values
+		self.line_csstheta.set_ydata(self.csstheta[:, 1])	# plot Css(r, theta)
+		self.line_csstheta.figure.canvas.draw()				# update plot
 
 class Css2DtoC44:
     """
@@ -812,6 +917,61 @@ class Css2DtoC44:
         return np.array(list(map(lambda x, y: [x, y],
 			*(self.c44_x, gaussian_smooth_1D(self.c44_x, self.c44, smooth)))))
 
+class Css2DtoCsstheta:
+    """
+    Calculates Css(r, theta) as values of strain correlations along the
+	half-line of origin (0, 0) and inclination of angle theta.
+    """
+
+    def __init__(self, box_size, points_x, r_min, r_max):
+        """
+        Sets parameters for Css(r, theta) calculation.
+
+        Parameters
+        ----------
+        box_size : float
+            Size of the square box to consider.
+        points_x : int
+            Number of radii at which to evaluate strain correlations.
+        r_min : float
+            Minimum radius.
+        r_max : float
+            Maximum radius.
+        """
+
+        self.box_size = box_size
+
+        self.points_x = points_x
+
+        self.r_min = r_min
+        self.r_max = r_max
+        self.csstheta_x = np.linspace(self.r_min, self.r_max, self.points_x)
+
+    def get_Csstheta(self, Css2D, theta=0):
+        """
+        From 2D strain correlations Css2D, returns values of Css(r, theta) at
+        self.points_x radii between r_max and r_min.
+
+        Parameters
+        ----------
+        Css2D : 2D array-like
+            Shear strain correlation grid.
+		theta : float
+			Inclination of half-line in Css2D grid. (default: 0)
+
+        Returns
+        -------
+        Csstheta : 2D Numpy array
+            List of [r, Css(r, theta)].
+        """
+
+        self.css2Dgrid = CorGrid(Css2D, self.box_size)	# shear strain 2D CorGrid object
+        self.csstheta = np.array(list(map(
+			lambda r: [r, self.css2Dgrid.get_value_polar(r, theta)],
+            self.csstheta_x)))
+
+        return self.csstheta
+
 def plot_fft():
 	"""
 	Plots shear strain correlations.
@@ -836,7 +996,10 @@ def plot_fft():
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
-		smooth=smooth, r_cut=r_cut_fourier)
+		smooth=smooth, r_cut=r_cut_fourier,
+		theta=theta, points_x_theta=points_x_theta,
+		y_min_theta=y_min_theta, y_max_theta=y_max_theta,
+		r_min_theta=r_min_theta, r_max_theta=r_max_theta)
 
 	# CSS FIGURE
 
@@ -886,6 +1049,24 @@ def plot_fft():
 		fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
 			slope_max_c44, x_fit='(r/a)', y_fit='C_4^4(r)')		# add fitting line to plot
 		to_return += (fl_c44,)
+
+	# CSS(r, theta) FIGURE
+
+	sc.fig_theta.suptitle(suptitle())
+
+	sc.fig_theta.set_size_inches(16, 16)	# figure size
+
+	sc.ax_theta.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{\bar{N}})$')
+	sc.ax_theta.set_ylabel('%s' % cor_name + r'$(r, \theta=%.2e)$' % theta)
+	sc.ax_theta.set_xlim([r_min_theta, r_max_theta])
+	sc.ax_theta.set_ylim([y_min_theta, y_max_theta])
+	sc.ax_theta.set_yscale('log')
+	sc.ax_theta.set_xscale('log')
+
+	if get_env('FITTING_LINE', default=False, vartype=bool):					# FITTING_LINE mode
+		fl_theta = FittingLine(sc.ax_theta, slope0_theta, slope_min_theta,
+			slope_max_theta, x_fit='(r/a)', y_fit='%s(r, \\theta)' % cor_name)	# add fitting line to plot
+		to_return += (fl_theta,)
 
 	# RETURN
 
@@ -1093,14 +1274,36 @@ if __name__ == '__main__':	# executing as script
 			r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
 				vartype=float)	# initial wave length Gaussian cut-off radius
 
+			theta = np.pi*get_env('THETA', default=_theta, vartype=float)	# angle at which to evaluate Css(r, theta)
+
+			points_x_theta = get_env('POINTS_X_THETA', default=points_x_c44,
+				vartype=int)	# number of radii at which to evaluate Css(r, theta)
+
+			y_min_theta = get_env('Y_MIN_THETA', default=_y_min_theta,
+				vartype=float)	# minimum plot value for Css(r, theta)
+			y_max_theta = get_env('Y_MAX_THETA', default=_y_max_theta,
+				vartype=float)	# maximum plot value for Css(r, theta)
+
+			r_min_theta = get_env('R_MIN_THETA', default=_r_min_theta,
+				vartype=float)	# minimum radius in average particle separation for Css(r, theta) calculation
+			r_max_theta = get_env('R_MAX_THETA', default=_r_max_theta,
+				vartype=float)	# maximum radius in average particle separation for Css(r, theta) calculation
+
 			if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 
 				slope0_c44 = get_env('SLOPE_C44',
-					default=_slope0_c44, vartype=float)		# initial slope for fitting line
+					default=_slope0_c44, vartype=float)		# initial slope for fitting line in C44 figure
 				slope_min_c44 = get_env('SLOPE_MIN_C44',
-					default=_slope_min_c44, vartype=float)	# minimum slope for fitting line
+					default=_slope_min_c44, vartype=float)	# minimum slope for fitting line in C44 figure
 				slope_max_c44 = get_env('SLOPE_MAX_C44',
-					default=_slope_max_c44, vartype=float)	# maximum slope for fitting line
+					default=_slope_max_c44, vartype=float)	# maximum slope for fitting line in C44 figure
+
+				slope0_theta = get_env('SLOPE_THETA',
+					default=slope0_c44, vartype=float)		# initial slope for fitting line in Css(r, theta) figure
+				slope_min_theta = get_env('SLOPE_MIN_THETA',
+					default=slope_min_c44, vartype=float)	# minimum slope for fitting line in Css(r, theta) figure
+				slope_max_theta = get_env('SLOPE_MAX_THETA',
+					default=slope_max_c44, vartype=float)	# maximum slope for fitting line in Css(r, theta) figure
 
 			plot = plot_fft()	# plotting shear strain correlations with slider for cut-off radius
 
