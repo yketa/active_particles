@@ -90,14 +90,15 @@ class FittingLine:
         """
 
         self.ax = ax                # Axes object
-        ax.set_yscale('log')        # setting y-axis on logarithmic scale
+        plt.sca(self.ax)            # set current axis
+        self.ax.set_yscale('log')   # setting y-axis on logarithmic scale
 
-        self.x_fit = kwargs['x_fit'] if 'x_fit' in kwargs else\
-            ax.get_xlabel().replace('$', '')    # x data name in legend
-        self.y_fit = kwargs['y_fit'] if 'y_fit' in kwargs else\
-            ax.get_ylabel().replace('$', '')    # y data name in legend
-        self.color = color                      # color of fitting line
-        self.linestyle = linestyle              # linestyle of fitting line
+        self.x_fit = (kwargs['x_fit'] if 'x_fit' in kwargs
+            else self.ax.get_xlabel()).replace('$', '') # x data name in legend
+        self.y_fit = (kwargs['y_fit'] if 'y_fit' in kwargs
+            else self.ax.get_ylabel()).replace('$', '') # y data name in legend
+        self.color = color                              # color of fitting line
+        self.linestyle = linestyle                      # linestyle of fitting line
 
         self.x0 = np.exp(np.ma.log(self.ax.get_xlim()).mean())  # x coordinate of clicked point
         self.y0 = np.exp(np.ma.log(self.ax.get_ylim()).mean())  # y coordinate of clicked point
