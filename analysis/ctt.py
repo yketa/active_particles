@@ -1,12 +1,10 @@
 """
 Module ctt calculates or plots mean squared cross and dot products of
-normalised wave vectors and displacement Fourier transform, strain
-correlations from these variables, and density correlations from calculated
-displacement grids.
+normalised wave vectors and displacement Fourier transform and strain
+correlations from these variables.
 
-Files are saved according to active_particles.naming.Ctt (cross product),
-active_particles.naming.Cll (dot product) and active_particles.naming.Cnn
-(density correlations) naming standards.
+Files are saved according to active_particles.naming.Ctt (cross product) and
+active_particles.naming.Cll (dot product) naming standards.
 
 A brief description of the algorithm can be found at:
 https://yketa.github.io/UBC_2018_Wiki/#Collective%20mean%20square%20displacements
@@ -30,15 +28,6 @@ SAVE [COMPUTE or PLOT mode] : bool
 	DEFAULT: False
 FITTING_LINE [SHOW mode] : bool
 	Display adjustable fitting line on graphs.
-	DEFAULT: False
-STRAIN_CORRELATIONS [SHOW mode] : bool
-	Computes strain correlations from cross and dot products of normalised wave
-	vectors and displacement Fourier transform as functions of wave vector
-	norm and plots it, with adjustable cut-off radius.
-	DEFAULT: False
-DIVIDE_BY_CNN [STRAIN_CORRELATIONS mode] : bool
-	Divides strain correlation projection on cos(4 \\theta) by the density
-	correlations at half radius.
 	DEFAULT: False
 
 Environment parameters
@@ -82,6 +71,12 @@ X_ZERO : float
 Y_ZERO : float
 	2nd coordinate of the centre of the square box to consider.
 	DEFAULT: 0
+R_CUT_FOURIER [PLOT or SHOW mode] : float
+	Initial wave length Gaussian cut-off radius.
+	DEFAULT: active_particles.analysis.css._r_cut_fourier
+SMOOTH [PLOT or SHOW mode] : float
+	C44 Gaussian smoothing length scale.
+	DEFAULT: 0
 R_MIN [PLOT or SHOW mode] : float
 	Minimum wave length norm for plots.
 	DEFAULT: active_particles.analysis.ctt._r_min
@@ -103,34 +98,34 @@ SLOPE_MIN [FITTING_LINE mode] : float
 SLOPE_MAX [FITTING_LINE mode] : float
 	Maximum slope for fitting line.
 	DEFAULT: active_particles.analysis.ctt._slope_max
-R_MAX_CSS [STRAIN_CORRELATIONS mode] : float
+R_MAX_CSS [PLOT mode] : float
 	Maximum radius in infinite norm for strain correlations plot.
 	DEFAULT: active_particles.analysis.css._r_max
-POINTS_X_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
+POINTS_X_C44 [PLOT mode] : int
 	Number of radii at which to evaluate integrated strain correlation.
 	DEFAULT: active_particles.analysis.css._points_x_c44
-POINTS_THETA_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : int
+POINTS_THETA_C44 [PLOT mode] : int
 	Number of angles to evaluate integrated strain correlation.
 	DEFAULT: active_particles.analysis.css._points_theta_c44
-Y_MIN_C44 [STRAIN_CORRELATIONS mode] : float
+Y_MIN_C44 [PLOT mode] : float
 	Minimum plot value for C44.
 	DEFAULT: active_particles.analysis.css._y_min_c44
-Y_MAX_C44 [STRAIN_CORRELATIONS mode] : float
+Y_MAX_C44 [PLOT mode] : float
 	Maximum plot value for C44.
 	DEFAULT: active_particles.analysis.css._y_max_c44
-R_MIN_C44 [STRAIN_CORRELATIONS mode] : float
+R_MIN_C44 [PLOT mode] : float
 	Minimum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_min_c44
-R_MAX_C44 [STRAIN_CORRELATION mode] : float
+R_MAX_C44 [PLOT mode] : float
 	Maximum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_max_c44
-SLOPE_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : slope
+SLOPE_C44 [FITTING_LINE mode] : slope
 	Initial slope for fitting line.
 	DEFAULT: active_particles.analysis.css._slope0_c44
-SLOPE_MIN_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+SLOPE_MIN_C44 [FITTING_LINE mode] : float
 	Minimum slope for fitting line.
 	DEFAULT: active_particles.analysis.css._slope_min_c44
-SLOPE_MAX_C44 [STRAIN_CORRELATIONS and FITTING_LINE mode] : float
+SLOPE_MAX_C44 [FITTING_LINE mode] : float
 	Maximum slope for fitting line.
 	DEFAULT: active_particles.analysis.css._slope_max_c44
 
@@ -145,9 +140,10 @@ according to active_particles.naming.Ctt standards in DATA_DIRECTORY.
 dot products of normalised wave vectors and displacement Fourier transform
 according to active_particles.naming.Cll standards in DATA_DIRECTORY.
 [SHOW or PLOT mode]
-> Plots cylindrical averages as functions of wave length.
+> Plots cylindrical averages as functions of wave length and resulting
+strain correlations.
 [SAVE mode]
-> Saves figure in DATA_DIRECTORY.
+> Saves collective mean square displacement figure in DATA_DIRECTORY.
 """
 
 import active_particles.naming as naming
@@ -155,14 +151,14 @@ import active_particles.naming as naming
 from active_particles.init import get_env, slurm_output, linframes
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
-	divide_arrays
+	divide_arrays, FFT2Dfilter
 from active_particles.quantities import nD0_active
 
-from active_particles.analysis.cuu import displacement_grid, Cnn
+from active_particles.analysis.cuu import displacement_grid
 from active_particles.analysis.css import StrainCorrelations, Css2DtoC44,\
 	_r_max as _r_max_css, _c_min, _c_max, _slope0_c44,\
 	_slope_min_c44, _slope_max_c44, _points_x_c44, _points_theta_c44,\
-	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44
+	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44, _r_cut_fourier
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
 from active_particles.analysis.number import count_particles
@@ -176,8 +172,6 @@ from math import ceil
 import numpy as np
 
 import pickle
-
-from collections import OrderedDict
 
 from datetime import datetime
 
@@ -193,15 +187,20 @@ from matplotlib.widgets import Slider
 
 # DEFAULT VARIABLES
 
-_r_min = 1		# default minimum wave length for plots
+_r_min = 5e-1	# default minimum wave length for plots
 
 _slope0 = 2		# default initial slope for fitting line
 _slope_min = 0	# default minimum slope for fitting line
 _slope_max = 4	# default maximum slope for fitting line
 
+_cross_label =\
+	r'$\left<||\vec{k}\wedge\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$'	# transversal collective mean square displacement label
+_dot_label =\
+	r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$'	# longitudinal collective mean square displacement label
+
 # FUNCTIONS AND CLASSES
 
-def plot_product(product, ax):
+def plot_product(product, av_p_sep, ax):
 	"""
 	Plot cross or product data on ax, on log-log axis, as a function of
 	wave length.
@@ -210,6 +209,8 @@ def plot_product(product, ax):
 	----------
 	product : Numpy array
 		Cross or dot product.
+	av_p_sep : float
+		Average particle separation.
 	ax : matplotlib axis
 		Axis to plot on.
 
@@ -219,15 +220,20 @@ def plot_product(product, ax):
 		Plotted product.
 	"""
 
-	line, = ax.loglog(2*np.pi/product[1:, 0], product[1:, 1])
+	line, = ax.loglog(2*np.pi/(product[1:, 0]*av_p_sep), product[1:, 1])
 	return line
 
-def plot_cross(ax):
+def plot_cross(k_cross_FFTugrid1D_sqnorm, av_p_sep, ax):
 	"""
 	Plot cross product data on ax.
 
 	Parameters
 	----------
+	k_cross_FFTugrid1D_sqnorm : 2D array-like
+		Cylindrical average of the square norm of cross product of normalised
+		wave vector and displacement Fourier transform.
+	av_p_sep : float
+		Average particle separation.
 	ax : matplotlib axis
 		Axis to plot on.
 
@@ -237,19 +243,23 @@ def plot_cross(ax):
 		Plotted cross product.
 	"""
 
-	cross = plot_product(k_cross_FFTugrid1D_sqnorm, ax)
+	cross = plot_product(k_cross_FFTugrid1D_sqnorm, av_p_sep, ax)
 	cross.set_color('blue')
-	cross.set_label(
-		r'$\left<||\vec{k}\wedge\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+	cross.set_label(_cross_label)
 
 	return cross
 
-def plot_dot(ax):
+def plot_dot(k_dot_FFTugrid1D_sqnorm, av_p_sep, ax):
 	"""
 	Plot dot product data on ax.
 
 	Parameters
 	----------
+	k_dot_FFTugrid1D_sqnorm : 2D array-like
+		Cylindrical average of the square norm of dot product of normalised
+		wave vector and displacement Fourier transform.
+	av_p_sep : float
+		Average particle separation.
 	ax : matplotlib axis
 		Axis to plot on.
 
@@ -259,10 +269,9 @@ def plot_dot(ax):
 		Plotted dot product.
 	"""
 
-	dot = plot_product(k_dot_FFTugrid1D_sqnorm, ax)
+	dot = plot_product(k_dot_FFTugrid1D_sqnorm, av_p_sep, ax)
 	dot.set_color('orange')
-	dot.set_label(
-		r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$')
+	dot.set_label(_dot_label)
 
 	return dot
 
@@ -291,24 +300,96 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.kxsq = np.array(self.wave_vectors)[:, :, 0]**2	# squared wave vectors x-coordinates
 		self.kysq = np.array(self.wave_vectors)[:, :, 1]**2	# squared wave vectors y-coordinates
 		self.ksq = self.kxsq + self.kysq					# squared wave vectors norms
+		self.k = np.sqrt(self.ksq)							# wave vectors norms
 
 		self.k_cross_FFTugrid2D_sqnorm = k_cross_FFTugrid2D_sqnorm
-		self.k_dot_FFTugrid2D_sqnorm = k_dot_FFTugrid2D_sqnorm
+		self.k_cross_FFTugrid1D_sqnorm = g2Dto1Dgrid(
+			k_cross_FFTugrid2D_sqnorm, self.k)
 
-		self.strain_correlations_FFT = (
+		self.k_dot_FFTugrid2D_sqnorm = k_dot_FFTugrid2D_sqnorm
+		self.k_dot_FFTugrid1D_sqnorm = g2Dto1Dgrid(
+			k_dot_FFTugrid2D_sqnorm, self.k)
+
+		self.cross_label = _cross_label.replace('$', '')
+		self.dot_label = _dot_label.replace('$', '')
+
+	def get_strain_correlations_FFT(self,
+		k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm):
+		"""
+		Returns Fourier transform of strain correlations from square norm of
+		cross product of normalised wave vector and displacement Fourier
+		transform and square norm of dot product of normalised wave vector and
+		displacement Fourier transform.
+
+		Parameters
+		----------
+		k_cross_FFTugrid2D_sqnorm : 2D array-like
+			Square norm of cross product of normalised wave vector and
+			displacement Fourier transform.
+		k_dot_FFTugrid2D_sqnorm : 2D array-like
+			Square norm of dot product of normalised wave vector and
+			displacement Fourier transform.
+
+		Returns
+		-------
+		strain_correlations_FFT : 2D array-like
+			Fourier transform of strain correlations
+		"""
+
+		return (
 			- divide_arrays(
-				(self.k_cross_FFTugrid2D_sqnorm - self.k_dot_FFTugrid2D_sqnorm)
+				(k_cross_FFTugrid2D_sqnorm - k_dot_FFTugrid2D_sqnorm)
 				*self.kxsq*self.kysq,
 				self.ksq)
-			+ self.k_cross_FFTugrid2D_sqnorm*self.ksq/4)	# Fourier transform of strain correlations
+			+ k_cross_FFTugrid2D_sqnorm*self.ksq/4)
 
-	def plot(self, box_size, r_max_css, av_p_sep,
+	def strain_correlations(self, r_cut=0):
+		"""
+		Computes strain correlations from inverse fast Fourier transform of
+		self.strain_correlations_FFT, calculated from transversal and
+		longitudinal mean square displacements with low wave lengths Gaussian
+		cut at r_cut.
+
+		Parameters
+		----------
+		r_cut : float
+			Wave length Gaussian cut-off radius, equivalent to coarse-graining
+			cut-off radius.
+
+		Returns
+		-------
+		sc : Numpy array
+			Strain correlations.
+		"""
+
+		self.filtered_k_cross_FFTugrid2D_sqnorm = (FFT2Dfilter(
+			self.k_cross_FFTugrid2D_sqnorm, wave_vectors=self.wave_vectors)
+			.gaussian_filter(r_cut)
+			.signalFFT)	# square norm of cross product of normalised wave vector and displacement Fourier transform with low wave lengths Gaussian cut at r_cut
+		self.filtered_k_cross_FFTugrid1D_sqnorm = g2Dto1Dgrid(
+			self.filtered_k_cross_FFTugrid2D_sqnorm, self.k)
+
+		self.filtered_k_dot_FFTugrid2D_sqnorm = (FFT2Dfilter(
+			self.k_dot_FFTugrid2D_sqnorm, wave_vectors=self.wave_vectors)
+			.gaussian_filter(r_cut)
+			.signalFFT)	# square norm of dot product of normalised wave vector and displacement Fourier transform with low wave lengths Gaussian cut at r_cut
+		self.filtered_k_dot_FFTugrid1D_sqnorm = g2Dto1Dgrid(
+			self.filtered_k_dot_FFTugrid2D_sqnorm, self.k)
+
+		self.strain_correlations_FFT = self.get_strain_correlations_FFT(
+			self.filtered_k_cross_FFTugrid2D_sqnorm,
+			self.filtered_k_dot_FFTugrid2D_sqnorm)
+
+		return super().strain_correlations(r_cut=0)
+
+	def plot(self, box_size, r_max_css, av_p_sep, r_min, r_max, y_min, y_max,
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
 		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
-		divide_by_cnn=False, **kwargs):
+		r_cut=0, smooth=0):
 		"""
-		Plots strain correlations with slider for cut-off radius.
+		Plots collective mean square displacements strain correlations with
+		slider for cut-off radius.
 
 		Parameters
 		----------
@@ -318,6 +399,14 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 			Maximum radius in infinite norm for strain correlations plots.
 		av_p_sep : float
 			Average particle separation.
+		r_min : float
+			Minimum wave length for collective mean square displacements.
+		r_max : float
+			Maximum wave length for collective mean square displacements.
+		y_min : float
+			Minimum value collective mean square displacements.
+		y_max : float
+			Maximum value collective mean square displacements.
 		points_x_c44 : int
             Number of radii at which to evaluate integrated strain correlation.
 			(default: active_particles.plot.c44._points_x)
@@ -336,34 +425,49 @@ class StrainCorrelationsCMSD(StrainCorrelations):
         r_max_c44 : float
             Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_max)
-		divide_by_cnn : bool
-			Display C_{\\varepsilon_{xy}\\varepsilon_{xy}}/C_{\\rho\\rho}
-			rather than just C_{\\varepsilon_{xy}\\varepsilon_{xy}}.
-			(default: False)
-			NOTE: if True, then cnn2D must be in the keyword arguments.
-
-		Optional keyword arguments
-		--------------------------
-		cnn2D : 2D array-like
-			Density correlation grid C_{\\rho\\rho}.
+		r_cut : float
+			Initial wave length Gaussian cut-off radius. (default: 0)
+		smooth : float
+			C44 Gaussian smoothing length scale. (default: 0)
 		"""
-
-		self.box_size = box_size
-		self.r_max_css = r_max_css
-
-		self.divide_by_cnn = divide_by_cnn
-		if self.divide_by_cnn:
-			self.cnn2Dgrid = CorGrid(np.array(kwargs['cnn2D']), self.box_size)	# density correlations CorGrid object
-
-		self.fig, (self.ax_sc, self.ax_kFFTugrid) = plt.subplots(1, 2)
-
-		self.r_cut = 0	# cut-off radius
 
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
 
-		# STRAIN CORRELATIONS
+		self.box_size = box_size
+		self.av_p_sep = av_p_sep
+
+		self.r_max_css = r_max_css
+
+		self.r_cut = r_cut
 
 		grid = self.strain_correlations_corgrid()	# correlation grid
+
+		# COLECTIVE MEAN SQUARE DISPLACEMENTS FIGURE
+
+		self.fig_cmsd = plt.figure()
+		gs = GridSpec(2, 2)
+
+		self.ax_cross = plt.subplot(gs[0, 0])
+		self.cross_line = plot_cross(self.filtered_k_cross_FFTugrid1D_sqnorm,
+			self.av_p_sep, self.ax_cross)
+
+		self.ax_dot = plt.subplot(gs[1, 0])
+		self.dot_line = plot_dot(self.filtered_k_dot_FFTugrid1D_sqnorm,
+			self.av_p_sep, self.ax_dot)
+
+		self.ax_super = plt.subplot(gs[:, 1])
+		self.super_cross_line = plot_cross(
+			self.filtered_k_cross_FFTugrid1D_sqnorm, self.av_p_sep,
+			self.ax_super)
+		self.super_dot_line = plot_dot(
+			self.filtered_k_dot_FFTugrid1D_sqnorm, self.av_p_sep,
+			self.ax_super)
+
+		self.ax_super.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
+
+		# STRAIN CORRELATIONS AND SUPERIMPOSED ORIGINAL CMSD FIGURE
+
+		self.fig_sc, (self.ax_sc, self.ax_kFFTugrid) = plt.subplots(1, 2)
 
 		Cmin = np.max((np.min(grid.grid), _c_min))
 		Cmax = np.max((np.min(grid.grid), _c_max))
@@ -379,27 +483,25 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.colormap = mpl.colorbar.ColorbarBase(self.colormap_ax, cmap=cmap,
 		    norm=CvNorm, orientation='vertical')    # color map
 
-		# CROSS AND DOT PRODUCTS
-
-		self.ax_kFFTugrid.set_xlim([r_min, r_max])
+		self.ax_kFFTugrid.set_xlim([r_min/self.av_p_sep, r_max/self.av_p_sep])
 		self.ax_kFFTugrid.set_ylim([y_min, y_max])
 
-		cross = plot_cross(self.ax_kFFTugrid)
-		dot = plot_dot(self.ax_kFFTugrid)
+		_ = plot_cross(self.k_cross_FFTugrid1D_sqnorm, self.av_p_sep,
+			self.ax_kFFTugrid)
+		_ = plot_dot(self.k_dot_FFTugrid1D_sqnorm, self.av_p_sep,
+			self.ax_kFFTugrid)
 
-		self.r_cut_line = self.ax_kFFTugrid.axvline(x=self.r_cut, color='red',
-			label=r'$r_{cut}$')	# vertical line delimiting wave lengths cutting domain
-
-		self.ax_kFFTugrid.legend()	# add legend to plot
+		self.r_cut_line = self.ax_kFFTugrid.axvline(x=self.r_cut,
+			color='red', label=r'$r_{cut}/a$')	# vertical line delimiting wave lengths cutting domain
 
 		self.r_cut_line.figure.canvas.mpl_connect('button_press_event',
 		    self.update_r_cut_line)	# call self.update_r_cut_line() on button press event
 
 		self.slider_ax = make_axes_locatable(self.ax_kFFTugrid).append_axes(
-		    'bottom', size='5%', pad=0.6)			# slider Axes
-		self.slider = Slider(self.slider_ax, r'$r_{cut}$', self.r_cut,
-			self.r_max_css, valinit=0)				# slider
-		self.slider.on_changed(self.update_r_cut)	# call update_r_cut when slider value is changed
+		    'bottom', size='5%', pad=0.6)						# slider Axes
+		self.slider = Slider(self.slider_ax, r'$r_{cut}/a$', 0,
+			self.r_max_css/self.av_p_sep, valinit=self.r_cut)	# slider
+		self.slider.on_changed(self.update_r_cut)				# call update_r_cut when slider value is changed
 
 		# GRID CIRLCE FIGURE
 
@@ -407,63 +509,34 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
 			min=Cmin, max=Cmax)
 		self.grid_circle.ax_grid.set_title(
-			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))
+			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
 
 		# C44 FIGURE
 
-		self.av_p_sep = av_p_sep
 		self.points_x_c44 = points_x_c44
 		self.points_theta_c44 = points_theta_c44
 		self.y_min_c44 = y_min_c44
 		self.y_max_c44 = y_max_c44
 		self.r_min_c44 = r_min_c44
 		self.r_max_c44 = r_max_c44
+		self.smooth = smooth
 
 		self.toC44 = Css2DtoC44(self.box_size,
 			self.points_x_c44, self.points_theta_c44,
 			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
 
 		self.fig_c44, self.ax_c44 = plt.subplots()
-		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)
+		self.ax_c44.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
 		self.ax_c44.set_xlim([self.r_min_c44, self.r_max_c44])
 		self.ax_c44.set_ylim([self.y_min_c44, self.y_max_c44])
+		self.ax_c44.set_yscale('log')
+		self.ax_c44.set_xscale('log')
 
 		self.c44 = self.css2Dtoc44(grid.grid)	# list of [r, C44(r)]
 		self.line_c44, = self.ax_c44.plot(self.c44[:, 0]/self.av_p_sep,
 			self.c44[:, 1])						# C44 plotting line
 
 	# METHODS CALLED BY SELF.PLOT()
-
-	def css2Dtoc44(self, css2D):
-		"""
-		Returns strain correlations projected on cos(4 \\theta) from strain
-		correlations grid.
-		NOTE: This projection is then divided by the density correlations at
-		half-radius in DIVIDE_BY_CNN mode.
-
-		Parameters
-		----------
-		Css2D : array-like
-			Strain correlations grid.
-
-		Returns
-		-------
-		c44 : Numpy array
-			Array of position and projection of strain correlations on
-			cos(4 \\theta) at this position.
-		"""
-
-		c44 = self.toC44.get_C44(css2D)	# list of [r, C44(r)]
-		if not(self.divide_by_cnn): return c44
-
-		# DIVIDE_BY_CNN mode
-
-		css = np.array(list(map(
-            lambda r: self.cnn2Dgrid.integrate_over_angles(r,
-            points_theta=self.toC44.points_theta),
-            self.toC44.c44_x/2)))
-		c44[:, 1] /= css
-		return c44
 
 	def update_r_cut_line(self, event):
 		"""
@@ -483,11 +556,29 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		radius self.r_cut.
 		"""
 
+		self.ax_super.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)				# update title
 		self.grid_circle.ax_grid.set_title(
-			'2D ' + r'$%s(r_{cut} = %.2e)$' % (self.cor_name, self.r_cut))	# update title
-		self.ax_c44.set_title(r'$r_{cut} = %.2e$' % self.r_cut)				# update title
+			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))	# update title
+		self.ax_c44.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)				# update title
 
 		grid = self.strain_correlations_corgrid()		# new grid
+
+		self.cross_line.set_ydata(
+			self.filtered_k_cross_FFTugrid1D_sqnorm[1:, 1])	# update TCMSD values
+		self.ax_cross.relim()								# recompute data limits
+		self.ax_cross.autoscale_view()						# scale axis to data
+		self.dot_line.set_ydata(
+			self.filtered_k_dot_FFTugrid1D_sqnorm[1:, 1])	# update LCMSD values
+		self.ax_dot.relim()									# recompute data limits
+		self.ax_dot.autoscale_view()						# scale axis to data
+		self.super_cross_line.set_ydata(
+			self.filtered_k_cross_FFTugrid1D_sqnorm[1:, 1])	# update TCMSD values
+		self.super_dot_line.set_ydata(
+			self.filtered_k_dot_FFTugrid1D_sqnorm[1:, 1])	# update LCMSD values
+		self.ax_super.relim()								# recompute data limits
+		self.ax_super.autoscale_view()						# scale axis to data
+		self.cross_line.figure.canvas.draw()				# update plot
+
 		self.grid_plot.set_data(grid.display_grid.grid)	# plot grid
 		self.grid_plot.figure.canvas.draw()				# update plot
 
@@ -518,177 +609,117 @@ def suptitle():
 
 def plot():
 	"""
-	Plots mean square norm of dot and cross products of wave vector and
-	displacement Fourier transform.
+	Plots collective mean square displacements, strain correlations and
+	projection of strain correlations on cos(4\\theta).
 
 	Returns
 	-------
-	fig : matplotlib figure
-		Figure.
-	ax_cross : matplotlib axis
-		Mean square cross product axis.
-	ax_dot : matplotlib axis
-		Mean square dot product axis.
-	ax_super : matplotlib axis
-		Superimposed mean square cross and dot products axis.
-	fl_cross [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
-		Fitting line object for cross axis.
-	fl_dot [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
-		Fitting line object for dot axis.
-		NOTE: Only in FITTING_LINE mode.
-	fl_super [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
-		Fitting line object for superimposition axis.
-		NOTE: Only in FITTING_LINE mode.
+	sc : active_particles.analysis.ctt.StrainCorrelationsCMSD
+		Strain correlations object.
 	"""
 
-	to_return = ()	# variables to return
+	sc = StrainCorrelationsCMSD(wave_vectors,
+		k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
+	sc.plot(box_size, r_max_css,
+		parameters['box_size']/np.sqrt(parameters['N']),
+		r_min, r_max, y_min, y_max,
+		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
+		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
+		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
+		r_cut=r_cut_fourier, smooth=smooth)
 
-	fig = plt.figure()
-	to_return += (fig,)
+	# COLECTIVE MEAN SQUARE DISPLACEMENTS FIGURE
 
-	fig.set_size_inches(30, 30)
-	fig.subplots_adjust(wspace=0.3)
-	fig.subplots_adjust(hspace=0.3)
+	sc.fig_cmsd.set_size_inches(16, 16)
+	sc.fig_cmsd.subplots_adjust(wspace=0.3)
+	sc.fig_cmsd.subplots_adjust(hspace=0.3)
 
-	fig.suptitle(suptitle())
+	sc.fig_cmsd.suptitle(suptitle())
 
-	gs = GridSpec(2, 2)
+	sc.ax_cross.set_xlabel(r'$\lambda/a = 2\pi/ka$')
+	sc.ax_cross.set_ylabel(sc.cross_line.get_label()
+		+ r'$\times \tilde{\mathcal{G}}(\vec{k}, r_{cut})$')
 
-	# CROSS
+	sc.ax_dot.set_xlabel(r'$\lambda/a = 2\pi/ka$')
+	sc.ax_dot.set_ylabel(sc.dot_line.get_label()
+		+ r'$\times \tilde{\mathcal{G}}(\vec{k}, r_{cut})$')
 
-	ax_cross = plt.subplot(gs[0, 0])
-	to_return += (ax_cross,)
-	cross_cross = plot_cross(ax_cross)	# cross product
+	sc.ax_super.set_xlabel(r'$\lambda/a = 2\pi/ka$')
+	sc.ax_super.set_ylabel(
+		r'$S(k) \times \tilde{\mathcal{G}}(\vec{k}, r_{cut})$')
+	sc.ax_super.add_artist(sc.ax_super.legend())
 
-	ax_cross.set_xlabel(r'$\lambda = 2\pi/k$')
-	ax_cross.set_xlim([r_min, r_max])
-	ax_cross.set_ylabel(cross_cross.get_label())
-	ax_cross.set_ylim([y_min, y_max])
-
-	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
-		fl_cross = FittingLine(ax_cross, slope0, slope_min, slope_max,
-			x_fit='\lambda')									# add fitting line to plot
-		to_return += (fl_cross,)
-
-	# DOT
-
-	ax_dot = plt.subplot(gs[1, 0])
-	to_return += (ax_dot,)
-	dot_dot = plot_dot(ax_dot)	# dot product
-
-	ax_dot.set_xlabel(r'$\lambda = 2\pi/k$')
-	ax_dot.set_xlim([r_min, r_max])
-	ax_dot.set_ylabel(dot_dot.get_label())
-	ax_dot.set_ylim([y_min, y_max])
-
-	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
-		fl_dot = FittingLine(ax_dot, slope0, slope_min, slope_max,
-			x_fit='\lambda')									# add fitting line to plot
-		to_return += (fl_dot,)
-
-	# SUPER
-
-	ax_super = plt.subplot(gs[:, 1])
-	to_return += (ax_super,)
-	cross_super = plot_cross(ax_super)	# cross product
-	dot_super = plot_dot(ax_super)		# dot product
-
-	legend = ax_super.legend()
-	ax_super.add_artist(legend)
-
-	ax_super.set_xlabel(r'$\lambda = 2\pi/k$')
-	ax_super.set_xlim([r_min, r_max])
-	ax_super.set_ylabel(r'$S(k)$')
-	ax_super.set_ylim([y_min, y_max])
-
-	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
-		fl_super = FittingLine(ax_super, slope0, slope_min, slope_max,
-			x_fit='\lambda')									# add fitting line to plot
-		to_return += (fl_super,)
-
-	# SAVING
+	sc.ax_cross.set_title(
+		r'$\tilde{\mathcal{G}}(\vec{k}, r_{cut}) \equiv$'
+		+ r'$\exp(-\frac{1}{2} r_{cut}^2 \vec{k}^2)$')
 
 	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
 		image_name, = naming_Ctt.image().filename(**attributes)
-		fig.savefig(joinpath(data_dir, image_name))
+		sc.fig_cmsd.savefig(joinpath(data_dir, image_name))
 
-	# STRAIN CORRELATIONS
+	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
+		sc.fl_cross = FittingLine(sc.ax_cross, slope0, slope_min, slope_max,
+			x_fit='(\lambda/a)')
+		sc.fl_dot = FittingLine(sc.ax_dot, slope0, slope_min, slope_max,
+			x_fit='(\lambda/a)')
+		sc.fl_super = FittingLine(sc.ax_super, slope0, slope_min, slope_max,
+			x_fit='(\lambda/a)')
 
-	if get_env('STRAIN_CORRELATIONS', default=False, vartype=bool):	# STRAIN_CORRELATIONS mode
+	# STRAIN CORRELATIONS AND SUPERIMPOSED ORIGINAL CMSD FIGURE
 
-		divide_by_cnn = get_env('DIVIDE_BY_CNN', default=False, vartype=bool)	# divide strain correlations by density correlations
+	sc.fig_sc.set_size_inches(16, 16)
+	sc.fig_sc.subplots_adjust(wspace=0.5)
+	sc.fig_sc.subplots_adjust(hspace=0.3)
 
-		cor_name = r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$'	# name of the plotted correlation
+	sc.fig_sc.suptitle(suptitle())
 
-		sc = StrainCorrelationsCMSD(wave_vectors,
-		    k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
-		to_return += (sc,)
-		sc.plot(parameters['box_size'], r_max_css,
-			parameters['box_size']/np.sqrt(parameters['N']),
-			points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
-			y_min_c44=y_min_c44, y_max_c44=y_max_c44,
-			r_min_c44=r_min_c44, r_max_c44=r_max_c44,
-			divide_by_cnn=divide_by_cnn, cnn2D=Cnn2D)
+	sc.ax_sc.set_title(
+		'2D ' + r'$%s(\vec{r})\ast\mathcal{G}(\vec{r}, \sigma)$' % sc.cor_name
+		+ '\n' + r'$\mathcal{G}(\vec{r}, \sigma) \equiv$'
+		+ r'$\frac{1}{2\pi\sigma^2}\exp(-\vec{r}^2/2\sigma^2)$')
+	sc.ax_sc.set_xlabel(r'$x$')
+	sc.ax_sc.set_ylabel(r'$y$')
+	sc.colormap.set_label(r'$%s$' % sc.cor_name, labelpad=20, rotation=270)
 
-		# R_CUT FIGURE
+	sc.ax_kFFTugrid.set_xlabel(sc.ax_super.get_xlabel())
+	sc.ax_kFFTugrid.set_ylabel(sc.ax_super.get_ylabel())
 
-		sc.fig.set_size_inches(16, 16)
-		sc.fig.subplots_adjust(wspace=0.3)
-		sc.fig.subplots_adjust(hspace=0.3)
+	sc.ax_kFFTugrid.legend()
 
-		sc.fig.suptitle(suptitle())
+	# GRID CIRCLE FIGURE
 
-		sc.ax_sc.set_title('2D ' + cor_name)
-		sc.ax_sc.set_xlabel(r'$x$')
-		sc.ax_sc.set_ylabel(r'$y$')
-		sc.colormap.set_label(cor_name, labelpad=20, rotation=270)
+	sc.grid_circle.fig.suptitle(suptitle())
 
-		sc.ax_kFFTugrid.set_xlabel(ax_super.get_xlabel())
-		sc.ax_kFFTugrid.set_xlim(ax_super.get_xlim())
-		sc.ax_kFFTugrid.set_ylabel(ax_super.get_ylabel())
-		sc.ax_kFFTugrid.set_ylim(ax_super.get_ylim())
+	sc.grid_circle.fig.set_size_inches(16, 16)
+	sc.grid_circle.fig.subplots_adjust(wspace=0.4)
+	sc.grid_circle.fig.subplots_adjust(hspace=0.3)
 
-		# GRID CIRCLE FIGURE
+	sc.grid_circle.ax_grid.set_xlabel(r'$x$')
+	sc.grid_circle.ax_grid.set_ylabel(r'$y$')
+	sc.grid_circle.colormap.set_label(r'$%s$' % sc.cor_name,
+		labelpad=20, rotation=270)
 
-		fig_gc, (ax_grid, ax_plot), cb_gc = sc.grid_circle.get_fig_ax_cmap()
+	sc.grid_circle.ax_plot.set_xlabel(r'$\theta$')
+	sc.grid_circle.ax_plot.set_ylabel(r'$%s(r, \theta)$' % sc.cor_name)
 
-		fig_gc.suptitle(suptitle())
+	# C44 FIGURE
 
-		fig_gc.set_size_inches(16, 16)		# figure size
-		fig_gc.subplots_adjust(wspace=0.4)	# width space
-		fig_gc.subplots_adjust(hspace=0.3)	# height space
+	sc.fig_c44.suptitle(suptitle())
 
-		ax_grid.set_xlabel(r'$x$')
-		ax_grid.set_ylabel(r'$y$')
-		cb_gc.set_label(cor_name, labelpad=20, rotation=270)
+	sc.fig_c44.set_size_inches(16, 16)	# figure size
 
-		ax_plot.set_xlabel(r'$\theta$')
-		ax_plot.set_ylabel(cor_name + r'$(r, \theta)$')
+	sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
+	sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
+		+ ' ' + r'$%s(r, \theta)$' % sc.cor_name
+		+ ' ' + r'$\cos4\theta$')
 
-		# C44 FIGURE
-
-		sc.fig_c44.suptitle(suptitle())
-
-		sc.fig_c44.set_size_inches(16, 16)	# figure size
-
-		sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
-		sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
-			+ ' ' + cor_name + r'$(r, \theta)$'
-			+ ' ' + r'$\cos4\theta$'
-			+ (r'$/C_{\rho\rho}(r/2)$' if divide_by_cnn else ''))
-		sc.ax_c44.set_xlim([r_min_c44, r_max_c44])
-		sc.ax_c44.set_ylim([y_min_c44, y_max_c44])
-		sc.ax_c44.set_yscale('log')
-		sc.ax_c44.set_xscale('log')
-
-		if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
-			fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
-				slope_max_c44, x_fit='(r/a)', y_fit='C_4^4(r)')		# add fitting line to plot
-			to_return += (fl_c44,)
+	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
+		sc.fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
+			slope_max_c44, x_fit='(r/a)', y_fit='C_4^4(r)')
 
 	# RETURN
 
-	return to_return
+	return sc
 
 # SCRIPT
 
@@ -740,8 +771,6 @@ if __name__ == '__main__':  # executing as script
     Ctt_filename, = naming_Ctt.filename(**attributes)   # Ctt filename
     naming_Cll = naming.Cll()                           # Cll naming object
     Cll_filename, = naming_Cll.filename(**attributes)   # Cll filename
-    naming_Cnn = naming.Cnn()                           # Cnn naming object
-    Cnn_filename, = naming_Cnn.filename(**attributes)   # Cnn filename
 
 	# STANDARD OUTPUT
 
@@ -771,10 +800,6 @@ if __name__ == '__main__':  # executing as script
                 box_size, centre, Ncases, time, dt, w_traj, u_traj),
                 times))											# lists of displacement variables
 
-        Cnn_object = Cnn(Ugrid, box_size)	# density correlation object
-        Cnn2D = Cnn_object.cnn2D			# 2D density correlation grid
-        Cnn1D = Cnn_object.cnn1D			# 1D averaged density correlation grid
-
         wave_vectors = wave_vectors_2D(Ncases, Ncases, d=box_size/Ncases)	# wave vectors grid
         wave_vectors_norm = np.sqrt(np.sum(wave_vectors**2, axis=-1))		# wave vectors norm grid
 
@@ -794,9 +819,6 @@ if __name__ == '__main__':  # executing as script
 
         # SAVING
 
-		# density correlations
-        Cnn_object.save(attributes, dir=data_dir)
-		# everything else
         with open(joinpath(data_dir, Ctt_filename), 'wb') as Ctt_dump_file,\
 			open(joinpath(data_dir, Cll_filename), 'wb') as Cll_dump_file:
             pickle.dump([wave_vectors, k_cross_FFTugrid2D_sqnorm,
@@ -813,13 +835,11 @@ if __name__ == '__main__':  # executing as script
 		# DATA
 
         with open(joinpath(data_dir, Ctt_filename), 'rb') as Ctt_dump_file,\
-			open(joinpath(data_dir, Cll_filename), 'rb') as Cll_dump_file,\
-			open(joinpath(data_dir, Cnn_filename), 'rb') as Cnn_dump_file:
+			open(joinpath(data_dir, Cll_filename), 'rb') as Cll_dump_file:
             (wave_vectors, k_cross_FFTugrid2D_sqnorm,
 				k_cross_FFTugrid1D_sqnorm) = pickle.load(Ctt_dump_file)
             (_, k_dot_FFTugrid2D_sqnorm,
 				k_dot_FFTugrid1D_sqnorm) = pickle.load(Cll_dump_file)
-            Cnn2D, Cnn1D = pickle.load(Cnn_dump_file)
 
         with open(wrap_file_name, 'rb') as wrap_file:
             w_traj = Gsd(wrap_file, prep_frames=prep_frames)		# wrapped trajectory object
@@ -832,6 +852,11 @@ if __name__ == '__main__':  # executing as script
 		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
 
 		# PLOT
+
+        r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
+			vartype=float)	# initial wave length Gaussian cut-off radius
+
+        smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale
 
         r_min = get_env('R_MIN', default=_r_min, vartype=float)					# minimum wave length for plots
         r_max = get_env('R_MAX', default=np.sqrt(2)*box_size, vartype=float)	# maximum wave length for plots
