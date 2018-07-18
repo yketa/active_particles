@@ -251,3 +251,43 @@ class CorGrid:
             self.display_grid.get_value_polar(r, angle)*projection(angle),
             theta)),
             theta)
+
+    def get_value_cartesian(self, x, y):
+        """
+        Get value of grid at position in cartesian coordinates.
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate
+        y : float
+            y-coordinate
+
+        Returns
+        -------
+        value : *
+            Value at (x, y).
+        """
+
+        return self.display_grid.get_value_cartesian(x, y)
+
+    def get_value_polar(self, r, angle, centre=(0, 0)):
+        """
+        Get value of grid at position in polar coordinates.
+
+        Parameters
+        ----------
+        r : float
+            Radius from centre.
+        angle : float
+            Angle from x-direction.
+        centre : float tuple
+            Origin for calculation. (default: (0, 0))
+
+        Returns
+        -------
+        value : *
+            Value at (r, angle) from centre.
+        """
+
+        return self.display_grid.get_value_polar(r, angle, centre=(0, 0))
