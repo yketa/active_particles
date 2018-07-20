@@ -277,7 +277,7 @@ class _File:
 
         return par_values
 
-    def add_ext(self, ext_parameters, ext_extension):
+    def add_ext(self, ext_parameters=None, ext_extension=None):
         """
         From a default standard, this function returns an extended standard
         with additional parameters and different extension.
@@ -286,8 +286,11 @@ class _File:
         ----------
         ext_parameters : ordered dictionary
             Hash table of additional parameters and their abbreviations.
+            (default: None)
+            NOTE: if ext_parameters == None, parameters remain unchanged.
         ext_extension : string
-            Different file extension.
+            Different file extension. (default: None)
+            NOTE: if ext_extension == None, the extension remains unchanged.
 
         Returns
         -------
@@ -295,10 +298,10 @@ class _File:
             Extended standard object.
         """
 
-        ext_self = deepcopy(self)                               # creates a deep copy of the standard
-        ext_self.parameters = OrderedDict(chain(
-            self.parameters.items(), ext_parameters.items()))   # extended ordered dictionary of parameters
-        ext_self.extension = ext_extension                      # extended standard extension
+        ext_self = deepcopy(self)                                       # creates a deep copy of the standard
+        if ext_parameters != None: ext_self.parameters = OrderedDict(chain(
+            self.parameters.items(), ext_parameters.items()))           # extended ordered dictionary of parameters
+        if ext_extension != None: ext_self.extension = ext_extension    # extended standard extension
 
         return ext_self
 
@@ -375,7 +378,8 @@ class _ShearStrainVorticity(_CorFile):
             space (True).
         """
 
-        if from_ft: # calculation in Fourier space
+        self.from_ft = from_ft
+        if self.from_ft:    # calculation in Fourier space
             name += 'ft'
             ext_parameters = OrderedDict()
         else:       # calculation in real space
@@ -383,6 +387,15 @@ class _ShearStrainVorticity(_CorFile):
                 ('sigma', '_SIGM')])
 
         super().__init__(name, ext_parameters=ext_parameters)   # initialise with superclass
+
+    def image(self):
+        """
+        Image name generator, with additional Gaussian cut-off radius parameter
+        for calculation in Fourier space.
+        """
+
+        if not(self.from_ft): return super().image()
+        else: return super().image().add_ext(OrderedDict([('r_cut', '_RCUT')]))
 
 class Css(_ShearStrainVorticity):
     """
@@ -493,6 +506,14 @@ class Ctt(_CorFile):
         """
 
         super().__init__('Ctt')  # initialise with superclass
+
+    def image(self):
+        """
+        Image name generator, with additional Gaussian cut-off radius
+        parameter.
+        """
+
+        return super().image().add_ext(OrderedDict([('r_cut', '_RCUT')]))
 
 class Cll(_CorFile):
     """
