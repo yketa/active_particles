@@ -113,10 +113,12 @@ R_MAX_C44 [FROM_FT and PLOT mode] : float
 	Maximum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_max_c44
 SMOOTH [FROM_FT and PLOT mode] : float
-	C44 Gaussian smoothing length scale.
+	C44 Gaussian smoothing length scale in units of average particle
+	separation.
 	DEFAULT: 0
 R_CUT_FOURIER [FROM_FT and PLOT mode] : float
-    Initial wave length Gaussian cut-off radius.
+    Initial wave length Gaussian cut-off radius in units of average particle
+	separation.
     DEFAULT: active_particles.analysis.css._r_cut_fourier
 SLOPE_C44 [FROM_FT, PLOT and FITTING_LINE mode] : slope
 	Initial slope for fitting line in C44 figure.
@@ -177,6 +179,8 @@ according to active_particles.naming.Ccc standards in DATA_DIRECTORY.
 vorticity.
 [SAVE and not(FROM_FT) mode]
 > Saves data map and correlation figures in DATA_DIRECTORY.
+[SAVE and FROM_FT mode]
+> Saves shear strain correlation figure in DATA_DIRECTORY.
 """
 
 import active_particles.naming as naming
@@ -544,8 +548,6 @@ def plot(grid, corr, box_size, var, naming_standard):
 		orientation='vertical')
 	cb1.set_label(r'$%s$' % C, labelpad=20, rotation=270)
 
-	# SAVING
-
 	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
 		image_name, = naming_standard.image().filename(**attributes)
 		fig.savefig(joinpath(data_dir, image_name))
@@ -603,7 +605,7 @@ class StrainCorrelations:
 		----------
 		r_cut : float
 			Wave length Gaussian cut-off radius, equivalent to coarse-graining
-			cut-off radius.
+			cut-off radius. (default: 0)
 
 		Returns
 		-------
@@ -613,7 +615,7 @@ class StrainCorrelations:
 
 		sc = (FFT2Dfilter(self.strain_correlations_FFT,
 			wave_vectors=self.wave_vectors)
-			.gaussian_filter(r_cut)
+			.gaussian_filter(np.sqrt(2)*r_cut)
 			.get_signal()).real
 		return sc/sc[0, 0]	# correlation normalisation
 
@@ -655,9 +657,11 @@ class StrainCorrelations:
 			Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.analysis.css._r_max_c44)
 		smooth : float
-			C44 Gaussian smoothing length scale. (default: 0)
+			C44 Gaussian smoothing length scale in units of average particle
+			separation. (default: 0)
 		r_cut : float
-			Initial wave length Gaussian cut-off radius. (default: 0)
+			Initial wave length Gaussian cut-off radius in units of average
+			particles separation. (default: 0)
 		theta : float
 			Angle at which to plot Css(r, theta). (default: 0)
 		points_x_theta : int
@@ -685,7 +689,7 @@ class StrainCorrelations:
 
 		self.r_max_css = r_max_css
 
-		self.r_cut = r_cut
+		self.r_cut = r_cut	# Gaussian cut-off radius in units of average particle separation
 
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
 
@@ -731,7 +735,7 @@ class StrainCorrelations:
 		self.y_max_c44 = y_max_c44
 		self.r_min_c44 = r_min_c44
 		self.r_max_c44 = r_max_c44
-		self.smooth = smooth
+		self.smooth = smooth	# C44 Gaussian smoothing length scale in units of average particle separation
 
 		self.toC44 = Css2DtoC44(self.box_size,
 			self.points_x_c44, self.points_theta_c44,
@@ -787,7 +791,7 @@ class StrainCorrelations:
 	def css2Dtoc44(self, css2D):
 		"""
 		Returns strain correlations projected on cos(4 \\theta) from strain
-		correlations grid.
+		correlations grid, smoothed over self.smooth*self.av_p_sep.
 
 		Parameters
 		----------
@@ -801,7 +805,7 @@ class StrainCorrelations:
 			cos(4 \\theta) at this position.
 		"""
 
-		return self.toC44.get_C44(css2D, smooth=self.smooth)	# list of [r, C44(r)]
+		return self.toC44.get_C44(css2D, smooth=self.av_p_sep*self.smooth)	# list of [r, C44(r)]
 
 	def css2Dtocsstheta(self, css2D):
 		"""
@@ -979,10 +983,8 @@ def plot_fft():
 
 	Returns
 	-------
-	sc : active_particles.analysis.css.StrainCorrelationsFFTsqnorm
-		StrainCorrelationsFFTsqnorm object.
-	fl [FITTING_LINE mode] : active_particles.plot.mpl_tools.FittingLine
-		Fitting line object for C44 figure.
+	sc : active_particles.analysis.css.StrainCorrelations
+		Strain correlations object.
 	"""
 
 	cor_name = r'$C_{\varepsilon_{xy}\varepsilon_{xy}}$'	# name of plotted correlation
@@ -990,7 +992,6 @@ def plot_fft():
 	wave_vectors = wave_vectors_2D(*FFTsgridsqnorm.shape, d=box_size/Ncases)	# wave vectors at which Fourier transform was calculated
 
 	sc = StrainCorrelations(wave_vectors, FFTsgridsqnorm)
-	to_return = (sc,)
 
 	av_p_sep = box_size/np.sqrt(Nmean)
 	sc.plot(parameters['box_size'], r_max, av_p_sep,
@@ -1012,22 +1013,29 @@ def plot_fft():
 	sc.ax_css.set_ylabel(r'$y$')
 	sc.colormap.set_label(cor_name, labelpad=20, rotation=270)
 
+	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
+		sc.ax_slider.set_visible(False)	# hide slider
+		image_name, = naming_Css.image().filename(
+			**{**attributes, 'r_cut': r_cut_fourier})
+		sc.fig_css.savefig(joinpath(data_dir, image_name))
+		sc.ax_slider.set_visible(True)	# show slider
+
 	# GRID CIRCLE FIGURE
 
 	fig_gc, (ax_grid, ax_plot), cb_gc = sc.grid_circle.get_fig_ax_cmap()
 
-	fig_gc.suptitle(suptitle())
+	sc.grid_circle.fig.suptitle(suptitle())
 
-	fig_gc.set_size_inches(16, 16)		# figure size
-	fig_gc.subplots_adjust(wspace=0.4)	# width space
-	fig_gc.subplots_adjust(hspace=0.3)	# height space
+	sc.grid_circle.fig.set_size_inches(16, 16)		# figure size
+	sc.grid_circle.fig.subplots_adjust(wspace=0.4)	# width space
+	sc.grid_circle.fig.subplots_adjust(hspace=0.3)	# height space
 
-	ax_grid.set_xlabel(r'$x$')
-	ax_grid.set_ylabel(r'$y$')
-	cb_gc.set_label(cor_name, labelpad=20, rotation=270)
+	sc.grid_circle.ax_grid.set_xlabel(r'$x$')
+	sc.grid_circle.ax_grid.set_ylabel(r'$y$')
+	sc.grid_circle.colormap.set_label(cor_name, labelpad=20, rotation=270)
 
-	ax_plot.set_xlabel(r'$\theta$')
-	ax_plot.set_ylabel(cor_name + r'$(r, \theta)$')
+	sc.grid_circle.ax_plot.set_xlabel(r'$\theta$')
+	sc.grid_circle.ax_plot.set_ylabel(cor_name + r'$(r, \theta)$')
 
 	# C44 FIGURE
 
@@ -1039,7 +1047,6 @@ def plot_fft():
 	sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
 		+ ' ' + cor_name + r'$(r, \theta)$'
 		+ ' ' + r'$\cos4\theta$'
-		+ (r'$/C_{\rho\rho}(r/2)$' if divide_by_cnn else '')
 		+ ' ' + (r'($\sigma_{smooth}/a=%.2e$)' % smooth if smooth!=0 else ''))
 	sc.ax_c44.set_xlim([r_min_c44, r_max_c44])
 	sc.ax_c44.set_ylim([y_min_c44, y_max_c44])
@@ -1047,9 +1054,8 @@ def plot_fft():
 	sc.ax_c44.set_xscale('log')
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
-		fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
+		sc.fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
 			slope_max_c44, x_fit='(r/a)', y_fit='C_4^4(r)')		# add fitting line to plot
-		to_return += (fl_c44,)
 
 	# CSS(r, theta) FIGURE
 
@@ -1065,13 +1071,12 @@ def plot_fft():
 	sc.ax_theta.set_xscale('log')
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):					# FITTING_LINE mode
-		fl_theta = FittingLine(sc.ax_theta, slope0_theta, slope_min_theta,
+		sc.fl_theta = FittingLine(sc.ax_theta, slope0_theta, slope_min_theta,
 			slope_max_theta, x_fit='(r/a)', y_fit='%s(r, \\theta)' % cor_name)	# add fitting line to plot
-		to_return += (fl_theta,)
 
 	# RETURN
 
-	return to_return
+	return sc
 
 # SCRIPT
 
@@ -1256,9 +1261,6 @@ if __name__ == '__main__':	# executing as script
 
 		else:				# shear strain in Fourier space
 
-			divide_by_cnn = get_env('DIVIDE_BY_CNN', default=False,
-				vartype=bool)	# divide strain correlations by density correlations
-
 			points_x_c44 = get_env('POINTS_X_C44', default=_points_x_c44,
 				vartype=int)							# number of radii at which to evaluate integrated strain correlation
 			points_theta_c44 = get_env('POINTS_THETA_C44',
@@ -1270,10 +1272,10 @@ if __name__ == '__main__':	# executing as script
 			r_min_c44 = get_env('R_MIN_C44', default=_r_min_c44, vartype=float)	# minimum radius in average particle separation for C44 calculation
 			r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
 
-			smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale
+			smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale in units of average particle separation
 
 			r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
-				vartype=float)	# initial wave length Gaussian cut-off radius
+				vartype=float)	# initial wave length Gaussian cut-off radius in units of average particle separation
 
 			theta = np.pi*get_env('THETA', default=_theta, vartype=float)	# angle at which to evaluate Css(r, theta)
 
