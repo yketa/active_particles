@@ -72,10 +72,12 @@ Y_ZERO : float
 	2nd coordinate of the centre of the square box to consider.
 	DEFAULT: 0
 R_CUT_FOURIER [PLOT or SHOW mode] : float
-	Initial wave length Gaussian cut-off radius.
+	Initial wave length Gaussian cut-off radius in units of average particle
+	separation.
 	DEFAULT: active_particles.analysis.css._r_cut_fourier
 SMOOTH [PLOT or SHOW mode] : float
-	C44 Gaussian smoothing length scale.
+	C44 Gaussian smoothing length scale in units of average particle
+	separation.
 	DEFAULT: 0
 R_MIN [PLOT or SHOW mode] : float
 	Minimum wave length norm for plots.
@@ -354,7 +356,7 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		----------
 		r_cut : float
 			Wave length Gaussian cut-off radius, equivalent to coarse-graining
-			cut-off radius.
+			cut-off radius. (default: 0)
 
 		Returns
 		-------
@@ -364,14 +366,14 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 
 		self.filtered_k_cross_FFTugrid2D_sqnorm = (FFT2Dfilter(
 			self.k_cross_FFTugrid2D_sqnorm, wave_vectors=self.wave_vectors)
-			.gaussian_filter(r_cut)
+			.gaussian_filter(np.sqrt(2)*r_cut)
 			.signalFFT)	# square norm of cross product of normalised wave vector and displacement Fourier transform with low wave lengths Gaussian cut at r_cut
 		self.filtered_k_cross_FFTugrid1D_sqnorm = g2Dto1Dgrid(
 			self.filtered_k_cross_FFTugrid2D_sqnorm, self.k)
 
 		self.filtered_k_dot_FFTugrid2D_sqnorm = (FFT2Dfilter(
 			self.k_dot_FFTugrid2D_sqnorm, wave_vectors=self.wave_vectors)
-			.gaussian_filter(r_cut)
+			.gaussian_filter(np.sqrt(2)*r_cut)
 			.signalFFT)	# square norm of dot product of normalised wave vector and displacement Fourier transform with low wave lengths Gaussian cut at r_cut
 		self.filtered_k_dot_FFTugrid1D_sqnorm = g2Dto1Dgrid(
 			self.filtered_k_dot_FFTugrid2D_sqnorm, self.k)
@@ -426,9 +428,11 @@ class StrainCorrelationsCMSD(StrainCorrelations):
             Maximum radius in average particle separation for C44 calculation.
 			(default: active_particles.plot.c44._r_max)
 		r_cut : float
-			Initial wave length Gaussian cut-off radius. (default: 0)
+			Initial wave length Gaussian cut-off radius in units of average
+			particles separation. (default: 0)
 		smooth : float
-			C44 Gaussian smoothing length scale. (default: 0)
+			C44 Gaussian smoothing length scale in units of average particle
+			separation. (default: 0)
 		"""
 
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
@@ -438,7 +442,7 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 
 		self.r_max_css = r_max_css
 
-		self.r_cut = r_cut
+		self.r_cut = r_cut	# Gaussian cut-off radius in units of average particle separation
 
 		grid = self.strain_correlations_corgrid()	# correlation grid
 
@@ -519,7 +523,7 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.y_max_c44 = y_max_c44
 		self.r_min_c44 = r_min_c44
 		self.r_max_c44 = r_max_c44
-		self.smooth = smooth
+		self.smooth = smooth	# C44 Gaussian smoothing length scale in units of average particle separation
 
 		self.toC44 = Css2DtoC44(self.box_size,
 			self.points_x_c44, self.points_theta_c44,
@@ -638,23 +642,24 @@ def plot():
 
 	sc.ax_cross.set_xlabel(r'$\lambda/a = 2\pi/ka$')
 	sc.ax_cross.set_ylabel(sc.cross_line.get_label()
-		+ r'$\times \tilde{\mathcal{G}}(\vec{k}, r_{cut})$')
+		+ r'$\times \tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k})$')
 
 	sc.ax_dot.set_xlabel(r'$\lambda/a = 2\pi/ka$')
 	sc.ax_dot.set_ylabel(sc.dot_line.get_label()
-		+ r'$\times \tilde{\mathcal{G}}(\vec{k}, r_{cut})$')
+		+ r'$\times \tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k})$')
 
 	sc.ax_super.set_xlabel(r'$\lambda/a = 2\pi/ka$')
 	sc.ax_super.set_ylabel(
-		r'$S(k) \times \tilde{\mathcal{G}}(\vec{k}, r_{cut})$')
+		r'$S(k) \times \tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k})$')
 	sc.ax_super.add_artist(sc.ax_super.legend())
 
 	sc.ax_cross.set_title(
-		r'$\tilde{\mathcal{G}}(\vec{k}, r_{cut}) \equiv$'
-		+ r'$\exp(-\frac{1}{2} r_{cut}^2 \vec{k}^2)$')
+		r'$\tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k}) \equiv$'
+		+ r'$\exp(-r_{cut}^2 |\vec{k}|^2)$')
 
 	if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
-		image_name, = naming_Ctt.image().filename(**attributes)
+		image_name, = naming_Ctt.image().filename(
+			**{**attributes, 'r_cut': r_cut_fourier})
 		sc.fig_cmsd.savefig(joinpath(data_dir, image_name))
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
@@ -674,9 +679,11 @@ def plot():
 	sc.fig_sc.suptitle(suptitle())
 
 	sc.ax_sc.set_title(
-		'2D ' + r'$%s(\vec{r})\ast\mathcal{G}(\vec{r}, \sigma)$' % sc.cor_name
-		+ '\n' + r'$\mathcal{G}(\vec{r}, \sigma) \equiv$'
-		+ r'$\frac{1}{2\pi\sigma^2}\exp(-\vec{r}^2/2\sigma^2)$')
+		'2D '
+		+ r'$[%s\ast\mathcal{G}_{\sqrt{2}r_{cut}}](\vec{r})$' % sc.cor_name
+		+ r'$/[%s\ast\mathcal{G}_{\sqrt{2}r_{cut}}](\vec{0})$' % sc.cor_name
+		+ '\n' + r'$\mathcal{G}_{r_{cut}}(\vec{r}) \equiv$'
+		+ r'$\frac{1}{2\pi r_{cut}^2}\exp(-|\vec{r}|^2/2r_{cut}^2)$')
 	sc.ax_sc.set_xlabel(r'$x$')
 	sc.ax_sc.set_ylabel(r'$y$')
 	sc.colormap.set_label(r'$%s$' % sc.cor_name, labelpad=20, rotation=270)
@@ -711,7 +718,8 @@ def plot():
 	sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
 	sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
 		+ ' ' + r'$%s(r, \theta)$' % sc.cor_name
-		+ ' ' + r'$\cos4\theta$')
+		+ ' ' + r'$\cos4\theta$'
+		+ ' ' + (r'($\sigma_{smooth}/a=%.2e$)' % smooth if smooth!=0 else ''))
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 		sc.fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
@@ -854,9 +862,9 @@ if __name__ == '__main__':  # executing as script
 		# PLOT
 
         r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
-			vartype=float)	# initial wave length Gaussian cut-off radius
+			vartype=float)	# initial wave length Gaussian cut-off radius in units of average particle separation
 
-        smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale
+        smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale in units of average particle separation
 
         r_min = get_env('R_MIN', default=_r_min, vartype=float)					# minimum wave length for plots
         r_max = get_env('R_MAX', default=np.sqrt(2)*box_size, vartype=float)	# maximum wave length for plots
