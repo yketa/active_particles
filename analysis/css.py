@@ -1081,14 +1081,13 @@ def plot_fft():
 	sc.fig_theta.set_size_inches(16, 16)	# figure size
 
 	sc.ax_theta.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{\bar{N}})$')
-	sc.ax_theta.set_ylabel('%s' % cor_name + r'$(r, \theta=%.2e)$' % theta)
 	sc.ax_theta.set_xlim([r_min_theta, r_max_theta])
 	sc.ax_theta.set_ylim([y_min_theta, y_max_theta])
 	sc.ax_theta.set_yscale('log')
 	sc.ax_theta.set_xscale('log')
 
 	if sc.superimpose_c44:	# SUPERIMPOSE_C44 mode
-		sc.ax_theta.set_ylabel(r'$C(t)$')
+		sc.ax_theta.set_ylabel(r'$C(r)$')
 		plt.sca(sc.ax_theta)
 		sc.ax_theta.add_artist(plt.legend(handles=[
 			Line2D([0], [0], color=sc.line_csstheta.get_color(),

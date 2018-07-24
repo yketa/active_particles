@@ -850,7 +850,7 @@ def plot():
 	sc.ax_theta.set_xscale('log')
 
 	if sc.superimpose_c44:	# SUPERIMPOSE_C44 mode
-		sc.ax_theta.set_ylabel(r'$C(t)$')
+		sc.ax_theta.set_ylabel(r'$C(r)$')
 		plt.sca(sc.ax_theta)
 		sc.ax_theta.add_artist(plt.legend(handles=[
 			Line2D([0], [0], color=sc.line_csstheta.get_color(),
