@@ -27,6 +27,9 @@ FROM_FT [COMPUTE or PLOT mode] : bool
 	Calculates shear strain and displacement vorticity in Fourier space rather
 	than in real space, or plots the resulting correlations in real space.
 	DEFAULT: False
+SUPERIMPOSE_C44 [FROM_FT and SHOW mode] : bool
+	Superimpose C44 curve to Css(r, theta) curve.
+	DEFAULT: False
 FITTING_LINE [FROM_FT and SHOW mode] : bool
 	Display adjustable fitting line on graph of projection of shear strain on
 	cos(4 \\theta).
@@ -222,6 +225,7 @@ import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import Slider
 from matplotlib.gridspec import GridSpec
+from matplotlib.lines import Line2D
 
 from active_particles.plot.mpl_tools import GridCircle, FittingLine
 
@@ -626,7 +630,8 @@ class StrainCorrelations:
 		smooth=0, r_cut=0,
 		theta=0, points_x_theta=None,
 		y_min_theta=_y_min_theta, y_max_theta=_y_max_theta,
-		r_min_theta=_r_min_theta, r_max_theta=_r_max_theta):
+		r_min_theta=_r_min_theta, r_max_theta=_r_max_theta,
+		superimpose_c44=False):
 		"""
 		Plots strain correlations with slider for cut-off radius.
 
@@ -682,6 +687,8 @@ class StrainCorrelations:
 			Maximum radius in average particle separation for Css(r, theta)
 			calculation.
 			(default: active_particles.analysis.css._r_max_theta)
+		superimpose_c44 : bool
+			Superimpose C44 curve to Css(r, theta) curve. (default: False)
 		"""
 
 		self.box_size = box_size
@@ -722,7 +729,8 @@ class StrainCorrelations:
 		# GRID CIRCLE FIGURE
 
 		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
-			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
+			[-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep,
+				-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep],
 			min=Cmin, max=Cmax)
 		self.grid_circle.ax_grid.set_title(
 			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
@@ -759,9 +767,10 @@ class StrainCorrelations:
 		self.y_max_theta = y_max_theta
 		self.r_min_theta = r_min_theta
 		self.r_max_theta = r_max_theta
+		self.superimpose_c44 = superimpose_c44
 
-		self.toCsstheta = Css2DtoCsstheta(self.box_size,
-			self.points_x_theta, self.r_min_theta, self.r_max_theta)
+		self.toCsstheta = Css2DtoCsstheta(self.box_size, self.points_x_theta,
+			self.av_p_sep*self.r_min_theta, self.av_p_sep*self.r_max_theta)
 
 		self.fig_theta, self.ax_theta = plt.subplots()
 		self.ax_theta.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
@@ -771,6 +780,10 @@ class StrainCorrelations:
 		self.csstheta = self.css2Dtocsstheta(grid.grid)				# list of [r, Css(r, theta)]
 		self.line_csstheta, = self.ax_theta.plot(
 			self.csstheta[:, 0]/self.av_p_sep, self.csstheta[:, 1])	# Css(r, theta) plotting line
+
+		if self.superimpose_c44:								# SUPERIMPOSE_C44 mode
+			self.line_c44_superimposed, = self.ax_theta.plot(
+				self.c44[:, 0]/self.av_p_sep, self.c44[:, 1])	# C44 plotting line superimposed on Css(r, theta)
 
 	# METHODS CALLED BY SELF.PLOT()
 
@@ -859,6 +872,8 @@ class StrainCorrelations:
 		self.csstheta = self.css2Dtocsstheta(grid.grid)		# update Css(r, theta) values
 		self.line_csstheta.set_ydata(self.csstheta[:, 1])	# plot Css(r, theta)
 		self.line_csstheta.figure.canvas.draw()				# update plot
+		if self.superimpose_c44: self.line_c44_superimposed.set_ydata(
+			self.c44[:, 1])									# update plot
 
 class Css2DtoC44:
     """
@@ -913,6 +928,7 @@ class Css2DtoC44:
         """
 
         self.css2Dgrid = CorGrid(Css2D, self.box_size)	# shear strain 2D CorGrid object
+
         self.c44 = np.array(list(map(
             lambda r: self.css2Dgrid.integrate_over_angles(r,
             	projection=lambda theta: np.cos(4*theta)/np.pi,
@@ -1001,7 +1017,8 @@ def plot_fft():
 		smooth=smooth, r_cut=r_cut_fourier,
 		theta=theta, points_x_theta=points_x_theta,
 		y_min_theta=y_min_theta, y_max_theta=y_max_theta,
-		r_min_theta=r_min_theta, r_max_theta=r_max_theta)
+		r_min_theta=r_min_theta, r_max_theta=r_max_theta,
+		superimpose_c44=superimpose_c44)
 
 	# CSS FIGURE
 
@@ -1030,8 +1047,8 @@ def plot_fft():
 	sc.grid_circle.fig.subplots_adjust(wspace=0.4)	# width space
 	sc.grid_circle.fig.subplots_adjust(hspace=0.3)	# height space
 
-	sc.grid_circle.ax_grid.set_xlabel(r'$x$')
-	sc.grid_circle.ax_grid.set_ylabel(r'$y$')
+	sc.grid_circle.ax_grid.set_xlabel(r'$x/a$')
+	sc.grid_circle.ax_grid.set_ylabel(r'$y/a$')
 	sc.grid_circle.colormap.set_label(cor_name, labelpad=20, rotation=270)
 
 	sc.grid_circle.ax_plot.set_xlabel(r'$\theta$')
@@ -1069,6 +1086,17 @@ def plot_fft():
 	sc.ax_theta.set_ylim([y_min_theta, y_max_theta])
 	sc.ax_theta.set_yscale('log')
 	sc.ax_theta.set_xscale('log')
+
+	if sc.superimpose_c44:	# SUPERIMPOSE_C44 mode
+		sc.ax_theta.set_ylabel(r'$C(t)$')
+		plt.sca(sc.ax_theta)
+		sc.ax_theta.add_artist(plt.legend(handles=[
+			Line2D([0], [0], color=sc.line_csstheta.get_color(),
+				label='%s' % cor_name + r'$(r, \theta=%.2e)$' % theta),
+			Line2D([0], [0], color=sc.line_c44_superimposed.get_color(),
+				label=r'$C_4^4(r)$')]))
+	else:
+		sc.ax_theta.set_ylabel('%s' % cor_name + r'$(r, \theta=%.2e)$' % theta)
 
 	if get_env('FITTING_LINE', default=False, vartype=bool):					# FITTING_LINE mode
 		sc.fl_theta = FittingLine(sc.ax_theta, slope0_theta, slope_min_theta,
@@ -1234,15 +1262,18 @@ if __name__ == '__main__':	# executing as script
 			with open(joinpath(data_dir, Css_filename), 'rb') as Css_dump_file:
 				FFTsgridsqnorm = pickle.load(Css_dump_file)
 
+	if get_env('PLOT', default=False, vartype=bool) or\
+		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
+
+		# PARAMETERS
+
 		with open(wrap_file_name, 'rb') as wrap_file:
 			w_traj = Gsd(wrap_file, prep_frames=prep_frames)		# wrapped trajectory object
 			Nmean = np.mean(count_particles(
 				w_traj, *times, box_size=box_size, centre=centre))	# average number of particles in box
 		nD0 = nD0_active(
 			Nmean, parameters['vzero'], parameters['dr'], box_size)	# product of particle density and active diffusion constant
-
-	if get_env('PLOT', default=False, vartype=bool) or\
-		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
+		av_p_sep = parameters['box_size']/np.sqrt(Nmean)			# average particle separation
 
 		# PLOT
 
@@ -1291,6 +1322,9 @@ if __name__ == '__main__':	# executing as script
 				vartype=float)	# minimum radius in average particle separation for Css(r, theta) calculation
 			r_max_theta = get_env('R_MAX_THETA', default=_r_max_theta,
 				vartype=float)	# maximum radius in average particle separation for Css(r, theta) calculation
+
+			superimpose_c44 = get_env('SUPERIMPOSE_C44',
+				default=False, vartype=bool)	# superimpose C44 curve to Css(r, theta) curve
 
 			if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 
