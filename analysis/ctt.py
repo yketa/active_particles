@@ -26,6 +26,10 @@ SHOW [COMPUTE or PLOT mode] : bool
 SAVE [COMPUTE or PLOT mode] : bool
 	Save graphs.
 	DEFAULT: False
+COMPARISON [SHOW mode] : bool
+	Plots collective mean square displacements for different wave length
+	Gaussian cut-off radii.
+	DEFAULT: False
 FITTING_LINE [SHOW mode] : bool
 	Display adjustable fitting line on graphs.
 	DEFAULT: False
@@ -71,6 +75,9 @@ X_ZERO : float
 Y_ZERO : float
 	2nd coordinate of the centre of the square box to consider.
 	DEFAULT: 0
+FONT_SIZE : int
+    Plot font size.
+    DEFAULT: active_particles.analysis.css._font_size
 R_CUT_FOURIER [PLOT or SHOW mode] : float
 	Initial wave length Gaussian cut-off radius in units of average particle
 	separation.
@@ -141,16 +148,20 @@ according to active_particles.naming.Ctt standards in DATA_DIRECTORY.
 > Saves wave vectors grid, 2D grid and 1D cylindrical average of mean squared
 dot products of normalised wave vectors and displacement Fourier transform
 according to active_particles.naming.Cll standards in DATA_DIRECTORY.
-[SHOW or PLOT mode]
-> Plots cylindrical averages as functions of wave length and resulting
-strain correlations.
-[SAVE mode]
+[SHOW or PLOT and not(COMPARISON) mode]
+> Plots cylindrical averages of mean square displacements as functions of wave
+length and resulting strain correlations.
+[SHOW or PLOT and COMPARISON mode]
+> Plots cylindrical averages of mean square displacements as functions of wave
+length for different wave length Gaussian cut-off radii.
+[SAVE and not(COMPARISON) mode]
 > Saves collective mean square displacement figure in DATA_DIRECTORY.
 """
 
 import active_particles.naming as naming
 
-from active_particles.init import get_env, slurm_output, linframes
+from active_particles.init import get_env, get_env_list, slurm_output,\
+	linframes
 from active_particles.dat import Dat, Gsd
 from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
 	divide_arrays, FFT2Dfilter
@@ -160,9 +171,10 @@ from active_particles.analysis.cuu import displacement_grid
 from active_particles.analysis.css import StrainCorrelations, Css2DtoC44,\
 	_r_max as _r_max_css, _c_min, _c_max, _slope0_c44,\
 	_slope_min_c44, _slope_max_c44, _points_x_c44, _points_theta_c44,\
-	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44, _r_cut_fourier
+	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44, _r_cut_fourier, _font_size
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
+from active_particles.plot.plot import list_colormap
 from active_particles.analysis.number import count_particles
 
 from os import getcwd
@@ -186,6 +198,7 @@ import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import Slider
+from matplotlib.lines import Line2D
 
 # DEFAULT VARIABLES
 
@@ -406,9 +419,9 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		r_max : float
 			Maximum wave length for collective mean square displacements.
 		y_min : float
-			Minimum value collective mean square displacements.
+			Minimum value for collective mean square displacements.
 		y_max : float
-			Maximum value collective mean square displacements.
+			Maximum value for collective mean square displacements.
 		points_x_c44 : int
             Number of radii at which to evaluate integrated strain correlation.
 			(default: active_particles.plot.c44._points_x)
@@ -609,7 +622,8 @@ def suptitle():
 		nD0*dt*parameters['period_dump']*parameters['time_step'])
 		+ '\n' + r'$L=%.2e, x_0=%.2e, y_0=%.2e,$' % (box_size, *centre)
 		+ r'$S_{init}=%.2e$' % init_frame
-		+ r'$, S_{max}=%.2e, N_{cases}=%.2e$' % (int_max, Ncases))
+		+ r'$, S_{max}=%.2e, N_{cases}=%.2e, dL=%.2e$'
+		% (int_max, Ncases, np.sqrt(Nmean)/Ncases))
 
 def plot():
 	"""
@@ -624,8 +638,7 @@ def plot():
 
 	sc = StrainCorrelationsCMSD(wave_vectors,
 		k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
-	sc.plot(box_size, r_max_css,
-		parameters['box_size']/np.sqrt(parameters['N']),
+	sc.plot(box_size, r_max_css, av_p_sep,
 		r_min, r_max, y_min, y_max,
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
@@ -729,6 +742,105 @@ def plot():
 
 	return sc
 
+def plot_comparison():
+	"""
+	Plots collective mean square displacements for different wave length
+	Gaussian cut-off radii.
+
+	Returns
+	-------
+	sc : active_particles.analysis.ctt.StrainCorrelationsCMSD
+		Strain correlations object.
+	"""
+
+	sc = StrainCorrelationsCMSD(wave_vectors,
+		k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
+
+	# CALCULATION
+
+	Css = {}                                # hash table of shear strain correlations with Gaussian cut-off radii as keys
+	filtered_k_cross_FFTugrid1D_sqnorm = {} # hash table of filtered mean square norms of cross products of normalised wave vectors with Gaussian cut-off radii as keys
+	filtered_k_dot_FFTugrid1D_sqnorm = {}   # hash table of filtered mean square norms of dot products of normalised wave vectors with Gaussian cut-off radii as keys
+
+	for r_cut in r_cut_fourier_list:
+		Css[r_cut] = sc.strain_correlations(r_cut=r_cut*av_p_sep)
+		filtered_k_cross_FFTugrid1D_sqnorm[r_cut] = (sc
+			.filtered_k_cross_FFTugrid1D_sqnorm)
+		filtered_k_dot_FFTugrid1D_sqnorm[r_cut] = (sc
+			.filtered_k_dot_FFTugrid1D_sqnorm)
+
+	# PLOT PARAMETERS
+
+	colors = list_colormap(r_cut_fourier_list)	# line colors hash table
+
+	x_label = r'$\lambda/a = 2\pi/|\vec{k}|a$'  # x-axis label
+
+	# PLOT
+
+	sc.fig = plt.figure()
+	sc.fig.suptitle(
+		r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e,$'
+		% (parameters['N'], parameters['density'], parameters['vzero'],
+		parameters['dr'])
+		+ r'$\Delta t=%.2e, nD_0 \Delta t=%.2e$'
+		% (dt*parameters['period_dump']*parameters['time_step'],
+		nD0*dt*parameters['period_dump']*parameters['time_step'])
+		+ '\n' +  r'$S_{init}=%.2e$' % init_frame
+		+ r'$, S_{max}=%.2e, N_{cases}=%.2e, dL/a=%.2e$'
+		% (int_max, Ncases, np.sqrt(parameters['N'])/Ncases)
+		+ '\n' + r'$\tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k}) \equiv$'
+		+ r'$\exp(-r_{cut}^2 |\vec{k}|^2)$')
+	sc.fig.subplots_adjust(wspace=0.25)
+
+	gs = GridSpec(1, 3, width_ratios=[1, 1, 2/10])
+
+	sc.ax_cross = plt.subplot(gs[0])
+	sc.ax_cross.set_ylim([y_min, y_max])
+	sc.ax_cross.set_ylabel(
+		r'$\left<||\vec{k}\wedge\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$'
+		+ r'$\times \tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k})$')
+	sc.ax_cross.set_xlim([r_min, r_max])
+	sc.ax_cross.set_xlabel(x_label)
+
+	sc.ax_dot = plt.subplot(gs[1])
+	sc.ax_dot.set_ylim([y_min, y_max])
+	sc.ax_dot.set_ylabel(
+		r'$\left<||\vec{k}\cdot\tilde{\vec{u}}(\vec{k})||^2\right>/k^2$'
+		+ r'$\times \tilde{\mathcal{G}}^2_{r_{cut}}(\vec{k})$')
+	sc.ax_dot.set_xlim([r_min, r_max])
+	sc.ax_dot.set_xlabel(x_label)
+
+	for r_cut in r_cut_fourier_list:
+		sc.ax_cross.loglog(
+			2*np.pi/filtered_k_cross_FFTugrid1D_sqnorm[r_cut][1:, 0]
+				/av_p_sep,
+			filtered_k_cross_FFTugrid1D_sqnorm[r_cut][1:, 1],
+			color=colors[r_cut])
+		sc.ax_dot.loglog(
+			2*np.pi/filtered_k_cross_FFTugrid1D_sqnorm[r_cut][1:, 0]
+				/av_p_sep,
+			filtered_k_dot_FFTugrid1D_sqnorm[r_cut][1:, 1],
+			color=colors[r_cut])
+
+	sc.ax_legend = plt.subplot(gs[2])
+	sc.ax_legend.axis('off')
+	sc.ax_legend.legend(handles=list(map(
+		lambda r_cut: Line2D([0], [0], color=colors[r_cut],
+			label=r'$r_{cut}/a=%.2e$' % r_cut),
+		r_cut_fourier_list)),
+		loc='center')
+
+	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
+
+		sc.fl_cross = FittingLine(sc.ax_cross,
+			2, 0, 4, y_fit='', x_fit='(\\lambda/a)')    # cross product axes fitting line
+		sc.fl_dot = FittingLine(sc.ax_dot,
+			2, 0, 4, y_fit='', x_fit='(\\lambda/a)')    # dot product axes fitting line
+
+	# RETURN
+
+	return sc
+
 # SCRIPT
 
 if __name__ == '__main__':  # executing as script
@@ -749,6 +861,8 @@ if __name__ == '__main__':  # executing as script
 		default=joinpath(data_dir, naming.parameters_file))	# simulation parameters file
     with open(parameters_file, 'rb') as param_file:
 	       parameters = pickle.load(param_file)				# parameters hash table
+
+    av_p_sep = parameters['box_size']/np.sqrt(parameters['N'])	# average particle separation
 
     box_size = get_env('BOX_SIZE', default=parameters['box_size'],
 		vartype=float)									# size of the square box to consider
@@ -861,48 +975,62 @@ if __name__ == '__main__':  # executing as script
 
 		# PLOT
 
-        r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
-			vartype=float)	# initial wave length Gaussian cut-off radius in units of average particle separation
+        font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)	# plot font size
+        mpl.rcParams.update({'font.size': font_size})
 
-        smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale in units of average particle separation
+        slope0 = get_env('SLOPE', default=_slope0, vartype=float)			# initial slope for fitting line for CMSD plots
+        slope_min = get_env('SLOPE_MIN', default=_slope_min, vartype=float)	# minimum slope for fitting line for CMSD plots
+        slope_max = get_env('SLOPE_MAX', default=_slope_max, vartype=float)	# maximum slope for fitting line for CMSD plots
 
-        r_min = get_env('R_MIN', default=_r_min, vartype=float)					# minimum wave length for plots
-        r_max = get_env('R_MAX', default=np.sqrt(2)*box_size, vartype=float)	# maximum wave length for plots
+        r_min = get_env('R_MIN', default=_r_min, vartype=float)	# minimum wave length for CMSD plots
+        r_max = get_env('R_MAX', default=np.sqrt(2)*box_size/av_p_sep,
+			vartype=float)										# maximum wave length for CMSD plots
 
         y_min = get_env('Y_MIN',
 			default=np.min((k_cross_FFTugrid1D_sqnorm[1:, 1],
 			k_dot_FFTugrid1D_sqnorm[1:, 1])),
-			vartype=float)	# minimum y-coordinate for plots
+			vartype=float)	# minimum y-coordinate for CMSD plots
         y_max = get_env('Y_MAX',
 			default=np.max((k_cross_FFTugrid1D_sqnorm[1:, 1],
 			k_dot_FFTugrid1D_sqnorm[1:, 1])),
-			vartype=float)	# maximum y-coordinate for plots
+			vartype=float)	# maximum y-coordinate for CMSD plots
 
-        slope0 = get_env('SLOPE', default=_slope0, vartype=float)			# initial slope for fitting line
-        slope_min = get_env('SLOPE_MIN', default=_slope_min, vartype=float)	# minimum slope for fitting line
-        slope_max = get_env('SLOPE_MAX', default=_slope_max, vartype=float)	# maximum slope for fitting line
+        comparison = get_env('COMPARISON', default=False, vartype=bool)
 
-        r_max_css = get_env('R_MAX_CSS', default=_r_max_css, vartype=float)	# maximum radius in infinite norm for strain correlations plot
+        if comparison:	# COMPARISON mode
 
-        points_x_c44 = get_env('POINTS_X_C44', default=_points_x_c44,
-			vartype=int)							# number of radii at which to evaluate integrated strain correlation
-        points_theta_c44 = get_env('POINTS_THETA_C44',
-			default=_points_theta_c44, vartype=int)	# number of angles to evaluate integrated strain correlation
+            r_cut_fourier_list = get_env_list('R_CUT_FOURIER', vartype=float)	# list of wave length Gaussian cut-off radii in units of average particle separation
 
-        y_min_c44 = get_env('Y_MIN_C44', default=_y_min_c44, vartype=float)	# minimum plot value for C44
-        y_max_c44 = get_env('Y_MAX_C44', default=_y_max_c44, vartype=float)	# maximum plot value for C44
+            plot = plot_comparison()
 
-        r_min_c44 = get_env('R_MIN_C44', default=_r_min_c44, vartype=float)	# minimum radius in average particle separation for C44 calculation
-        r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
+        else:	# not(COMPARISON) mode
 
-        slope0_c44 = get_env('SLOPE_C44', default=_slope0_c44,
-			vartype=float)	# initial slope for fitting line
-        slope_min_c44 = get_env('SLOPE_MIN_C44', default=_slope_min_c44,
-			vartype=float)	# minimum slope for fitting line
-        slope_max_c44 = get_env('SLOPE_MAX_C44', default=_slope_max_c44,
-			vartype=float)	# maximum slope for fitting line
+            r_cut_fourier = get_env('R_CUT_FOURIER', default=_r_cut_fourier,
+				vartype=float)	# initial wave length Gaussian cut-off radius in units of average particle separation
 
-        plot = plot()
+            smooth = get_env('SMOOTH', default=0, vartype=float)	# C44 Gaussian smoothing length scale in units of average particle separation
+
+            r_max_css = get_env('R_MAX_CSS', default=_r_max_css, vartype=float)	# maximum radius in infinite norm for strain correlations plot
+
+            points_x_c44 = get_env('POINTS_X_C44', default=_points_x_c44,
+				vartype=int)							# number of radii at which to evaluate integrated strain correlation
+            points_theta_c44 = get_env('POINTS_THETA_C44',
+				default=_points_theta_c44, vartype=int)	# number of angles to evaluate integrated strain correlation
+
+            y_min_c44 = get_env('Y_MIN_C44', default=_y_min_c44, vartype=float)	# minimum plot value for C44
+            y_max_c44 = get_env('Y_MAX_C44', default=_y_max_c44, vartype=float)	# maximum plot value for C44
+
+            r_min_c44 = get_env('R_MIN_C44', default=_r_min_c44, vartype=float)	# minimum radius in average particle separation for C44 calculation
+            r_max_c44 = get_env('R_MAX_C44', default=_r_max_c44, vartype=float)	# maximum radius in average particle separation for C44 calculation
+
+            slope0_c44 = get_env('SLOPE_C44', default=_slope0_c44,
+				vartype=float)	# initial slope for fitting line for C44 plot
+            slope_min_c44 = get_env('SLOPE_MIN_C44', default=_slope_min_c44,
+				vartype=float)	# minimum slope for fitting line for C44 plot
+            slope_max_c44 = get_env('SLOPE_MAX_C44', default=_slope_max_c44,
+				vartype=float)	# maximum slope for fitting line for C44 plot
+
+            plot = plot()
 
         if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
             plt.show()
