@@ -30,6 +30,9 @@ COMPARISON [SHOW mode] : bool
 	Plots collective mean square displacements for different wave length
 	Gaussian cut-off radii.
 	DEFAULT: False
+SUPERIMPOSE_C44 [not(COMPARISON) and SHOW mode] : bool
+	Superimpose C44 curve to Css(r, theta) curve.
+	DEFAULT: False
 FITTING_LINE [SHOW mode] : bool
 	Display adjustable fitting line on graphs.
 	DEFAULT: False
@@ -137,6 +140,35 @@ SLOPE_MIN_C44 [FITTING_LINE mode] : float
 SLOPE_MAX_C44 [FITTING_LINE mode] : float
 	Maximum slope for fitting line.
 	DEFAULT: active_particles.analysis.css._slope_max_c44
+THETA [FROM_FT and PLOT mode] : float
+	Angle at which to evaluate Css(r, theta) (in multiple of pi).
+	DEFAULT:  active_particles.analysis.css._theta
+POINTS_X_THETA [FROM_FT and PLOT mode] : int
+	Number of radii at which to evaluate Css(r, theta).
+	DEFAULT: POINTS_X_C44
+Y_MIN_THETA [FROM_FT and PLOT mode] : float
+	Minimum plot value for Css(r, theta).
+	DEFAULT: active_particles.analysis.css._y_min_theta
+Y_MAX_THETA [FROM_FT and PLOT mode] : float
+	Maximum plot value for Css(r, theta).
+	DEFAULT: active_particles.analysis.css._y_max_theta
+R_MIN_THETA [FROM_FT and PLOT mode] : float
+	Minimum radius in average particle separation for Css(r, theta)
+	calculation.
+	DEFAULT: active_particles.analysis.css._r_min_theta
+R_MAX_THETA [FROM_FT and PLOT mode] : float
+	Maximum radius in average particle separation for Css(r, theta)
+	calculation.
+	DEFAULT: active_particles.analysis.css._r_max_theta
+SLOPE_THETA [PLOT and FITTING_LINE mode] : slope
+	Initial slope for fitting line in Css(r, theta) figure.
+	DEFAULT: SLOPE_C44
+SLOPE_MIN_THETA [PLOT and FITTING_LINE mode] : float
+	Minimum slope for fitting line in Css(r, theta) figure.
+	DEFAULT: SLOPE_MIN_C44
+SLOPE_MAX_THETA [PLOT and FITTING_LINE mode] : float
+	Maximum slope for fitting line in Css(r, theta) figure.
+	DEFAULT: SLOPE_MAX_C44
 
 Output
 ------
@@ -168,10 +200,13 @@ from active_particles.maths import g2Dto1Dgrid, kFFTgrid, wave_vectors_2D,\
 from active_particles.quantities import nD0_active
 
 from active_particles.analysis.cuu import displacement_grid
-from active_particles.analysis.css import StrainCorrelations, Css2DtoC44,\
+from active_particles.analysis.css import StrainCorrelations,\
+	Css2DtoC44, Css2DtoCsstheta,\
 	_r_max as _r_max_css, _c_min, _c_max, _slope0_c44,\
 	_slope_min_c44, _slope_max_c44, _points_x_c44, _points_theta_c44,\
-	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44, _r_cut_fourier, _font_size
+	_y_min_c44, _y_max_c44, _r_min_c44, _r_max_c44,\
+	_y_min_theta, _y_max_theta, _r_min_theta, _r_max_theta,\
+	_theta, _r_cut_fourier, _font_size
 from active_particles.analysis.correlations import CorGrid
 from active_particles.plot.mpl_tools import FittingLine, GridCircle
 from active_particles.plot.plot import list_colormap
@@ -401,7 +436,11 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
 		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
-		r_cut=0, smooth=0):
+		r_cut=0, smooth=0,
+		theta=0, points_x_theta=None,
+		y_min_theta=_y_min_theta, y_max_theta=_y_max_theta,
+		r_min_theta=_r_min_theta, r_max_theta=_r_max_theta,
+		superimpose_c44=False):
 		"""
 		Plots collective mean square displacements strain correlations with
 		slider for cut-off radius.
@@ -446,6 +485,28 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		smooth : float
 			C44 Gaussian smoothing length scale in units of average particle
 			separation. (default: 0)
+		theta : float
+			Angle at which to plot Css(r, theta). (default: 0)
+		points_x_theta : int
+			Number of radii at which to evaluate Css(r, theta). (default: None)
+			NOTE: if points_x_theta == None, then it is taken equal to
+			      points_x_c44.
+		y_min_theta : float
+			Minimum plot value for Css(r, theta).
+			(default: active_particles.analysis.ctt._y_min_theta)
+		y_max_theta : float
+			Maximum plot value for Css(r, theta).
+			(default: active_particles.analysis.ctt._y_max_theta)
+		r_min_theta : float
+			Minimum radius in average particle separation for Css(r, theta)
+			calculation.
+			(default: active_particles.analysis.ctt._r_min_theta)
+		r_max_theta : float
+			Maximum radius in average particle separation for Css(r, theta)
+			calculation.
+			(default: active_particles.analysis.ctt._r_max_theta)
+		superimpose_c44 : bool
+			Superimpose C44 curve to Css(r, theta) curve. (default: False)
 		"""
 
 		self.cor_name = 'C_{\\varepsilon_{xy}\\varepsilon_{xy}}'	# name of plotted correlation
@@ -523,7 +584,8 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		# GRID CIRLCE FIGURE
 
 		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
-			[-self.r_max_css, self.r_max_css, -self.r_max_css, self.r_max_css],
+			[-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep,
+				-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep],
 			min=Cmin, max=Cmax)
 		self.grid_circle.ax_grid.set_title(
 			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
@@ -552,6 +614,33 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.c44 = self.css2Dtoc44(grid.grid)	# list of [r, C44(r)]
 		self.line_c44, = self.ax_c44.plot(self.c44[:, 0]/self.av_p_sep,
 			self.c44[:, 1])						# C44 plotting line
+
+		# CSS(r, theta) FIGURE
+
+		self.theta = theta
+		self.points_x_theta = (points_x_theta if points_x_theta != None
+			else self.points_x_c44)
+		self.y_min_theta = y_min_theta
+		self.y_max_theta = y_max_theta
+		self.r_min_theta = r_min_theta
+		self.r_max_theta = r_max_theta
+		self.superimpose_c44 = superimpose_c44
+
+		self.toCsstheta = Css2DtoCsstheta(self.box_size, self.points_x_theta,
+			self.av_p_sep*self.r_min_theta, self.av_p_sep*self.r_max_theta)
+
+		self.fig_theta, self.ax_theta = plt.subplots()
+		self.ax_theta.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
+		self.ax_theta.set_xlim([self.r_min_theta, self.r_max_theta])
+		self.ax_theta.set_ylim([self.y_min_theta, self.y_max_theta])
+
+		self.csstheta = self.css2Dtocsstheta(grid.grid)				# list of [r, Css(r, theta)]
+		self.line_csstheta, = self.ax_theta.plot(
+			self.csstheta[:, 0]/self.av_p_sep, self.csstheta[:, 1])	# Css(r, theta) plotting line
+
+		if self.superimpose_c44:								# SUPERIMPOSE_C44 mode
+			self.line_c44_superimposed, = self.ax_theta.plot(
+				self.c44[:, 0]/self.av_p_sep, self.c44[:, 1])	# C44 plotting line superimposed on Css(r, theta)
 
 	# METHODS CALLED BY SELF.PLOT()
 
@@ -608,6 +697,12 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.line_c44.set_ydata(self.c44[:, 1])		# plot C44
 		self.line_c44.figure.canvas.draw()			# update plot
 
+		self.csstheta = self.css2Dtocsstheta(grid.grid)		# update Css(r, theta) values
+		self.line_csstheta.set_ydata(self.csstheta[:, 1])	# plot Css(r, theta)
+		self.line_csstheta.figure.canvas.draw()				# update plot
+		if self.superimpose_c44: self.line_c44_superimposed.set_ydata(
+			self.c44[:, 1])									# update plot
+
 def suptitle():
 	"""
 	Returns suptitles for figures.
@@ -643,7 +738,11 @@ def plot():
 		points_x_c44=points_x_c44, points_theta_c44=points_theta_c44,
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
-		r_cut=r_cut_fourier, smooth=smooth)
+		r_cut=r_cut_fourier, smooth=smooth,
+		theta=theta, points_x_theta=points_x_theta,
+		y_min_theta=y_min_theta, y_max_theta=y_max_theta,
+		r_min_theta=r_min_theta, r_max_theta=r_max_theta,
+		superimpose_c44=superimpose_c44)
 
 	# COLECTIVE MEAN SQUARE DISPLACEMENTS FIGURE
 
@@ -714,8 +813,8 @@ def plot():
 	sc.grid_circle.fig.subplots_adjust(wspace=0.4)
 	sc.grid_circle.fig.subplots_adjust(hspace=0.3)
 
-	sc.grid_circle.ax_grid.set_xlabel(r'$x$')
-	sc.grid_circle.ax_grid.set_ylabel(r'$y$')
+	sc.grid_circle.ax_grid.set_xlabel(r'$x/a$')
+	sc.grid_circle.ax_grid.set_ylabel(r'$y/a$')
 	sc.grid_circle.colormap.set_label(r'$%s$' % sc.cor_name,
 		labelpad=20, rotation=270)
 
@@ -728,7 +827,7 @@ def plot():
 
 	sc.fig_c44.set_size_inches(16, 16)	# figure size
 
-	sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{N})$')
+	sc.ax_c44.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{\bar{N}})$')
 	sc.ax_c44.set_ylabel(r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
 		+ ' ' + r'$%s(r, \theta)$' % sc.cor_name
 		+ ' ' + r'$\cos4\theta$'
@@ -737,6 +836,35 @@ def plot():
 	if get_env('FITTING_LINE', default=False, vartype=bool):	# FITTING_LINE mode
 		sc.fl_c44 = FittingLine(sc.ax_c44, slope0_c44, slope_min_c44,
 			slope_max_c44, x_fit='(r/a)', y_fit='C_4^4(r)')
+
+	# CSS(r, theta) FIGURE
+
+	sc.fig_theta.suptitle(suptitle())
+
+	sc.fig_theta.set_size_inches(16, 16)	# figure size
+
+	sc.ax_theta.set_xlabel(r'$r/a$' + ' ' + r'$(a = L/\sqrt{\bar{N}})$')
+	sc.ax_theta.set_xlim([r_min_theta, r_max_theta])
+	sc.ax_theta.set_ylim([y_min_theta, y_max_theta])
+	sc.ax_theta.set_yscale('log')
+	sc.ax_theta.set_xscale('log')
+
+	if sc.superimpose_c44:	# SUPERIMPOSE_C44 mode
+		sc.ax_theta.set_ylabel(r'$C(t)$')
+		plt.sca(sc.ax_theta)
+		sc.ax_theta.add_artist(plt.legend(handles=[
+			Line2D([0], [0], color=sc.line_csstheta.get_color(),
+				label=r'$%s$' % sc.cor_name + r'$(r, \theta=%.2e)$' % theta),
+			Line2D([0], [0], color=sc.line_c44_superimposed.get_color(),
+				label=r'$C_4^4(r)$')]))
+	else:
+		sc.ax_theta.set_ylabel(r'$%s$' % sc.cor_name
+			+ r'$(r, \theta=%.2e)$' % theta)
+
+	if get_env('FITTING_LINE', default=False, vartype=bool):			# FITTING_LINE mode
+		sc.fl_theta = FittingLine(sc.ax_theta, slope0_theta, slope_min_theta,
+			slope_max_theta,
+			x_fit=r'$(r/a)$', y_fit=r'$%s(r, \theta)$' % sc.cor_name)	# add fitting line to plot
 
 	# RETURN
 
@@ -862,8 +990,6 @@ if __name__ == '__main__':  # executing as script
     with open(parameters_file, 'rb') as param_file:
 	       parameters = pickle.load(param_file)				# parameters hash table
 
-    av_p_sep = parameters['box_size']/np.sqrt(parameters['N'])	# average particle separation
-
     box_size = get_env('BOX_SIZE', default=parameters['box_size'],
 		vartype=float)									# size of the square box to consider
     centre = (get_env('X_ZERO', default=0, vartype=float),
@@ -963,15 +1089,18 @@ if __name__ == '__main__':  # executing as script
             (_, k_dot_FFTugrid2D_sqnorm,
 				k_dot_FFTugrid1D_sqnorm) = pickle.load(Cll_dump_file)
 
+    if get_env('PLOT', default=False, vartype=bool) or\
+		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
+
+		# PARAMETERS
+
         with open(wrap_file_name, 'rb') as wrap_file:
             w_traj = Gsd(wrap_file, prep_frames=prep_frames)		# wrapped trajectory object
             Nmean = np.mean(count_particles(
 				w_traj, *times, box_size=box_size, centre=centre))	# average number of particles in box
         nD0 = nD0_active(
 			Nmean, parameters['vzero'], parameters['dr'], box_size)	# product of particle density and active diffusion constant
-
-    if get_env('PLOT', default=False, vartype=bool) or\
-		get_env('SHOW', default=False, vartype=bool):	# PLOT or SHOW mode
+        av_p_sep = parameters['box_size']/np.sqrt(Nmean)			# average particle separation
 
 		# PLOT
 
@@ -1029,6 +1158,31 @@ if __name__ == '__main__':  # executing as script
 				vartype=float)	# minimum slope for fitting line for C44 plot
             slope_max_c44 = get_env('SLOPE_MAX_C44', default=_slope_max_c44,
 				vartype=float)	# maximum slope for fitting line for C44 plot
+
+            theta = np.pi*get_env('THETA', default=_theta, vartype=float)	# angle at which to evaluate Css(r, theta)
+
+            points_x_theta = get_env('POINTS_X_THETA', default=points_x_c44,
+				vartype=int)	# number of radii at which to evaluate Css(r, theta)
+
+            y_min_theta = get_env('Y_MIN_THETA', default=_y_min_theta,
+				vartype=float)	# minimum plot value for Css(r, theta)
+            y_max_theta = get_env('Y_MAX_THETA', default=_y_max_theta,
+				vartype=float)	# maximum plot value for Css(r, theta)
+
+            r_min_theta = get_env('R_MIN_THETA', default=_r_min_theta,
+				vartype=float)	# minimum radius in average particle separation for Css(r, theta) calculation
+            r_max_theta = get_env('R_MAX_THETA', default=_r_max_theta,
+				vartype=float)	# maximum radius in average particle separation for Css(r, theta) calculation
+
+            slope0_theta = get_env('SLOPE_THETA',
+				default=slope0_c44, vartype=float)		# initial slope for fitting line in Css(r, theta) figure
+            slope_min_theta = get_env('SLOPE_MIN_THETA',
+				default=slope_min_c44, vartype=float)	# minimum slope for fitting line in Css(r, theta) figure
+            slope_max_theta = get_env('SLOPE_MAX_THETA',
+				default=slope_max_c44, vartype=float)	# maximum slope for fitting line in Css(r, theta) figure
+
+            superimpose_c44 = get_env('SUPERIMPOSE_C44',
+				default=False, vartype=bool)	# superimpose C44 curve to Css(r, theta) curve
 
             plot = plot()
 
