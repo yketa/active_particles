@@ -291,6 +291,42 @@ class Grid:
 
         return self.grid.__getitem__(*key)
 
+    def get_grid_indexes(self):
+        """
+        Returns grid of self.grid indexes and saves them in attributes
+        self.grid_indexes.
+
+        Returns
+        -------
+        grid_index : Numpy array
+            Grid of self.grid indexes.
+        """
+
+        self.grid_indexes = vector_vector_grid(
+            range(self.shape[0]), range(self.shape[1]), dtype=int)
+        return self.grid_indexes
+
+    def get_grid_coordinates(self):
+        """
+        Returns grid of self.grid coordinates and saves them in attributes
+        self.grid_coordinates.
+
+        Returns
+        -------
+        grid_coordinates : Numpy array
+            Grid of self.grid coordinates.
+        """
+
+        self.grid_coordinates = np.transpose(vector_vector_grid(
+            self.extent[0] + self.sep_boxes_x/2
+                + np.arange(self.sep_boxes_x*self.shape[0],
+                    step=self.sep_boxes_x),
+            self.extent[-2] + self.sep_boxes_y/2
+                + np.arange(self.sep_boxes_y*self.shape[0],
+                    step=self.sep_boxes_y)),
+            (1, 0, 2))
+        return self.grid_coordinates
+
     def in_grid(self, x, y):
         """
         Indicates if point (x, y) in cartesian coordinates is in grid.
@@ -359,7 +395,7 @@ class Grid:
 
         return self.get_value_cartesian(x, y)
 
-def vector_vector_grid(vector1, vector2):
+def vector_vector_grid(vector1, vector2, dtype=None):
     """
     From vector1 = (v1_i)_i and vector2 = (v2_i)_i, returns matrix
     M = (M_{i, j})_{i, j} = ((v1_i, v2_j))_{i, j}.
@@ -370,6 +406,9 @@ def vector_vector_grid(vector1, vector2):
         Vector 1.
     vector2 : 1D array-like
         Vector 2.
+    dtype : Numpy array dtype
+        Data type of the Numpy array to return. (default: None)
+        NOTE: if dtype == None, then the array is not converted to any type.
 
     Returns
     -------
@@ -382,7 +421,8 @@ def vector_vector_grid(vector1, vector2):
     M = np.transpose(M, (1, 0, 2))
     M[:, :, 1] = vector2
 
-    return M
+    if dtype != None: return M.astype(dtype)
+    else: return M
 
 def wave_vectors_2D(nx, ny, d=1):
     """
@@ -461,8 +501,8 @@ def divide_arrays(array1, array2):
         Quotient array.
     """
 
-    array1 = np.array(array1)
-    array2 = np.array(array2)
+    if not(isinstance(array1, np.ndarray)): array1 = np.array(array1)
+    if not(isinstance(array2, np.ndarray)): array2 = np.array(array2)
 
     return np.divide(array1, array2,
         out=np.zeros(array1.shape, dtype=array1.dtype), where=array2!=0)
