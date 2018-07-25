@@ -9,6 +9,8 @@ https://yketa.github.io/UBC_2018_Wiki/#Neighbours%20grids
 
 import numpy as np
 
+from active_particles.maths import neighbouring_boxes_2D
+
 class NeighboursGrid:
     """
     Considering a 2D square box, a grid is built by dividing the box in smaller
@@ -73,14 +75,9 @@ class NeighboursGrid:
 
         index =\
             (np.array(point)//self.spacing + self.cases_rcut)%self.cases_rcut   # index of the box containing point
-        sum_index = lambda ind, inc:\
-            tuple((ind + inc + self.cases_rcut)%self.cases_rcut)                # function summing box indexes
 
-        neighbours = []                 # neighbours list
-        for inc_x in [-1, 0, 1]:        # increment in x index
-            for inc_y in [-1, 0, 1]:    # increment in y index
-                neighbours += self.neighbours_grid[
-                    sum_index(index, np.array([inc_x, inc_y]))
-                    ]                   # adds indexes of neighbouring box to list of neighbours
+        neighbours = []                                         # neighbours list
+        for neighbour_index in neighbouring_boxes_2D(index, self.cases_rcut):
+            neighbours += self.neighbours_grid[neighbour_index] # adds indexes of neighbouring box to list of neighbours
 
         return neighbours
