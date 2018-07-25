@@ -253,7 +253,8 @@ class GridCircle:
     """
 
     def __init__(self, grid, extent=(-1, 1, -1, 1), circle_centre=(0, 0),
-        min=None, max=None, points_theta=100, show_slider=True):
+        min=None, max=None, points_theta=100, linear_interpolation=False,
+        show_slider=True):
         """
         Parameters
         ----------
@@ -274,6 +275,9 @@ class GridCircle:
         points_theta : int
             Number of points to consider in the interval [0, 2\\pi] when
             computing values along circle.
+        linear_interpolation : bool
+            Get value by linear interpolation of neighbouring grid boxes.
+            (default: False)
         show_slider : bool
             Display circle radius slider.
         """
@@ -282,6 +286,7 @@ class GridCircle:
         self.radius = 0                                     # radius of the circle
         self.points_theta = points_theta
         self.theta = np.linspace(0, 2*np.pi, points_theta)
+        self.linear_interpolation = linear_interpolation
 
         self.show_slider = show_slider
 
@@ -318,7 +323,7 @@ class GridCircle:
 
         # GRID
 
-        grid = np.array(grid)
+        #grid = np.array(grid)
 
         self.grid_plot = self.ax_grid.imshow(grid,
             cmap=cmap, norm=self.norm, extent=self.extent)  # grid plot
@@ -405,7 +410,9 @@ class GridCircle:
 
         self.line.set_ydata(list(map(
             lambda angle: self.grid.get_value_polar(self.radius, angle,
-            centre=self.circle_centre), self.theta)))   # values of the grid along the circle
+                centre=self.circle_centre,
+                linear_interpolation=self.linear_interpolation),
+            self.theta)))   # values of the grid along the circle
 
         self.circle.set_radius(self.radius) # adjusting circle radius
 

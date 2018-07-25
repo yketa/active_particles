@@ -30,6 +30,9 @@ COMPARISON [SHOW mode] : bool
 	Plots collective mean square displacements for different wave length
 	Gaussian cut-off radii.
 	DEFAULT: False
+LINEAR_INTERPOLATION [not(COMPARISON) and SHOW mode] : bool
+	Get value on grid by linear interpolation of neighbouring grid boxes.
+	DEFAULT: False
 SUPERIMPOSE_C44 [not(COMPARISON) and SHOW mode] : bool
 	Superimpose C44 curve to Css(r, theta) curve.
 	DEFAULT: False
@@ -436,7 +439,7 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
 		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
-		r_cut=0, smooth=0,
+		r_cut=0, smooth=0, linear_interpolation=False,
 		theta=0, points_x_theta=None,
 		y_min_theta=_y_min_theta, y_max_theta=_y_max_theta,
 		r_min_theta=_r_min_theta, r_max_theta=_r_max_theta,
@@ -485,6 +488,9 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		smooth : float
 			C44 Gaussian smoothing length scale in units of average particle
 			separation. (default: 0)
+        linear_interpolation : bool
+            Get value on grid by linear interpolation of neighbouring grid
+			boxes. (default: False)
 		theta : float
 			Angle at which to plot Css(r, theta). (default: 0)
 		points_x_theta : int
@@ -583,10 +589,12 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 
 		# GRID CIRLCE FIGURE
 
+		self.linear_interpolation = linear_interpolation
+
 		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
 			[-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep,
 				-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep],
-			min=Cmin, max=Cmax)
+			min=Cmin, max=Cmax, linear_interpolation=self.linear_interpolation)
 		self.grid_circle.ax_grid.set_title(
 			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
 
@@ -602,7 +610,8 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 
 		self.toC44 = Css2DtoC44(self.box_size,
 			self.points_x_c44, self.points_theta_c44,
-			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
+			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44,
+			linear_interpolation=self.linear_interpolation)
 
 		self.fig_c44, self.ax_c44 = plt.subplots()
 		self.ax_c44.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
@@ -627,7 +636,8 @@ class StrainCorrelationsCMSD(StrainCorrelations):
 		self.superimpose_c44 = superimpose_c44
 
 		self.toCsstheta = Css2DtoCsstheta(self.box_size, self.points_x_theta,
-			self.av_p_sep*self.r_min_theta, self.av_p_sep*self.r_max_theta)
+			self.av_p_sep*self.r_min_theta, self.av_p_sep*self.r_max_theta,
+			linear_interpolation=self.linear_interpolation)
 
 		self.fig_theta, self.ax_theta = plt.subplots()
 		self.ax_theta.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
@@ -739,6 +749,7 @@ def plot():
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
 		r_cut=r_cut_fourier, smooth=smooth,
+		linear_interpolation=linear_interpolation,
 		theta=theta, points_x_theta=points_x_theta,
 		y_min_theta=y_min_theta, y_max_theta=y_max_theta,
 		r_min_theta=r_min_theta, r_max_theta=r_max_theta,
@@ -1103,6 +1114,9 @@ if __name__ == '__main__':  # executing as script
         av_p_sep = parameters['box_size']/np.sqrt(Nmean)			# average particle separation
 
 		# PLOT
+
+        linear_interpolation = get_env('LINEAR_INTERPOLATION', default=False,
+			vartype=bool)	# LINEAR_INTERPOLATION mode
 
         font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)	# plot font size
         mpl.rcParams.update({'font.size': font_size})

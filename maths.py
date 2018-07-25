@@ -4,6 +4,8 @@ Module maths provides useful mathematic tools.
 
 import numpy as np
 
+from operator import itemgetter
+
 from scipy import interpolate
 
 from copy import deepcopy
@@ -272,7 +274,8 @@ class Grid:
         self.box_size = np.array([
             self.extent[1] - self.extent[0],
             self.extent[-1] - self.extent[-2]])
-        self.sep_boxes_x, self.sep_boxes_y = self.box_size/self.shape   # distance between consecutive boxes in each direction
+        self.sep_boxes = self.sep_boxes_x, self.sep_boxes_y =\
+            self.box_size/self.shape    # distance between consecutive boxes in each direction
 
     def __getitem__(self, *key):
         """
@@ -321,9 +324,9 @@ class Grid:
             self.extent[0] + self.sep_boxes_x/2
                 + np.arange(self.sep_boxes_x*self.shape[0],
                     step=self.sep_boxes_x),
-            self.extent[-2] + self.sep_boxes_y/2
+            (self.extent[-2] + self.sep_boxes_y/2
                 + np.arange(self.sep_boxes_y*self.shape[0],
-                    step=self.sep_boxes_y)),
+                    step=self.sep_boxes_y))[::-1]),
             (1, 0, 2))
         return self.grid_coordinates
 
@@ -347,7 +350,7 @@ class Grid:
         return (x >= self.extent[0] and x <= self.extent[1]
             and y >= self.extent[2] and y <= self.extent[3])
 
-    def get_value_cartesian(self, x, y):
+    def get_value_cartesian(self, x, y, linear_interpolation=False):
         """
         Get value of grid at position in cartesian coordinates.
 
@@ -357,21 +360,41 @@ class Grid:
             x-coordinate
         y : float
             y-coordinate
+        linear_interpolation : bool
+            Get value by linear interpolation of neighbouring grid boxes.
+            (default: False)
 
         Returns
         -------
         value : *
-            Value at (x, y).
+            Value at (x, y) with or without linear interpolation.
         """
 
         if not(self.in_grid(x, y)): return None # point not on grid
 
-        index_x = int((x - self.extent[0])//self.sep_boxes_x)%self.shape[0] # index correponding to x
-        index_y = int((y - self.extent[2])//self.sep_boxes_y)%self.shape[1] # index correponding to y
+        index_y = int((x - self.extent[0])//self.sep_boxes_x)%self.shape[0]     # index correponding to second axis of grid
+        index_x = -1-int((y - self.extent[2])//self.sep_boxes_y)%self.shape[1]  # index correponding to first axis of grid
 
-        return self.grid[index_x, index_y]
+        if not(linear_interpolation): return self.grid[index_x, index_y]
 
-    def get_value_polar(self, r, angle, centre=(0, 0)):
+        try:
+            nearest_box_pos = self.grid_coordinates[index_x, index_y]       # nearest box position
+        except AttributeError:
+            nearest_box_pos = self.get_grid_coordinates()[index_x, index_y] # nearest box position
+
+        neighbouring_boxes = neighbouring_boxes_2D(
+            (index_x, index_y), self.shape)
+        neighbours_values = itemgetter(*neighbouring_boxes)(self.grid)
+        neighbours_relative_positions = (nearest_box_pos[::-1] +
+            (np.array(neighbouring_boxes_2D((1, 1), 3)) - 1)
+            *self.sep_boxes[::-1])[:, ::-1]  # positions of neighbouring boxes
+
+        return interpolate.interp2d(
+            *np.transpose(neighbours_relative_positions), neighbours_values,
+            kind='linear')(x, y)[0]
+
+    def get_value_polar(self, r, angle, centre=(0, 0),
+        linear_interpolation=False):
         """
         Get value of grid at position in polar coordinates.
 
@@ -383,17 +406,22 @@ class Grid:
             Angle from x-direction.
         centre : float tuple
             Origin for calculation. (default: (0, 0))
+        linear_interpolation : bool
+            Get value by linear interpolation of neighbouring grid boxes.
+            (default: False)
 
         Returns
         -------
         value : *
-            Value at (r, angle) from centre.
+            Value at (r, angle) from centre with or without linear
+            interpolation.
         """
 
-        x = centre[0] - r*np.sin(angle) # corresponding cartesian x-coordinate
-        y = centre[1] + r*np.cos(angle) # corresponding cartesian y-coordinate
+        x = centre[0] + r*np.cos(angle) # corresponding cartesian x-coordinate
+        y = centre[1] + r*np.sin(angle) # corresponding cartesian y-coordinate
 
-        return self.get_value_cartesian(x, y)
+        return self.get_value_cartesian(x, y,
+            linear_interpolation=linear_interpolation)
 
 def vector_vector_grid(vector1, vector2, dtype=None):
     """
@@ -846,3 +874,33 @@ def gaussian_smooth_2D(X, Y, Z, sigma, *xy):
             np.sum(Z*smoothing_coefficients)/np.sum(smoothing_coefficients)
 
     return smoothedZ
+
+def neighbouring_boxes_2D(index, shape):
+    """
+    In a 2D grid of shape shape with periodic boundaries, this function returns
+    the 9 neighbouring boxes indexes of box with index index, including index.
+
+    Parameters
+    ----------
+    index : 2-uple of int
+        Index of the box to get neighbours of.
+    shape : 2-uple of int or int
+        Number of boxes in all or one direction.
+
+    Returns
+    -------
+    neighbours : list of 2-uple
+        List of indexes of neighbouring boxes.
+    """
+
+    index = np.array(index, dtype=int)
+    shape = (lambda shape: np.array([shape[0], shape[-1]], dtype=int))(
+        np.array(shape, ndmin=1))
+    neighbours = []
+
+    for inc_x in [-1, 0, 1]:        # increment in x index
+        for inc_y in [-1, 0, 1]:    # increment in y index
+            inc = np.array([inc_x, inc_y], dtype=int)
+            neighbours += [tuple((index + inc + shape)%shape)]
+
+    return neighbours

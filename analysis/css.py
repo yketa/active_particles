@@ -26,6 +26,9 @@ SAVE [COMPUTE or PLOT mode] : bool
 FROM_FT [COMPUTE or PLOT mode] : bool
 	Calculates shear strain and displacement vorticity in Fourier space rather
 	than in real space, or plots the resulting correlations in real space.
+	DEFAULT: True
+LINEAR_INTERPOLATION [FROM_FT and SHOW mode] : bool
+	Get value on grid by linear interpolation of neighbouring grid boxes.
 	DEFAULT: False
 SUPERIMPOSE_C44 [FROM_FT and SHOW mode] : bool
 	Superimpose C44 curve to Css(r, theta) curve.
@@ -627,7 +630,7 @@ class StrainCorrelations:
 		points_x_c44=_points_x_c44, points_theta_c44=_points_theta_c44,
 		y_min_c44=_y_min_c44, y_max_c44=_y_max_c44,
 		r_min_c44=_r_min_c44, r_max_c44=_r_max_c44,
-		smooth=0, r_cut=0,
+		smooth=0, r_cut=0, linear_interpolation=False,
 		theta=0, points_x_theta=None,
 		y_min_theta=_y_min_theta, y_max_theta=_y_max_theta,
 		r_min_theta=_r_min_theta, r_max_theta=_r_max_theta,
@@ -664,6 +667,9 @@ class StrainCorrelations:
 		smooth : float
 			C44 Gaussian smoothing length scale in units of average particle
 			separation. (default: 0)
+        linear_interpolation : bool
+            Get value on grid by linear interpolation of neighbouring grid
+			boxes. (default: False)
 		r_cut : float
 			Initial wave length Gaussian cut-off radius in units of average
 			particles separation. (default: 0)
@@ -728,10 +734,12 @@ class StrainCorrelations:
 
 		# GRID CIRCLE FIGURE
 
+		self.linear_interpolation = linear_interpolation
+
 		self.grid_circle = GridCircle(grid.display_grid.grid, extent=
 			[-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep,
 				-self.r_max_css/self.av_p_sep, self.r_max_css/self.av_p_sep],
-			min=Cmin, max=Cmax)
+			min=Cmin, max=Cmax, linear_interpolation=self.linear_interpolation)
 		self.grid_circle.ax_grid.set_title(
 			'2D ' + r'$%s(r_{cut}/a = %.2e)$' % (self.cor_name, self.r_cut))
 
@@ -747,7 +755,8 @@ class StrainCorrelations:
 
 		self.toC44 = Css2DtoC44(self.box_size,
 			self.points_x_c44, self.points_theta_c44,
-			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44)
+			self.av_p_sep*self.r_min_c44, self.av_p_sep*self.r_max_c44,
+			linear_interpolation=self.linear_interpolation)
 
 		self.fig_c44, self.ax_c44 = plt.subplots()
 		self.ax_c44.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
@@ -770,7 +779,8 @@ class StrainCorrelations:
 		self.superimpose_c44 = superimpose_c44
 
 		self.toCsstheta = Css2DtoCsstheta(self.box_size, self.points_x_theta,
-			self.av_p_sep*self.r_min_theta, self.av_p_sep*self.r_max_theta)
+			self.av_p_sep*self.r_min_theta, self.av_p_sep*self.r_max_theta,
+			linear_interpolation=self.linear_interpolation)
 
 		self.fig_theta, self.ax_theta = plt.subplots()
 		self.ax_theta.set_title(r'$r_{cut}/a = %.2e$' % self.r_cut)
@@ -882,7 +892,7 @@ class Css2DtoC44:
     """
 
     def __init__(self, box_size, points_x, points_theta,
-        r_min, r_max):
+        r_min, r_max, linear_interpolation=False):
         """
         Sets parameters for C44 integration.
 
@@ -898,6 +908,9 @@ class Css2DtoC44:
             Minimum radius.
         r_max : float
             Maximum radius.
+        linear_interpolation : bool
+            Get value on grid by linear interpolation of neighbouring grid
+			boxes. (default: False)
         """
 
         self.box_size = box_size
@@ -908,6 +921,8 @@ class Css2DtoC44:
         self.r_min = r_min
         self.r_max = r_max
         self.c44_x = np.linspace(self.r_min, self.r_max, self.points_x)
+
+        self.linear_interpolation = linear_interpolation
 
     def get_C44(self, Css2D, smooth=0):
         """
@@ -932,7 +947,8 @@ class Css2DtoC44:
         self.c44 = np.array(list(map(
             lambda r: self.css2Dgrid.integrate_over_angles(r,
             	projection=lambda theta: np.cos(4*theta)/np.pi,
-            	points_theta=self.points_theta),
+            	points_theta=self.points_theta,
+				linear_interpolation=self.linear_interpolation),
             self.c44_x)))
 
         return np.array(list(map(lambda x, y: [x, y],
@@ -944,7 +960,8 @@ class Css2DtoCsstheta:
 	half-line of origin (0, 0) and inclination of angle theta.
     """
 
-    def __init__(self, box_size, points_x, r_min, r_max):
+    def __init__(self, box_size, points_x, r_min, r_max,
+		linear_interpolation=False):
         """
         Sets parameters for Css(r, theta) calculation.
 
@@ -958,6 +975,9 @@ class Css2DtoCsstheta:
             Minimum radius.
         r_max : float
             Maximum radius.
+        linear_interpolation : bool
+            Get value on grid by linear interpolation of neighbouring grid
+			boxes. (default: False)
         """
 
         self.box_size = box_size
@@ -967,6 +987,8 @@ class Css2DtoCsstheta:
         self.r_min = r_min
         self.r_max = r_max
         self.csstheta_x = np.linspace(self.r_min, self.r_max, self.points_x)
+
+        self.linear_interpolation = linear_interpolation
 
     def get_Csstheta(self, Css2D, theta=0):
         """
@@ -988,7 +1010,8 @@ class Css2DtoCsstheta:
 
         self.css2Dgrid = CorGrid(Css2D, self.box_size)	# shear strain 2D CorGrid object
         self.csstheta = np.array(list(map(
-			lambda r: [r, self.css2Dgrid.get_value_polar(r, theta)],
+			lambda r: [r, self.css2Dgrid.get_value_polar(r, theta,
+				linear_interpolation=self.linear_interpolation)],
             self.csstheta_x)))
 
         return self.csstheta
@@ -1015,6 +1038,7 @@ def plot_fft():
 		y_min_c44=y_min_c44, y_max_c44=y_max_c44,
 		r_min_c44=r_min_c44, r_max_c44=r_max_c44,
 		smooth=smooth, r_cut=r_cut_fourier,
+		linear_interpolation=linear_interpolation,
 		theta=theta, points_x_theta=points_x_theta,
 		y_min_theta=y_min_theta, y_max_theta=y_max_theta,
 		r_min_theta=r_min_theta, r_max_theta=r_max_theta,
@@ -1147,7 +1171,7 @@ if __name__ == '__main__':	# executing as script
 
 	times = linframes(init_frame, Nentries - dt, int_max)	# frames at which shear strain is calculated
 
-	from_ft = get_env('FROM_FT', default=False, vartype=bool)	# calculation of shear strain and vorticity in real space (False) or in Fourier space (True)
+	from_ft = get_env('FROM_FT', default=True, vartype=bool)	# calculation of shear strain and vorticity in real space (False) or in Fourier space (True)
 
 	# NAMING
 
@@ -1275,6 +1299,9 @@ if __name__ == '__main__':	# executing as script
 		av_p_sep = parameters['box_size']/np.sqrt(Nmean)			# average particle separation
 
 		# PLOT
+
+		linear_interpolation = get_env('LINEAR_INTERPOLATION', default=False,
+			vartype=bool)	# LINEAR_INTERPOLATION mode
 
 		font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)       # plot font size
 		mpl.rcParams.update({'font.size': font_size})

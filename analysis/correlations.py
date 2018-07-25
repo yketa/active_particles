@@ -223,7 +223,7 @@ class CorGrid:
             -self.display_size[-1]/2, self.display_size[-1]/2))
 
     def integrate_over_angles(self, r, projection=lambda angle: 1,
-        points_theta=100):
+        points_theta=100, linear_interpolation=False):
         """
         Returns intergration of values of display grid over all angles,
         projected on projection, at radius r.
@@ -236,6 +236,9 @@ class CorGrid:
             Projector. (default: 1)
         points_theta : int
             Number of values of angles for integration.
+        linear_interpolation : bool
+            Get value by linear interpolation of neighbouring grid boxes.
+            (default: False)
 
         Returns
         -------
@@ -247,12 +250,14 @@ class CorGrid:
 
         theta = np.linspace(0, 2*np.pi, points_theta)   # angles for integration
         return np.trapz(
-            list(map(lambda angle:
-            self.display_grid.get_value_polar(r, angle)*projection(angle),
-            theta)),
+            list(map(
+                lambda angle: (self.display_grid.get_value_polar(r, angle,
+                    linear_interpolation=linear_interpolation)
+                    *projection(angle)),
+                theta)),
             theta)
 
-    def get_value_cartesian(self, x, y):
+    def get_value_cartesian(self, x, y, linear_interpolation=False):
         """
         Get value of grid at position in cartesian coordinates.
 
@@ -262,16 +267,21 @@ class CorGrid:
             x-coordinate
         y : float
             y-coordinate
+        linear_interpolation : bool
+            Get value by linear interpolation of neighbouring grid boxes.
+            (default: False)
 
         Returns
         -------
         value : *
-            Value at (x, y).
+            Value at (x, y) with or without linear interpolation.
         """
 
-        return self.display_grid.get_value_cartesian(x, y)
+        return self.display_grid.get_value_cartesian(x, y,
+            linear_interpolation=linear_interpolation)
 
-    def get_value_polar(self, r, angle, centre=(0, 0)):
+    def get_value_polar(self, r, angle, centre=(0, 0),
+        linear_interpolation=False):
         """
         Get value of grid at position in polar coordinates.
 
@@ -283,11 +293,16 @@ class CorGrid:
             Angle from x-direction.
         centre : float tuple
             Origin for calculation. (default: (0, 0))
+        linear_interpolation : bool
+            Get value by linear interpolation of neighbouring grid boxes.
+            (default: False)
 
         Returns
         -------
         value : *
-            Value at (r, angle) from centre.
+            Value at (r, angle) from centre with or without linear
+            interpolation.
         """
 
-        return self.display_grid.get_value_polar(r, angle, centre=(0, 0))
+        return self.display_grid.get_value_polar(r, angle, centre=(0, 0),
+            linear_interpolation=linear_interpolation)
