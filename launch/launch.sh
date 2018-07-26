@@ -106,7 +106,7 @@ MEM=${MEM-}                         # real memory required per node
 
 sbatch ${CHAIN:+-d afterok:$CHAIN} <<EOF
 #! /bin/bash
-#SBATCH --job-name=$JOB_NAME
+#SBATCH --job-name='$JOB_NAME'
 #SBATCH --partition=$PARTITION
 #SBATCH --gres=$GRES
 #SBATCH --output=$OUT_FILE
