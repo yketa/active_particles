@@ -4,21 +4,24 @@
 
 usage(){  # help menu
 
-cat << EOF
-Submit job to a Slurm job scheduler.
+underline=$(tput smul)
+bold=$(tput bold)
+normal=$(tput sgr0)
 
-SYNOPSIS
+less <<< "Submit job to a Slurm job scheduler.
+
+${bold}SYNOPSIS${normal}
 
   launch.sh [options] [script]
 
-OPTIONS
+${bold}OPTIONS${normal}
 
-  [without arguments]
+  ${underline}without argument${normal}
   -h    Display help menu.
   -r    Run with mprof memory profiler.
         (see https://github.com/pythonprofilers/memory_profiler)
 
-  [with arguments]
+  ${underline}with argument${normal}
   -j    Job name on Slurm scheduler.
         DEFAULT: script name after last '/'
   -o    Error output directory.
@@ -38,7 +41,7 @@ OPTIONS
         DEFAULT: (not specified)
   -d    Data directory.
         DEFAULT: (not specified)
-EOF
+"
 
 }
 
