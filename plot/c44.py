@@ -40,6 +40,11 @@ DIVIDE_BY_MAX : bool
     Divide C44 by its maximum for each lag-time and display these maxima in
     graph inset.
     DEFAULT: False
+DIVIDE_BY_CHI : bool
+    Divide C44 by its susceptibility for each lag-time and display these
+    susceptibilities in graph inset.
+    NOTE: if DIVIDE_BY_CHI=True, DIVIDE_BY_MAX is set to False.
+    DEFAULT: False
 
 Environment parameters
 ----------------------
@@ -102,6 +107,12 @@ POINTS_THETA : int
 SMOOTH ['fourier' mode] : float
 	C44 smoothing length scale.
 	DEFAULT: 0
+R_MIN_CHI [DIVIDE_BY_CHI mode] : float
+    Minimum radius for susceptibility integration.
+    DEFAULT: active_particles.plot.chi_msd._r_min
+R_MAX_CHI [DIVIDE_BY_CHI mode] : float
+    Maximum radius for susceptibility integration.
+    DEFAULT: active_particles.plot.chi_msd._r_max
 FONT_SIZE : int
     Plot font size.
     DEFAULT: active_particles.plot.c44._font_size
@@ -160,8 +171,11 @@ from active_particles.analysis.css import Css2DtoC44, StrainCorrelations,\
     _r_min_c44 as _r_min, _r_max_c44 as _r_max,\
     _r_cut
 from active_particles.analysis.ctt import StrainCorrelationsCMSD
+from active_particles.analysis.cuu import c1Dtochi
 from active_particles.plot.plot import list_colormap
 from active_particles.plot.mpl_tools import FittingLine
+from active_particles.plot.chi_msd import _r_min as _r_min_chi,\
+    _r_max as _r_max_chi
 
 from math import ceil
 
@@ -239,7 +253,12 @@ if __name__ == '__main__':  # executing as script
     centre = (get_env('X_ZERO', default=0, vartype=float),
 		get_env('Y_ZERO', default=0, vartype=float))	# centre of the box
 
-    divide_by_max = get_env('DIVIDE_BY_MAX', default=False) # divide C44 by its maximum for each lag-time
+    divide_by_max = get_env('DIVIDE_BY_MAX', default=False, vartype=bool)   # divide C44 by its maximum for each lag-time
+
+    divide_by_chi = get_env('DIVIDE_BY_CHI', default=False, vartype=bool)   # divide C44 by its susceptibility for each lag time
+    if divide_by_chi: divide_by_max = False
+    r_min_chi = get_env('R_MIN_CHI', default=_r_min_chi, vartype=float)     # minimum radius for susceptibility integration
+    r_max_chi = get_env('R_MAX_CHI', default=_r_max_chi, vartype=float)     # maximum radius for susceptibility integration
 
     # NAMING
 
@@ -283,7 +302,7 @@ if __name__ == '__main__':  # executing as script
     # CALCULATION
 
     toC44 = Css2DtoC44(box_size, points_x, points_theta,
-        av_p_sep*r_min, av_p_sep*r_max) # Css2D to C44 conversion object
+        av_p_sep*r_min, av_p_sep*r_max, linear_interpolation=get_env('LINEAR_INTERPOLATION', default=True, vartype=bool))    # Css2D to C44 conversion object
     C44 = {}                            # hash table of tables of C44 at X with lag times as keys
 
     if mode == 'real':
@@ -317,18 +336,21 @@ if __name__ == '__main__':  # executing as script
 
     elif mode == 'cmsd':
 
-        files_Ctt = naming_Ctt.get_files(directory=data_dir, **attributes)      # files corresponding to parameters
+        files_Ctt = naming_Ctt.get_files(directory=data_dir, **attributes)  # files corresponding to parameters
         dt_list_Ctt = np.array(list(map(
-            lambda file: naming_Ctt.get_data(file, 'dt'), files))).flatten()    # list of lag times corresponding to files
+            lambda file: naming_Ctt.get_data(file, 'dt'),
+            files_Ctt))).flatten()                                          # list of lag times corresponding to files
 
-        files_Cll = naming_Cll.get_files(directory=data_dir, **attributes)
+        files_Cll = naming_Cll.get_files(directory=data_dir, **attributes)  # files corresponding to parameters
         dt_list_Cll = np.array(list(map(
-            lambda file: naming_Cll.get_data(file, 'dt'), files))).flatten()    # list of lag times corresponding to files
+            lambda file: naming_Cll.get_data(file, 'dt'),
+            files_Cll))).flatten()                                          # list of lag times corresponding to files
 
         files, dt_list = [], []
         for file_Ctt, dt in zip(files_Ctt, dt_list_Ctt):
             if dt in dt_list_Cll:   # looking for transversal and longitudinal collective mean square displacements files with same lag times
-                files += [(file_Ctt, files_Cll[dt_list_Cll.index(dt)])]
+                files += [
+                    (file_Ctt, files_Cll[dt_list_Cll.tolist().index(dt)])]
                 dt_list += [dt]
 
         wave_vectors = wave_vectors_2D(Ncases, Ncases, d=box_size/Ncases)   # wave vectors at which Fourier transform was calculated
@@ -341,7 +363,7 @@ if __name__ == '__main__':  # executing as script
             C44[dt] = toC44.get_C44(
                 StrainCorrelationsCMSD(wave_vectors,
                     k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
-                .strain_correlations(r_cut=r_cut_fourier))
+                .strain_correlations(r_cut=av_p_sep*r_cut_fourier))
 
     dt_list = sorted(dt_list)
 
@@ -363,6 +385,12 @@ if __name__ == '__main__':  # executing as script
     if divide_by_max:
         ax.set_ylabel(
             r'$C_4^4(r)/max(C_4^4(r), %.2e \leq r \leq %.2e)$' % (r_min, r_max)
+            + '\n' + r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
+            + ' ' + r'$C_{\epsilon_{xy}\epsilon_{xy}}(r, \theta)$'
+            + ' ' + r'$\cos4\theta$')
+    elif divide_by_chi:
+        ax.set_ylabel(
+            r'$C_4^4(r)/\chi$'
             + '\n' + r'$C_4^4(r) = \frac{1}{\pi}\int_0^{2\pi}d\theta$'
             + ' ' + r'$C_{\epsilon_{xy}\epsilon_{xy}}(r, \theta)$'
             + ' ' + r'$\cos4\theta$')
@@ -401,22 +429,32 @@ if __name__ == '__main__':  # executing as script
     legend0 += [Line2D([0], [0], lw=0, label='')]
     leg.legend(handles=legend0, loc='center', ncol=ncol_legend)
 
-    if divide_by_max:   # DIVIDE_BY_MAX mode
+    if divide_by_max or divide_by_chi:                                          # DIVIDE_BY_MAX or DIVIDE_BY_CHI mode
         inset_ax = inset_axes(ax, loc=1,
             width='%e' % width_inset + '%', height='%e' % height_inset + '%')   # inset axes
         inset_ax.set_yscale('log')
-        inset_ax.set_ylabel(r'$max(C_4^4(r))$')
         inset_ax.set_xscale('log')
         inset_ax.set_xlabel(r'$nD_0\Delta t$')
+        if divide_by_max: inset_ax.set_ylabel(r'$max(C_4^4(r))$')               # DIVIDE_BY_MAX mode
+        if divide_by_chi: inset_ax.set_ylabel(
+            r'$\chi = \frac{2\pi}{L^2}\int_{r_{min}}^{r_{max}}dr'
+            + ' ' + 'C_4^4(r)$')                                                # DIVIDE_BY_CHI mode
 
     for dt in dt_list:
-        if divide_by_max:
-                max_C44 = max(C44[dt][:, 1])
-                C44[dt][:, 1] /= max_C44
-                inset_ax.scatter(
-                    dt*parameters['time_step']*parameters['period_dump']*nD0,
-                    max_C44,
-                    color=colors[dt])
+        if divide_by_max:   # DIVIDE_BY_MAX mode
+            max_C44 = max(C44[dt][:, 1])
+            C44[dt][:, 1] /= max_C44
+            inset_ax.scatter(
+                dt*parameters['time_step']*parameters['period_dump']*nD0,
+                max_C44,
+                color=colors[dt])
+        if divide_by_chi:   # DIVIDE_BY_CHI mode
+            chi_C44 = c1Dtochi(C44[dt], box_size, r_min=r_min, r_max=r_max)
+            C44[dt][:, 1] /= chi_C44
+            inset_ax.scatter(
+                dt*parameters['time_step']*parameters['period_dump']*nD0,
+                chi_C44,
+                color=colors[dt])
         ax.plot(C44[dt][:, 0]/av_p_sep, C44[dt][:, 1], color=colors[dt])
 
     title = r'$N=%.2e, \phi=%1.2f,$' % (parameters['N'], parameters['density'])
@@ -438,10 +476,8 @@ if __name__ == '__main__':  # executing as script
         title += r'$, r_{cut}=%.2e$' % r_cut_fourier
     title += '\n'
     title += r'$N_r=%.2e, N_{\theta}=%.2e$' % (points_x, points_theta)
-    if 'BOX_SIZE' in envvar:
-        title += r'$, L = %.3e$' % box_size
-    if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:
-        title += r'$, x_0=%.3e, y_0=%.3e$' % centre
+    if divide_by_chi:
+        title += r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min_chi, r_max_chi)
     fig.suptitle(title)
 
     plt.show()
