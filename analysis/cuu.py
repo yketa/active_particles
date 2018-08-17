@@ -336,8 +336,11 @@ class Cnn:
 
 def c1Dtochi(c1D, box_size, r_min=None, r_max=None):
 	"""
-	From displacement-related variable cylindrically averaged correlations,
-	returns cooperativity integrated from r_min to r_max.
+	For the cylindrically-averaged 1D correlation function c1D(r), this
+	function returns the 2D susceptibility of the square box system of length
+	L, defined as chi = 2\\pi/L^2 \\int_{r_min}^{r_max} dr c1D(r).
+	NOTE: for displacement-related correlations, this susceptibility
+	corresponds to the cooperativity.
 
 	Parameters
 	----------
@@ -357,7 +360,7 @@ def c1Dtochi(c1D, box_size, r_min=None, r_max=None):
 	Returns
 	-------
 	chi : float
-		Cooperativity.
+		Susceptibility.
 	"""
 
 	c1D = np.array(sorted(c1D, key=lambda el: el[0]))
