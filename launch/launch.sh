@@ -9,6 +9,7 @@ bold=$(tput bold)
 normal=$(tput sgr0)
 
 less <<< "Submit job to a Slurm job scheduler.
+(see https://slurm.schedmd.com/sbatch.html)
 
 ${bold}SYNOPSIS${normal}
 
@@ -38,6 +39,7 @@ ${bold}OPTIONS${normal}
   -n    Maximum ntasks to be invoked on each core.
         DEFAULT: 1
   -m    Real memory required per node.
+        NOTE: MaxMemPerNode allocates maximum memory.
         DEFAULT: (not specified)
   -d    Data directory.
         DEFAULT: (not specified)
