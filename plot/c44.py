@@ -45,6 +45,9 @@ DIVIDE_BY_CHI : bool
     susceptibilities in graph inset.
     NOTE: if DIVIDE_BY_CHI=True, DIVIDE_BY_MAX is set to False.
     DEFAULT: False
+LINEAR_INTERPOLATION : bool
+	Get value on grid by linear interpolation of neighbouring grid boxes.
+	DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -113,6 +116,14 @@ R_MIN_CHI [DIVIDE_BY_CHI mode] : float
 R_MAX_CHI [DIVIDE_BY_CHI mode] : float
     Maximum radius for susceptibility integration.
     DEFAULT: active_particles.plot.chi_msd._r_max
+DT_MIN : int
+    Minimum lag time.
+    NOTE: if DT_MIN=None, no minimum is taken.
+    DEFAULT: None.
+DT_MAX : int
+    Maximum lag time.
+    NOTE: if DT_MAX=None, no maximum is taken.
+    DEFAULT: None.
 FONT_SIZE : int
     Plot font size.
     DEFAULT: active_particles.plot.c44._font_size
@@ -260,6 +271,9 @@ if __name__ == '__main__':  # executing as script
     r_min_chi = get_env('R_MIN_CHI', default=_r_min_chi, vartype=float)     # minimum radius for susceptibility integration
     r_max_chi = get_env('R_MAX_CHI', default=_r_max_chi, vartype=float)     # maximum radius for susceptibility integration
 
+    dt_min = get_env('DT_MIN', vartype=int) # minimum lag time
+    dt_max = get_env('DT_MAX', vartype=int) # maximum lag time
+
     # NAMING
 
     attributes = {'density': parameters['density'], 'N': parameters['N'],
@@ -302,8 +316,10 @@ if __name__ == '__main__':  # executing as script
     # CALCULATION
 
     toC44 = Css2DtoC44(box_size, points_x, points_theta,
-        av_p_sep*r_min, av_p_sep*r_max, linear_interpolation=get_env('LINEAR_INTERPOLATION', default=True, vartype=bool))    # Css2D to C44 conversion object
-    C44 = {}                            # hash table of tables of C44 at X with lag times as keys
+        av_p_sep*r_min, av_p_sep*r_max,
+        linear_interpolation=get_env(
+            'LINEAR_INTERPOLATION', default=True, vartype=bool))    # Css2D to C44 conversion object
+    C44 = {}                                                        # hash table of tables of C44 at X with lag times as keys
 
     if mode == 'real':
 
@@ -365,7 +381,9 @@ if __name__ == '__main__':  # executing as script
                     k_cross_FFTugrid2D_sqnorm, k_dot_FFTugrid2D_sqnorm)
                 .strain_correlations(r_cut=av_p_sep*r_cut_fourier))
 
-    dt_list = sorted(dt_list)
+    dt_list = [dt for dt in sorted(dt_list)
+        if (dt_min == None or dt >= dt_min)
+        and (dt_max == None or dt <= dt_max)]
 
     # PLOT
 
@@ -437,8 +455,8 @@ if __name__ == '__main__':  # executing as script
         inset_ax.set_xlabel(r'$nD_0\Delta t$')
         if divide_by_max: inset_ax.set_ylabel(r'$max(C_4^4(r))$')               # DIVIDE_BY_MAX mode
         if divide_by_chi: inset_ax.set_ylabel(
-            r'$\chi = \frac{2\pi}{L^2}\int_{r_{min}}^{r_{max}}dr'
-            + ' ' + 'C_4^4(r)$')                                                # DIVIDE_BY_CHI mode
+            r'$\chi = \frac{2\pi}{L^2}\int_{r_{min}}^{r_{max}}dr$'
+            + ' ' + r'$r$' + ' ' + r'$C_4^4(r)$')                               # DIVIDE_BY_CHI mode
 
     for dt in dt_list:
         if divide_by_max:   # DIVIDE_BY_MAX mode
