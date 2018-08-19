@@ -61,8 +61,8 @@ class FittingLine:
         Fitting line function.
     """
 
-    def __init__(self, ax, slope, slope_min, slope_max, color='black',
-        linestyle='--', legend=True, **kwargs):
+    def __init__(self, ax, slope, slope_min=None, slope_max=None,
+        color='black', linestyle='--', slider=True, legend=True, **kwargs):
         """
         Parameters
         ----------
@@ -72,14 +72,24 @@ class FittingLine:
             Initial slope of fitting line in log-log plot.
         slope_min : float
             Minimum slope of fitting line for slider.
+            NOTE: if slope_min=None, then slope_min is taken to be slope.
+            DEFAULT: None
         slope_max : float
             Maximum slope of fitting line for slider.
+            NOTE: if slope_max=None, then slope_max is taken to be slope.
+            DEFAULT: None
         color : any matplotlib color
             Color of fitting line.
+            DEFAULT: black
         linestyle : any matplotlib line style
             Line style of fitting line.
+            DEFAULT: --
+        slider : bool
+            Display slider for slope.
+            DEFAULT: True
         legend : bool
             Display legend.
+            DEFAULT: True
 
         Optional keyword arguments
         --------------------------
@@ -108,7 +118,7 @@ class FittingLine:
             color=self.color, linestyle=self.linestyle) # Line2D representing fitting line
 
         self.display_legend = legend                                # display legend
-        if self.display_legend == True:
+        if self.display_legend:
             self.x_legend = np.mean(self.ax.get_xlim())             # x coordinate of fitting line legend
             self.y_legend = np.mean(self.ax.get_ylim())             # y coordinate of fitting line legend
             self.legend = plt.legend(handles=[self.line], loc=10,
@@ -118,11 +128,15 @@ class FittingLine:
             self.legend_artist.set_picker(10)                       # epsilon tolerance in points to fire pick event
         self.on_legend = False                                      # has the mouse been clicked on fitting line legend
 
-        self.slider_ax = make_axes_locatable(self.ax).append_axes(
-            'bottom', size='5%', pad=0.6)               # slider Axes
-        self.slider = Slider(self.slider_ax, 'slope', slope_min, slope_max,
-            valinit=slope)                              # slider
-        self.slider.on_changed(self.update_slope)       # call self.update_slope when slider value is changed
+        self.display_slider = slider                    # display slider
+        if self.display_slider:
+            self.slider_ax = make_axes_locatable(self.ax).append_axes(
+                'bottom', size='5%', pad=0.6)           # slider Axes
+            self.slider = Slider(self.slider_ax, 'slope',
+                slope_min if slope_min != None else slope,
+                slope_max if slope_max != None else slope,
+                valinit=slope)                          # slider
+            self.slider.on_changed(self.update_slope)   # call self.update_slope when slider value is changed
 
         self.law = 'exponential'    # fitting line law
         self.update_law()           # initialises fitting line function, updates figure and sets legend
@@ -195,6 +209,8 @@ class FittingLine:
 
         Hide slider if slider is visible, and vice versa.
         """
+
+        if not(self.display_slider): return
 
         self.slider_ax.set_visible(self.slider_ax.get_visible() == False)   # hide or show slider Axes
         self.line.figure.canvas.draw()                                      # updates figure
