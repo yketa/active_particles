@@ -48,6 +48,23 @@ def to_vartype(input, default=None, vartype=str):
         except ValueError: return vartype(eval(input))
     except: return default
 
+def set_env(var_name, var_value):
+    """
+    Sets environment variable var_name value to str(var_value).
+
+    Parameters
+    ----------
+    var_name : string
+        Environment variable name.
+    var_value : *
+        Environment variable value.
+        NOTE: if var_value=None, then the environment variable is unset
+    """
+
+    if var_value == None:
+        if var_name in envvar: del envvar[var_name]
+    else: envvar[var_name] = str(var_value)
+
 def get_env(var_name, default=None, vartype=str):
     """
     Returns environment variable with desired data type.
