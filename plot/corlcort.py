@@ -508,8 +508,8 @@ if __name__ == '__main__':  # executing as script
         + (r'$, \tilde{v}=%.2e$' % vzero if mode == 'dr' else
         r'$, \tilde{\nu}_r = %.2e$' % dr)
         + '\n'
-        + r'$S_{init}=%.2e, S_{max}=%.2e$' % (init_frame, Ncases)
-        + r'$, N_{cases}=%.2e$' % int_max
+        + r'$S_{init}=%.2e, S_{max}=%.2e$' % (init_frame, int_max)
+        + r'$, N_{cases}=%.2e$' % Ncases
         + r'$, r_{min}=%.2e, r_{max}=%.2e$' % (r_min, r_max))
     fig_ratio.suptitle(suptitle)
 
