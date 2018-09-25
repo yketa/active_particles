@@ -62,7 +62,8 @@ class FittingLine:
     """
 
     def __init__(self, ax, slope, slope_min=None, slope_max=None,
-        color='black', linestyle='--', slider=True, legend=True, **kwargs):
+        color='black', linestyle='--', slider=True,
+        legend=True, exp_format='{:.2e}', **kwargs):
         """
         Parameters
         ----------
@@ -90,6 +91,10 @@ class FittingLine:
         legend : bool
             Display legend.
             DEFAULT: True
+        exp_format : string
+            Exponent string format in legend.
+            NOTE: Only if legend=True.
+            DEFAULT: {:.2e}
 
         Optional keyword arguments
         --------------------------
@@ -127,6 +132,7 @@ class FittingLine:
             self.legend_artist = self.ax.add_artist(self.legend)    # fitting line legend artist object
             self.legend_artist.set_picker(10)                       # epsilon tolerance in points to fire pick event
         self.on_legend = False                                      # has the mouse been clicked on fitting line legend
+        self.exp_format = exp_format                                # exponent string format in legend
 
         self.display_slider = slider                    # display slider
         if self.display_slider:
@@ -240,11 +246,11 @@ class FittingLine:
         """
 
         if self.law == 'powerlaw':
-            self.line.set_label(r'$%s \propto %s^{%.2e}$' % (self.y_fit,
-                self.x_fit, self.slope)) # fitting line label
+            self.line.set_label(r'$%s \propto %s^{%s}$' % (self.y_fit,
+                self.x_fit, self.exp_format.format(self.slope)))    # fitting line label
         elif self.law == 'exponential':
-            self.line.set_label(r'$%s \propto e^{%.2e%s}$' % (self.y_fit,
-                self.slope, self.x_fit)) # fitting line label
+            self.line.set_label(r'$%s \propto e^{%s%s}$' % (self.y_fit,
+                self.exp_format.format(self.slope), self.x_fit))    # fitting line label
 
         if self.display_legend == True:
             self.legend.get_texts()[0].set_text(self.line.get_label())  # updates fitting line legend
