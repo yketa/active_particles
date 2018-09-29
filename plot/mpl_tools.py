@@ -63,7 +63,7 @@ class FittingLine:
 
     def __init__(self, ax, slope, slope_min=None, slope_max=None,
         color='black', linestyle='--', slider=True,
-        legend=True, exp_format='{:.2e}', **kwargs):
+        legend=True, exp_format='{:.2e}', font_size=None, **kwargs):
         """
         Parameters
         ----------
@@ -95,6 +95,10 @@ class FittingLine:
             Exponent string format in legend.
             NOTE: Only if legend=True.
             DEFAULT: {:.2e}
+        font_size : float
+            Legend font size.
+            NOTE: if font_size=None, the font size is not imposed.
+            DEFAULT: None
 
         Optional keyword arguments
         --------------------------
@@ -129,6 +133,7 @@ class FittingLine:
             self.legend = plt.legend(handles=[self.line], loc=10,
                 bbox_to_anchor=(self.x_legend, self.y_legend),
                 bbox_transform=self.ax.transData)                   # fitting line legend
+            self.set_fontsize(font_size)                            # set legend font size
             self.legend_artist = self.ax.add_artist(self.legend)    # fitting line legend artist object
             self.legend_artist.set_picker(10)                       # epsilon tolerance in points to fire pick event
         self.on_legend = False                                      # has the mouse been clicked on fitting line legend
@@ -155,6 +160,21 @@ class FittingLine:
             'button_release_event', self.on_release)    # call on release on figure
         self.cid_scroll = self.line.figure.canvas.mpl_connect(
             'scroll_event', self.on_scroll)             # call on scroll
+
+    def set_fontsize(self, font_size):
+        """
+        Set legend font size.
+
+        Parameters
+        ----------
+        font_size : float
+            Legend font size.
+            NOTE: if font_size=None, the font size is not changed.
+        """
+
+        self.font_size = font_size
+        if self.font_size != None:
+            self.legend.get_texts()[0].set_fontsize(self.font_size) # set legend font size
 
     def on_click(self, event):
         """
