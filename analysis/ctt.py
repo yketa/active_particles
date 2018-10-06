@@ -1,6 +1,7 @@
 """
 Module ctt calculates or plots mean squared cross and dot products of
-normalised wave vectors and displacement Fourier transform and strain
+normalised wave vectors and displacement Fourier transform, respectively
+transversal and longitudinal collective mean square displacements, and strain
 correlations from these variables.
 
 Files are saved according to active_particles.naming.Ctt (cross product) and
@@ -99,10 +100,10 @@ R_MAX [PLOT or SHOW mode] : float
 	Maximum wave length norm for plots.
 	DEFAULT: sqrt(2) times BOX_SIZE
 Y_MIN [PLOT or SHOW mode] : float
-	Minimum y-coordinate for plots.
+	Minimum y-coordinate for collective mean square displacement plots.
 	DEFAULT: fit to data
 Y_MAX [PLOT or SHOW mode] : float
-	Maximum y-coordinate for plots.
+	Maximum y-coordinate for collective mean square displacement plots.
 	DEFAULT: fit to data
 SLOPE [FITTING_LINE mode] : float
 	Initial slope for fitting line.
