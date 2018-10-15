@@ -38,6 +38,9 @@ SAVE [PLOT mode] : bool
 TRACER_PARTICLE ['trajecotry' mode] : bool
     Display tracer particle.
     DEFAULT: True
+SUPTITLE : bool
+    Display suptitle on figures.
+    DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -607,15 +610,21 @@ if __name__ == '__main__':  # executing as script
 
     # LEGEND SUPTITLE
 
+    display_suptitle = get_env('SUPTITLE', default=True, vartype=bool)  # display suptitle
+
     def suptitle(frame):
         """
         Returns figure suptitle.
+
+        NOTE: Returns empty string if display_suptitle=False.
 
         Parameters
         ----------
         frame : int
             Index of rendered frame.
         """
+
+        if not(display_suptitle): return ''
 
         suptitle = str(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
     		% (parameters['N'], parameters['density'], parameters['vzero'],
