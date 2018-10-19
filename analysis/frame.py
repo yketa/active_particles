@@ -119,6 +119,9 @@ FRAME_DEFINITION [SAVE mode] : float
 FONT_SIZE : int
     Font size.
     DEFAULT: active_particles.analysis.frame._font_size
+PAD : float
+    Separation between label and colormap.
+    DEFAULT: active_particles.analysis.frame._colormap_label_pad
 FIGURE_NAME [SAVE mode] : string
     Custom figure name.
     DEFAULT: according to naming standard
@@ -183,6 +186,8 @@ _arrow_head_width = _arrow_width*3e2        # default width of the arrows' head
 _arrow_head_length = _arrow_head_width*1.5  # default length of the arrows' head
 
 _font_size = 20 # font size
+
+_colormap_label_pad = 30    # default separation between label and colormap
 
 # FUNCTIONS AND CLASSES
 
@@ -309,7 +314,7 @@ class Velocity(_Frame):
     """
 
     def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
-        arrow_head_width, arrow_head_length, **kwargs):
+        arrow_head_width, arrow_head_length, pad, **kwargs):
         """
         Initialises and plots figure.
 
@@ -331,6 +336,8 @@ class Velocity(_Frame):
             Width of the arrows' head.
         arrow_head_length : float
             Length of the arrows' head.
+        pad : float
+            Separation between label and colormap.
 
         Optional keyword parameters
         ---------------------------
@@ -354,9 +361,9 @@ class Velocity(_Frame):
         except (KeyError, AttributeError): pass # 'vmax' not in keyword arguments or None
 
 
-        self.colorbar(self.vmin, self.vmax)                     # add colorbar to figure
+        self.colorbar(self.vmin, self.vmax) # add colorbar to figure
         self.colormap.set_label(r'$\log||\vec{v}(t)||$',
-            labelpad=30, rotation=270)                          # colorbar legend
+            labelpad=pad, rotation=270)     # colorbar legend
 
         self.draw()
 
@@ -459,7 +466,7 @@ class Displacement(_Frame):
     """
 
     def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
-        arrow_head_width, arrow_head_length, dt=0, **kwargs):
+        arrow_head_width, arrow_head_length, pad, dt=0, **kwargs):
         """
         Initialises and plots figure.
 
@@ -485,6 +492,8 @@ class Displacement(_Frame):
             Width of the arrows' head.
         arrow_head_length : float
             Length of the arrows' head.
+        pad : float
+            Separation between label and colormap.
         dt : int
             Lag time for displacement. (default=0)
 
@@ -510,9 +519,9 @@ class Displacement(_Frame):
             self.vmax = np.log10(kwargs['vmax'])
         except (KeyError, AttributeError): pass # 'vmax' not in keyword arguments or None
 
-        self.colorbar(self.vmin, self.vmax)                     # add colorbar to figure
+        self.colorbar(self.vmin, self.vmax) # add colorbar to figure
         self.colormap.set_label(r'$\log||\vec{u}(t, t+\Delta t)||$',
-            labelpad=30, rotation=270)                          # colorbar legend
+            labelpad=pad, rotation=270)     # colorbar legend
 
         self.draw()
 
@@ -608,6 +617,8 @@ if __name__ == '__main__':  # executing as script
     arrow_head_length = get_env('HEAD_LENGTH', default=_arrow_head_length,
         vartype=float)  # length of the arrows' head
 
+    pad = get_env('PAD', default=_colormap_label_pad, vartype=float)    # separation between label and colormap
+
     # LEGEND SUPTITLE
 
     display_suptitle = get_env('SUPTITLE', default=True, vartype=bool)  # display suptitle
@@ -657,7 +668,7 @@ if __name__ == '__main__':  # executing as script
 
             figure = plotting_object(u_traj, w_traj, init_frame, box_size,
                 centre, arrow_width, arrow_head_width, arrow_head_length,
-                dt=dt, vmin=vmin, vmax=vmax)
+                pad=pad, dt=dt, vmin=vmin, vmax=vmax)
             figure.fig.suptitle(suptitle(init_frame))
 
             if get_env('SAVE', default=False, vartype=bool):    # SAVE mode
