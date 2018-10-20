@@ -23,6 +23,13 @@ VARIABLE : string
 PECLET : bool
     Plot as function of the Péclet number Pe = vzero/dr.
     DEFAULT: True
+PHILOCMAX : bool
+    Plot most probable packing fraction instead of global system packing
+    fraction.
+    DEFAULT: False
+TITLE : bool
+    Display title on figure.
+    DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -92,6 +99,9 @@ FONT_SIZE : int
 COLORMAP : string
     Plot colormap.
     DEFAULT: active_particles.plot.pphiloc._colormap
+PAD : float
+    Separation between label and colormap.
+    DEFAULT: active_particles.plot.pphiloc._colormap_label_pad
 """
 
 import active_particles.naming as naming
@@ -141,8 +151,9 @@ _pphilocmin = 1e-4  # default minimum local density probability
 _pphilocmax = 1e-1  # default maximum local density probability
 _contours = 20      # default contour level value
 
-_font_size = 15         # default font size for the plot
-_colormap = 'inferno'   # default plot colormap
+_font_size = 15             # default font size for the plot
+_colormap = 'inferno'       # default plot colormap
+_colormap_label_pad = 20    # separation between label and colormap
 
 # FUNCTIONS AND CLASSES
 
@@ -272,10 +283,10 @@ if __name__ == '__main__':  # executing as script
         var_max = get_env('DR_MAX', default=_dr_max, vartype=float) # maximum rotation diffusion constant
 
         if peclet:
-            x_func = lambda x: np.log10(vzero/x)                    # x-coordinate as function of plot variable
+            x_func = lambda x: np.log10(vzero/x)    # x-coordinate as function of plot variable
         else:
-            x_func = lambda x: np.log10(1/x)                        # x-coordinate as function of plot variable
-            x_label = r'$\log(\tau_r \equiv \tilde{\nu}_r^{-1})$'   # x-coordinate label
+            x_func = lambda x: np.log10(1/x)        # x-coordinate as function of plot variable
+            x_label = r'$\log(1/\tilde{\nu}_r)$'    # x-coordinate label
 
     elif mode == 'vzero':
 
@@ -325,6 +336,8 @@ if __name__ == '__main__':  # executing as script
     font_size = get_env('FONT_SIZE', default=_font_size, vartype=float)
     mp.rcParams.update({'font.size': font_size})    # font size for the plot
 
+    pad = get_env('PAD', default=_colormap_label_pad, vartype=float)    # separation between label and colormap
+
     colormap = get_env('COLORMAP', default=_colormap)   # plot colormap
 
     Nbins = get_env('N_BINS', default=_Nbins, vartype=int)      # number of bins for the histogram
@@ -335,6 +348,8 @@ if __name__ == '__main__':  # executing as script
     pphilocmax = np.log10(
         get_env('PPHILOC_MAX', default=_pphilocmax, vartype=float)) # maximum local density probability
     contours = get_env('CONTOURS', default=_contours, vartype=int)  # contour level value
+
+    philocmax = get_env('PHILOCMAX', default=False, vartype=bool)   # plot most probable packing fraction instead of global system packing fraction
 
     # CALCULATION
 
@@ -348,7 +363,6 @@ if __name__ == '__main__':  # executing as script
     # PLOT
 
     fig, ax = plt.subplots()
-    fig.set_size_inches(20, 20)
 
     cmap = plt.get_cmap(colormap)
     norm = colors.Normalize(vmin=pphilocmin, vmax=pphilocmax)
@@ -358,20 +372,30 @@ if __name__ == '__main__':  # executing as script
     cax = divider.append_axes("right", size="5%", pad=0.05)
     cb = mp.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm,
         orientation='vertical')
-    cb.set_label(r'$\log P(\phi_{loc})$', labelpad=20, rotation=270)
+    cb.set_label(r'$\log P(\phi_{loc})$', labelpad=pad, rotation=270)
 
     ax.tricontourf(*philoc.histogram3D, contours, cmap=cmap, norm=norm) # local density histogram
-    ax.plot(
-        philoc.histogram3D[0],
-        np.full(philoc.histogram3D.shape[1], fill_value=density),
-        linestyle='--', color='red', linewidth=4)   # average density line
+    if philocmax:
+        philocmax_line = [[x_func(philoc.var_hash[dir]), philoc.philocmax[dir]]
+            for dir in philoc.dirs
+            if dir in philoc.var_hash and dir in philoc.philocmax]
+        philocmax_line.sort(key=lambda el: el[0])
+        philocmax_line = np.array(philocmax_line)
+        ax.plot(philocmax_line[:, 0], philocmax_line[:, 1],
+            linestyle='--', color='red', linewidth=4)   # most probable packing fraction line
+    else:
+        ax.plot(
+            philoc.histogram3D[0],
+            np.full(philoc.histogram3D.shape[1], fill_value=density),
+            linestyle='--', color='red', linewidth=4)   # global system packing fraction line
 
-    ax.set_title(
+    title = (
         r'$N=%.1e, \phi=%1.2f,$' % (N, density)
         + (r'$\tilde{v} = %.2e$' % vzero if mode == 'dr' else
         r'$\tilde{\nu}_r = %.2e$' % dr)
         + '\n' + r'$S_{init} = %.1e, S_{max} = %.1e,$' % (init_frame, int_max)
         + r'$N_{cases} = %.1e, r_{max} = %.1e$' % (Ncases, box_size))
+    if get_env('TITLE', default=True, vartype=bool): ax.set_title(title)
     ax.set_xlabel(x_label)
     ax.set_ylabel(r'$\phi_{loc}$')
 
