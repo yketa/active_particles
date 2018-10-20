@@ -16,6 +16,9 @@ DIVIDE_BY_MAX : bool
     Divide collective mean square displacement multiplied by squared wave
     vector norm by its maximum for each lag-time.
     DEFAULT: False
+TITLE : bool
+    Display title on figure.
+    DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -362,6 +365,6 @@ if __name__ == '__main__':  # executing as script
     title += r'$S_{init}=%.2e, S_{max}=%.2e,$' % (init_frame, int_max)
     title += (r'$N_{cases}=%.2e, dL=%.2e a, r_{cut}=%.2e a$'
         % (Ncases, np.sqrt(parameters['N'])/Ncases, r_cut))
-    fig.suptitle(title)
+    if get_env('TITLE', default=True, vartype=bool): fig.suptitle(title)
 
     plt.show()
