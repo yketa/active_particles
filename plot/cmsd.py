@@ -94,15 +94,30 @@ HSPACE : float
 COLORMAP : string
     Plot colormap.
     DEFAULT: active_particles.plot.cmsd._colormap
-SLOPE [FITTING_LINE mode] : float
-    Initial slope for fitting line slider.
+SLOPE_CTT [FITTING_LINE mode] : float
+    Initial slope for fitting line slider for transversal CMSD plot.
     DEFAULT: active_particles.plot.cmsd._slope0
-SLOPE_MIN [FITTING_LINE mode] : float
-    Minimum slope for fitting line slider.
+SLOPE_MIN_CTT [FITTING_LINE mode] : float
+    Minimum slope for fitting line slider for transversal CMSD plot.
     DEFAULT: active_particles.plot.cmsd._slope_min
-SLOPE_MAX [FITTING_LINE mode] : float
-    Maximum slope for fitting line slider.
+SLOPE_MAX_CTT [FITTING_LINE mode] : float
+    Maximum slope for fitting line slider for transversal CMSD plot.
     DEFAULT: active_particles.plot.cmsd._slope_max
+SLOPE_CLL [FITTING_LINE mode] : float
+    Initial slope for fitting line slider for longitudinal CMSD plot.
+    DEFAULT: active_particles.plot.cmsd._slope0
+SLOPE_MIN_CLL [FITTING_LINE mode] : float
+    Minimum slope for fitting line slider for longitudinal CMSD plot.
+    DEFAULT: active_particles.plot.cmsd._slope_min
+SLOPE_MAX_CLL [FITTING_LINE mode] : float
+    Maximum slope for fitting line slider for longitudinal CMSD plot.
+    DEFAULT: active_particles.plot.cmsd._slope_max
+FITTING_LINE_SLIDER [FITTING_LINE mode] : bool
+    Display fitting line slider.
+    DEFAULT: True
+FITTING_LINE_LEGEND [FITTING_LINE mode] : bool
+    Display fitting line legend.
+    DEFAULT: True
 """
 
 import active_particles.naming as naming
@@ -301,14 +316,33 @@ if __name__ == '__main__':  # executing as script
 
     if get_env('FITTING_LINE', default=False, vartype=bool):    # FITTING LINE mode
 
-        slope0 = get_env('SLOPE', default=_slope0, vartype=float)           # initial slope for fitting line slider
-        slope_min = get_env('SLOPE_MIN', default=_slope_min, vartype=float) # minimum slope for fitting line slider
-        slope_max = get_env('SLOPE_MAX', default=_slope_max, vartype=float) # maximum slope for fitting line slider
+        slope0_Ctt = get_env('SLOPE_CTT',
+            default=_slope0, vartype=float)     # initial slope for fitting line slider for transversal CMSD plot
+        slope_min_Ctt = get_env('SLOPE_MIN_CTT',
+            default=_slope_min, vartype=float)  # minimum slope for fitting line slider for transversal CMSD plot
+        slope_max_Ctt = get_env('SLOPE_MAX_CTT',
+            default=_slope_max, vartype=float)  # maximum slope for fitting line slider for transversal CMSD plot
 
-        fitting_line_Ctt = FittingLine(ax_Ctt, slope0, slope_min, slope_max,
-            x_fit='(\lambda/a)', y_fit='C^{\perp}(k) \\times k^2')
-        fitting_line_Cll = FittingLine(ax_Cll, slope0, slope_min, slope_max,
-            x_fit='(\lambda/a)', y_fit='C^{||}(k) \\times k^2')
+        slope0_Cll = get_env('SLOPE_CLL',
+            default=_slope0, vartype=float)     # initial slope for fitting line slider for longitudinal CMSD plot
+        slope_min_Cll = get_env('SLOPE_MIN_CLL',
+            default=_slope_min, vartype=float)  # minimum slope for fitting line slider for longitudinal CMSD plot
+        slope_max_Cll = get_env('SLOPE_MAX_CLL',
+            default=_slope_max, vartype=float)  # maximum slope for fitting line slider for longitudinal CMSD plot
+
+        fitting_line_slider = get_env('FITTING_LINE_SLIDER',
+            default=True, vartype=float)    # display fitting line slider
+        fitting_line_legend = get_env('FITTING_LINE_LEGEND',
+            default=True, vartype=float)    # display fitting line legend
+
+        fitting_line_Ctt = FittingLine(ax_Ctt,
+            slope0_Ctt, slope_min_Ctt, slope_max_Ctt,
+            x_fit='(\lambda/a)', y_fit='C^{\perp}(k) \\times k^2',
+            slider=fitting_line_slider, legend=fitting_line_legend)
+        fitting_line_Cll = FittingLine(ax_Cll,
+            slope0_Cll, slope_min_Cll, slope_max_Cll,
+            x_fit='(\lambda/a)', y_fit='C^{||}(k) \\times k^2',
+            slider=fitting_line_slider, legend=fitting_line_legend)
 
     leg = plt.subplot(gs[2])    # legend axis
     leg.axis('off')
