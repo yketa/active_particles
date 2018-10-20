@@ -313,7 +313,7 @@ if __name__ == '__main__':  # executing as script
     leg = plt.subplot(gs[2])    # legend axis
     leg.axis('off')
     legend = [mpatches.Patch(color='none',
-        label=r'$nD_0 = \frac{2 k_B T N}{\lambda a L^2} = %.2e$' % nD0)]
+        label=r'$nD_0 = \frac{Nv_0^2}{2\nu_r L^2} = %.2e$' % nD0)]
     legend += list(map(lambda dt: Line2D([0], [0], color=colors[dt],
         label=r'$nD_0\Delta t = %.2e$'
         % (dt*parameters['time_step']*parameters['period_dump']*nD0)),
