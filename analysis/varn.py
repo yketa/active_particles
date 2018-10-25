@@ -12,6 +12,9 @@ COMPUTE : bool
 PLOT : bool
 	Plots histogram of local densities.
 	DEFAULT: False
+PEAK [COMPUTE or PLOT mode] : bool
+	Highlight tallest peak of histogram.
+	DEFAULT: True
 SHOW [COMPUTE or PLOT mode] : bool
 	Show graphs.
 	DEFAULT: False
@@ -201,37 +204,53 @@ def histogram(densities, Nbins, phimax):
 
     return bins, hist/densities.size
 
-def plot(bins, hist):
-    """
-    Plots histogram of densities.
 
-    Parameters
-    ----------
-    bins : array-like
-        Bins of the histogram.
-    hist : array-like
-        Values of the histogram at bins.
-    """
+class Plot:
+	"""
+	Plots histograms of densities.
+	"""
 
-    fig, ax = plt.subplots()
+	def __init__(self):
+		"""
+		Set figure.
+		"""
 
-    fig.suptitle(
-        r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
-        % (parameters['N'], parameters['density'], parameters['vzero'],
-        parameters['dr']) + '\n' +
-        r'$S_{init}=%.2e, S_{max}=%.2e, N_{cases}=%.2e, l=%.2e$'
-        % (init_frame, int_max, Ncases, box_size))
+		self.fig, self.ax = plt.subplots()
 
-    ax.set_xlabel(r'$\phi_{loc}$')
-    ax.set_ylabel(r'$P(\phi_{loc})$')
+		self.fig.suptitle(
+	        r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+	        % (parameters['N'], parameters['density'], parameters['vzero'],
+	        parameters['dr']) + '\n' +
+	        r'$S_{init}=%.2e, S_{max}=%.2e, N_{cases}=%.2e, l=%.2e$'
+	        % (init_frame, int_max, Ncases, box_size))
 
-    ax.semilogy(bins, hist)
+		self.ax.set_xlabel(r'$\phi_{loc}$')
+		self.ax.set_ylabel(r'$P(\phi_{loc})$')
 
-    # SAVING
+	def add_hist(self, bins, hist, peak=True):
+		"""
+		Add histogram of densities.
 
-    if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
-        image_name, = naming_varN.image().filename(**attributes)
-        fig.savefig(joinpath(data_dir, image_name))
+		Parameters
+	    ----------
+	    bins : array-like
+	        Bins of the histogram.
+	    hist : array-like
+	        Values of the histogram at bins.
+		peak : bool
+			Highlight tallest peak of histogram. (default: True)
+		"""
+
+		line, = self.ax.semilogy(bins, hist)
+
+		if peak:
+			philocmax, Pphilocmax = bins[np.argmax(hist)], np.max(hist)
+			self.ax.axhline(Pphilocmax, 0, 1,
+				linestyle='--', color=line.get_color())
+			self.ax.axvline(philocmax, 0, 1,
+				linestyle='--', color=line.get_color(),
+				label=r'$(\phi_{loc}^* = %1.2f, P(\phi_{loc}^*) = %.2e)$'
+				% (philocmax, Pphilocmax))
 
 # SCRIPT
 
@@ -321,8 +340,20 @@ if __name__ == '__main__':  # executing as script
         Nbins = get_env('N_BINS', default=_Nbins, vartype=int)      # number of bins for the histogram
         phimax = get_env('PHIMAX', default=_phimax, vartype=float)  # maximum local density for histogram
 
-        bins, hist = histogram(densities, Nbins, phimax)    # histogram and bin values from densities array
-        plot(bins, hist)
+        peak = get_env('PEAK', default=True, vartype=bool)	#
+
+        plot = Plot()
+        plot.add_hist(*histogram(densities, Nbins, phimax), peak=peak)
+
+        if peak: plot.ax.legend()	# display legend of highlighted peaks in histograms
+
+		# SAVING
+
+        if get_env('SAVE', default=False, vartype=bool):	# SAVE mode
+	        image_name, = naming_varN.image().filename(**attributes)
+	        plot.fig.savefig(joinpath(data_dir, image_name))
+
+		# SHOW
 
         if get_env('SHOW', default=False, vartype=bool):	# SHOW mode
             plt.show()
