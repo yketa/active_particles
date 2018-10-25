@@ -210,14 +210,19 @@ class Plot:
 	Plots histograms of densities.
 	"""
 
-	def __init__(self):
+	def __init__(self, suptitle=True):
 		"""
 		Set figure.
+
+		Parameters
+		----------
+		suptitle : bool
+			Display suptitle. (default: True)
 		"""
 
 		self.fig, self.ax = plt.subplots()
 
-		self.fig.suptitle(
+		if suptitle: self.fig.suptitle(
 	        r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
 	        % (parameters['N'], parameters['density'], parameters['vzero'],
 	        parameters['dr']) + '\n' +
