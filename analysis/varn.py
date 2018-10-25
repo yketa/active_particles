@@ -239,6 +239,11 @@ class Plot:
 	        Values of the histogram at bins.
 		peak : bool
 			Highlight tallest peak of histogram. (default: True)
+
+		Returns
+		-------
+		line : matplotlib.lines.Line2D
+			Plotted histogram line.
 		"""
 
 		line, = self.ax.semilogy(bins, hist)
@@ -251,6 +256,8 @@ class Plot:
 				linestyle='--', color=line.get_color(),
 				label=r'$(\phi_{loc}^* = %1.2f, P(\phi_{loc}^*) = %.2e)$'
 				% (philocmax, Pphilocmax))
+
+		return line
 
 # SCRIPT
 
