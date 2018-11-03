@@ -9,6 +9,10 @@ Environment modes
 COMPUTE : bool
 	Compute local densities.
 	DEFAULT: False
+CHECK : bool
+	Evaluate difference between the parametrised global packing fraction and
+	the measured averaged packing fraction.
+	DEFAULT: False
 PLOT : bool
 	Plots histogram of local densities.
 	DEFAULT: False
@@ -305,6 +309,24 @@ if __name__ == '__main__':  # executing as script
         slurm_output(joinpath(data_dir, 'out'), naming_varN, attributes)
 
     # MODE SELECTION
+
+    if get_env('CHECK', default=False, vartype=bool):	# CHECK mode
+
+		# DATA
+
+        with open(joinpath(data_dir, varN_filename), 'rb') as varN_dump_file:
+            densities = pickle.load(varN_dump_file)
+
+		# CHECK
+
+        mean_density = np.mean(densities)
+        difference = np.abs(mean_density - parameters['density'])
+        relative_difference = difference/parameters['density']
+
+        print('Parametrised packing fraction: %f' % parameters['density'])
+        print('Measured averaged packing fraction: %f' % mean_density)
+        print('Difference: %f' % difference)
+        print('Relative difference: %f' % relative_difference)
 
     if get_env('COMPUTE', default=False, vartype=bool):	# COMPUTE mode
 
