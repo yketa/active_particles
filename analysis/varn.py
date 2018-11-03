@@ -310,24 +310,6 @@ if __name__ == '__main__':  # executing as script
 
     # MODE SELECTION
 
-    if get_env('CHECK', default=False, vartype=bool):	# CHECK mode
-
-		# DATA
-
-        with open(joinpath(data_dir, varN_filename), 'rb') as varN_dump_file:
-            densities = pickle.load(varN_dump_file)
-
-		# CHECK
-
-        mean_density = np.mean(densities)
-        difference = np.abs(mean_density - parameters['density'])
-        relative_difference = difference/parameters['density']
-
-        print('Parametrised packing fraction: %f' % parameters['density'])
-        print('Measured averaged packing fraction: %f' % mean_density)
-        print('Difference: %f' % difference)
-        print('Relative difference: %f' % relative_difference)
-
     if get_env('COMPUTE', default=False, vartype=bool):	# COMPUTE mode
 
         startTime = datetime.now()
@@ -358,6 +340,24 @@ if __name__ == '__main__':  # executing as script
         # EXECUTION TIME
 
         print("Execution time: %s" % (datetime.now() - startTime))
+
+    if get_env('CHECK', default=False, vartype=bool):	# CHECK mode
+
+		# DATA
+
+        with open(joinpath(data_dir, varN_filename), 'rb') as varN_dump_file:
+            densities = pickle.load(varN_dump_file)
+
+		# CHECK
+
+        mean_density = np.mean(densities)
+        difference = np.abs(mean_density - parameters['density'])
+        relative_difference = difference/parameters['density']
+
+        print('Parametrised packing fraction: %f' % parameters['density'])
+        print('Measured averaged packing fraction: %f' % mean_density)
+        print('Difference: %f' % difference)
+        print('Relative difference: %f' % relative_difference)
 
     if get_env('PLOT', default=False, vartype=bool):	# PLOT mode
 
