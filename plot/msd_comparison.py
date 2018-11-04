@@ -1,85 +1,166 @@
-#! /home/yketa/miniconda3/bin/python3.6
+"""
+Module msd_comparison plots mean square displacements for different initial
+frames.
+
+Input files in simulation directory must follow the active_paricles.naming.Msd
+standard.
+
+Environment modes
+-----------------
+FITTING_LINE : bool
+    Display adjustable fitting line on plot.
+    DEFAULT: False
+MULTIPLY_WITH_DR : bool
+    Plot as function of the lag time multiplied with the rotation diffusion
+    rate rather than the sole lag time.
+    DEFAULT: True
+
+Environment parameters
+----------------------
+DATA_DIRECTORY : string
+	Data directory.
+	DEFAULT: current working directory
+PARAMETERS_FILE : string
+	Simulation parameters file.
+	DEFAULT: DATA_DIRECTORY/active_particles.naming.parameters_file
+INTERVAL_MAXIMUM : int
+	maximum number of time snapshots taken for the calculation of the mean
+    square displacement at each time.
+	DEFAULT: 1
+INTERVAL_PERIOD : int
+    Period of time at which mean square displacement was calculated.
+    DEFAULT: 1
+FONT_SIZE : int
+    Font size.
+    DEFAULT: active_particles.plot.msd_comparison._font_size
+MARKER_SIZE : int
+    Marker size.
+    DEFAULT: active_particles.plot.msd_comparison._marker_size
+COLORMAP : string
+    Plot colormap.
+    DEFAULT: active_particles.plot.msd_comparison._colormap
+SLOPE [FITTING_LINE mode] : float
+    Initial slope for fitting line slider.
+    DEFAULT: active_particles.plot.msd_comparison._slope0
+SLOPE_MIN [FITTING_LINE mode] : float
+    Minimum slope for fitting line slider.
+    DEFAULT: active_particles.plot.msd_comparison._slope_min
+SLOPE_MAX [FITTING_LINE mode] : float
+    Maximum slope for fitting line slider.
+    DEFAULT: active_particles.plot.msd_comparison._slope_max
+"""
+
+from active_particles import naming
+
+from active_particles.init import get_env
+
+from active_particles.plot.plot import list_colormap
+from active_particles.plot.mpl_tools import FittingLine
+
+from os import getcwd
+from os import environ as envvar
+if __name__ == '__main__': envvar['SHOW'] = 'True'
+from os.path import join as joinpath
+
+import pickle
+
+import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.cm as cmx
-import matplotlib.colors as colors
-from matplotlib.lines import Line2D
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.widgets import Slider, RadioButtons
-from matplotlib.gridspec import GridSpec
-import matplotlib.patches as mpatches
 
-import numpy as np
-import os
-import pickle
-import sys
-sys.path.append('/home/yketa')
-from exponents import *
-sys.path.append('/home/yketa/mpl_fitting_line')
-from mpl_fitting_line import *
+# DEFAULT VARIABLES
 
-font_size = int(eval(os.environ['FONT_SIZE'])) if 'FONT_SIZE' in os.environ else 10
-marker_size = int(eval(os.environ['MARKER_SIZE'])) if 'MARKER_SIZE' in os.environ else 20
-mpl.rcParams.update({'font.size': font_size, 'lines.markersize': marker_size})
+_slope0 = 0     # default initial slope for fitting line slider
+_slope_min = -2 # minimum slope for fitting line slider
+_slope_max = 2  # maximum slope for fitting line slider
 
-ncol_legend = int(eval(os.environ['NCOL_LEGEND'])) if 'NCOL_LEGEND' in os.environ else 1 # number of columns for the legend
+_font_size = 10     # default font size
+_marker_size = 20   # default marker size
 
-wspace = float(eval(os.environ['WSPACE'])) if 'WSPACE' in os.environ else 0.2
-hspace = float(eval(os.environ['HSPACE'])) if 'HSPACE' in os.environ else 0.05
+_colormap = 'jet'   # default plot colormap
 
-data_dir = os.environ['DATA_DIRECTORY'] if 'DATA_DIRECTORY' in os.environ else os.getcwd() # data directory
-os.chdir(data_dir) # change working directory to data directory
+# SCRIPT
 
-snap_max = int(eval(os.environ['SNAP_MAXIMUM'])) if 'SNAP_MAXIMUM' in os.environ else 1 # maximum number of time snapshots taken for the calculation of the mean square displacement at each time
-snap_period = int(eval(os.environ['SNAP_PERIOD'])) if 'SNAP_PERIOD' in os.environ else 1 # mean square displacement will be calculated for each snap_period dumps period of time
+if __name__ == '__main__':  # executing as script
 
-with open(data_dir + '/param.pickle', 'rb') as param_file:
-	N, a, pdi, N_sizes, density, box_size, kT, mu, k, vzero, dr, damp_bro, shear_rate, time_step, N_steps, period_dump, prep_steps = pickle.load(param_file)
-av_p_sep = box_size/np.sqrt(N) # average particle separation
+    # VARIABLE DEFINITIONS
 
-snip0 = 'msd_sterr_'
-snip1 = '_M%s_P%s' % tuple(map(float_to_letters, [snap_max, snap_period]))
-files = [file for file in os.listdir() if (snip0 in file) and (snip1 in file)] # msd csv
-init = lambda file: eval(letters_to_float(file.split("_I")[1][:5])) # lag time from file name
-init_list = sorted(list(map(init, files))) # list of lag times
+    data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
-slope0 = float(eval(os.environ['SLOPE'])) if 'SLOPE' in os.environ else 1 # default slope for slider
-slope_min = float(eval(os.environ['SLOPE_MIN'])) if 'SLOPE_MIN' in os.environ else 0 # minimum slope for slider
-slope_max = float(eval(os.environ['SLOPE_MAX'])) if 'SLOPE_MAX' in os.environ else 2 # maximum slope for slider
+    int_max = get_env('INTERVAL_MAXIMUM', default=1, vartype=int)   # maximum number of time snapshots taken for the calculation of the mean square displacement at each time
+    int_period = get_env('INTERVAL_PERIOD', default=1, vartype=int) # period of time at which mean square displacement was calculated
 
-colormap = os.environ['COLORMAP'] if 'COLORMAP' in os.environ else 'jet' # colormap for curves
-cm = plt.get_cmap(colormap)
-cNorm  = colors.Normalize(vmin=0, vmax=len(init_list) - 1)
-scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cm)
-colors = {init_list[i]: scalarMap.to_rgba(i) for i in range(len(init_list))} # curves colors
+    parameters_file = get_env('PARAMETERS_FILE',
+		default=joinpath(data_dir, naming.parameters_file))	# simulation parameters file
+    with open(parameters_file, 'rb') as param_file:
+        parameters = pickle.load(param_file)				# parameters hash table
 
-# msd
+    multiply_with_dr = get_env('MULTIPLY_WITH_DR', default=True, vartype=bool)  # multiply lag time with rotational diffusion rate
 
-msd = {} # Cuu1D with renormalisation by Cnn
-for file in files:
-	msd[file] = np.genfromtxt(fname=file, delimiter=',', skip_header=True)
+    # NAMING
 
-# PLOT
+    attributes = {'density': parameters['density'],
+        'vzero': parameters['vzero'], 'dr': parameters['dr'],
+        'N': parameters['N'], 'int_max': int_max, 'int_period': int_period} # attributes displayed in file names
+    naming_Msd = naming.Msd()                                               # mean square displacement naming object
 
-fig, ax = plt.subplots()
-fig.set_size_inches(30, 30)
-fig.subplots_adjust(wspace=wspace)
-fig.subplots_adjust(hspace=hspace)
+    # PLOT PARAMETERS
 
-ax.set_xlabel(r'$\Delta t$')
-ax.set_ylabel(r'$<|\Delta r(\Delta t)|^2>$')
+    font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)       # font size
+    marker_size = get_env('MARKER_SIZE', default=_marker_size, vartype=int) # marker size
+    mpl.rcParams.update(
+        {'font.size': font_size, 'lines.markersize': marker_size})
 
-for file in sorted(files, key=init):
-	ax.loglog(msd[file][:, 0]/av_p_sep, msd[file][:, 1], color=colors[init(file)], label=r'$S_{init} = %.0e$' % (init(file)))
-ax.legend(loc=7, bbox_to_anchor=(0.5, -0.1))
+    colormap = get_env('COLORMAP', default=_colormap)   # plot colormap
 
-fitting_line = FittingLine(ax, slope0, slope_min, slope_max) # interactive fitting line
+    # CALCULATION
 
-title = r'$N=%.2e, \phi=%1.2f, $' % (N, density)
-title += r'$\tilde{v}=%.2e, \tilde{\nu}_r=%.2e$' % (vzero, dr) if not('TEMPERATURE' in os.environ and eval(os.environ['TEMPERATURE'])) else r'$kT=%.2e, k=%.2e$' % (kT, k)
-title += '\n'
-title += r'$S_{max}=%.2e, S_{period}=%.2e$' % (snap_max, snap_period)
-fig.suptitle(title)
+    files = naming_Msd.get_files(directory=data_dir, **attributes)  # files corresponding to parameters
+    init_list = np.array(list(map(
+        lambda file: naming_Msd.get_data(file, 'init_frame'),
+        files))).flatten()                                          # list of lag times corresponding to files
 
-plt.show()
+    dt, msd, sterr = {}, {}, {} # lag times, mean square displacements, and standard error hash tables with initial frames as keys
+    for file, init in zip(files, init_list):
+        dt[init], msd[init], sterr[init] = np.transpose(np.genfromtxt(
+            fname=joinpath(data_dir, file), delimiter=',', skip_header=True))
+
+    init_list.sort()
+
+    # PLOT
+
+    colors = list_colormap(init_list, colormap=colormap)    # hash table of line colors with initial frames as keys
+
+    fig, ax = plt.subplots()
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+
+    ax.set_xlabel(
+        r'$\tilde{\nu}_r \Delta t$' if multiply_with_dr else r'$\Delta t$')
+    ax.set_ylabel(r'$<|\Delta r(\Delta t)|^2>/\Delta t$')
+
+    for init in init_list:
+        ax.errorbar(
+            dt[init]*parameters['dr'] if multiply_with_dr else dt[init],
+            msd[init]/dt[init], yerr=sterr[init]/dt[init],
+            color=colors[init], label=r'$S_{init} = %d$' % init)
+    ax.add_artist(plt.legend())
+
+    if get_env('FITTING_LINE', default=False, vartype=bool):    # FITTING_LINE mode
+
+        slope0 = get_env('SLOPE', default=_slope0, vartype=float)           # initial slope for fitting line slider
+        slope_min = get_env('SLOPE_MIN', default=_slope_min, vartype=float) # minimum slope for fitting line slider
+        slope_max = get_env('SLOPE_MAX', default=_slope_max, vartype=float) # maximum slope for fitting line slider
+
+        fitting_line = FittingLine(ax, slope0, slope_min, slope_max)
+        fitting_line.line.set_zorder(10)
+
+    title = r'$N=%.2e, \phi=%1.2f,$' % (parameters['N'], parameters['density'])
+    title += r'$\tilde{v}=%.2e,$' % parameters['vzero']
+    title += r'$\tilde{\nu}_r=%.2e$' % parameters['dr']
+    title += '\n'
+    title += r'$S_{max}=%.2e, S_{period}=%.2e$' % (int_max, int_period)
+    fig.suptitle(title)
+
+    plt.show()
