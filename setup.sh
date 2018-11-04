@@ -32,6 +32,7 @@ alias ap_chi_msd="$AP_PYTHON ${AP_DIR}/plot/chi_msd.py"
 alias ap_cmsd="$AP_PYTHON ${AP_DIR}/plot/cmsd.py"
 alias ap_comparison="$AP_PYTHON ${AP_DIR}/plot/comparison.py"
 alias ap_corlcort="$AP_PYTHON ${AP_DIR}/plot/corlcort.py"
+alias ap_msd_comparison="$AP_PYTHON ${AP_DIR}/plot/msd_comparison.py"
 alias ap_pphiloc="$AP_PYTHON ${AP_DIR}/plot/pphiloc.py"
 
 # FUNCTIONS
