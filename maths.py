@@ -904,3 +904,82 @@ def neighbouring_boxes_2D(index, shape):
             neighbours += [tuple((index + inc + shape)%shape)]
 
     return neighbours
+
+class Histogram:
+    """
+    Make histogram from lists of float values.
+    """
+
+    def __init__(self, Nbins, vmin, vmax, log=False):
+        """
+        Parameters
+        ----------
+        Nbins : int
+            Number of histogram bins.
+        vmin : float
+            Minimum included value for histogram bins.
+            NOTE: values lesser than vmin will be ignored.
+        vmax : float
+            Maximum excluded value for histogram bins.
+            NOTE: values greater or equal to vmax will be ignored.
+        log : bool.
+            Logarithmically spaced histogram values. (default: False)
+        """
+
+        self.Nbins = int(Nbins)
+        self.vmin = vmin
+        self.vmax = vmax
+
+        if log:
+            self.bins = np.logspace(np.log10(self.vmin), np.log10(self.vmax),
+                self.Nbins, endpoint=False, base=10)    # histogram bins
+        else:
+            self.bins = np.linspace(self.vmin, self.vmax,
+                self.Nbins, endpoint=False)             # histogram bins
+
+        self.reset_values()                 # reset values from which to compute the histogram
+        self.hist = np.empty(self.Nbins)    # values of the histogram at bins
+
+    def add_values(self, *values, replace=False):
+        """
+        Add values from which to compute the histogram.
+
+        Parameters
+        ----------
+        values : float or float array-like
+            Values to add.
+        replace : bool
+            Replace existing values. (default: False)
+        """
+
+        if replace: self.reset_values()
+        for value in values: self.values = np.append(self.values, value)
+
+    def reset_values(self):
+        """
+        Delete values from which to compute the histogram (self.values).
+        """
+
+        self.values = np.array([])
+
+    def get_histogram(self):
+        """
+        Get histogram from values in self.values.
+
+        Returns
+        -------
+        hist : Numpy array
+            Values of the histogram at self.bins.
+        """
+
+        for bin in range(self.bins.size):
+            bin_inf = self.bins[bin]
+            try: bin_sup = self.bins[bin + 1]
+            except IndexError: bin_sup = self.vmax
+            self.hist[bin] = np.sum(
+                (self.values >= bin_inf)*(self.values < bin_sup))
+
+        binned_values = np.sum(self.hist)
+        if binned_values == 0: return self.hist # no binned value
+        else: self.hist /= np.sum(self.hist)
+        return self.hist
