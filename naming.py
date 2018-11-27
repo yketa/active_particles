@@ -633,17 +633,23 @@ class Msd(_File):
     Naming mean square displacement files.
     """
 
-    def __init__(self):
+    def __init__(self, distribution=False):
         """
         Architecture of file name.
+
+        Parameters
+        ----------
+        distribution : bool
+            Distribution of square displacements file rather than mean square
+            displacement file. (default: False)
         """
 
-        self.name = 'msd_sterr' # generic name
+        self.name = 'msd_dist' if distribution else 'msd_sterr' # generic name
         self.parameters = OrderedDict([
             ('density', '_D'), ('vzero', '_V'), ('dr', '_R'), ('N', '_N'),
             ('init_frame', '_I'), ('int_max', '_M'), ('int_period', '_P')
-        ])                      # parameters and corresponding abbreviations (in order)
-        self.extension = '.csv' # file extension
+        ])                                                      # parameters and corresponding abbreviations (in order)
+        self.extension = '.pickle' if distribution else '.csv'  # file extension
 
 class VarN(_File):
     """
