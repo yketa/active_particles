@@ -77,6 +77,7 @@ import active_particles.naming as naming
 
 from active_particles.init import get_env, slurm_output
 from active_particles.dat import Gsd
+from active_particles.maths import Histogram
 
 from os import getcwd
 from os import environ as envvar
@@ -194,20 +195,9 @@ def histogram(densities, Nbins, phimax):
         Values of the histogram at bins.
     """
 
-    densities = np.array(densities)
-
-    bins = np.linspace(0, phimax, Nbins, endpoint=False)
-    bins_width = phimax/Nbins   # distance between bin values
-
-    hist = np.zeros(Nbins)
-    for density in densities.flatten():
-        if density < phimax:
-            hist[int(density//bins_width)] += 1
-        else:
-            hist[-1] += 1
-
-    return bins, hist/densities.size
-
+    hist = Histogram(Nbins, 0, phimax)
+    hist.add_values(densities)
+    return hist.bins, hist.get_histogram()
 
 class Plot:
 	"""
