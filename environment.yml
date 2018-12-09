@@ -1,6 +1,7 @@
 name: active_particles_env
 channels:
   - glotzer
+  - conda-forge
 dependencies:
   - python=3.6
   - gsd=1.5.*
@@ -8,3 +9,4 @@ dependencies:
   - matplotlib=2.1.*
   - numpy=1.14.*
   - scipy=1.0*
+  - ovito=2.9.*

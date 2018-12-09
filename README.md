@@ -9,7 +9,7 @@ Simulation scripts rely on the [HOOMD-blue](https://glotzerlab.engin.umich.edu/h
 
 ## Requirements
 
-* __active_particles__ was tested on Mac OS X and Linux, thus the installation script should work on these OS only.
+* __active_particles__ was tested on 64-bit Linux, thus the installation script should work on this OS only.
 * An environment is set specifically for __active_particles__ with [conda](https://conda.io/miniconda.html), which thus has to be installed.
 
 ## Installation
