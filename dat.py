@@ -12,7 +12,8 @@ from active_particles.maths import relative_positions
 from gsd.pygsd import GSDFile
 from gsd.hoomd import HOOMDTrajectory
 
-import ovito
+from ovito.io import import_file as ovito_import_file
+from ovito.modifiers import AtomicStrainModifier
 
 class Dat:
 	"""
@@ -235,7 +236,7 @@ class Gsd(HOOMDTrajectory):
 		self.prep_frames = prep_frames
 		self.dimensions = dimensions
 
-		self.node = ovito.io.import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
+		self.node = ovito_import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
 
 	def __getitem__(self, key):
 		"""
@@ -394,7 +395,7 @@ class Gsd(HOOMDTrajectory):
 
 		self.node.modifiers.clear()											# clear modification pipeline
 		self.node.modifiers.append(
-			ovito.modifiers.AtomicStrainModifier(
+			AtomicStrainModifier(
 				output_nonaffine_squared_displacements=True,
 				reference_frame=self.prep_frames + time0))					# add AtomicStrainModifier modifier to modification pipeline
 		self.node.modifiers[-1].reference.load(self.filename)				# load trajectory file as reference
