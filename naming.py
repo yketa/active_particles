@@ -592,6 +592,18 @@ class _FrameFile(_File):
                 OrderedDict([('frame_max', '_M')]).items()))
         return self.add_ext(ext_parameters, ext_extension)
 
+class D2min(_FrameFile):
+    """
+    Naming system images with D2min values.
+    """
+
+    def __init__(self):
+        """
+        Architecture of file name.
+        """
+
+        super().__init__('d', ext_parameters=OrderedDict([('dt', '_T')]))   # initialise with superclass
+
 class Velocity(_FrameFile):
     """
     Naming system images with arrows along velocity directions files.
