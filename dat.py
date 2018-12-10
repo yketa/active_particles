@@ -12,6 +12,8 @@ from active_particles.maths import relative_positions
 from gsd.pygsd import GSDFile
 from gsd.hoomd import HOOMDTrajectory
 
+import ovito
+
 class Dat:
 	"""
 	.dat files are designed to save trajectory (position and velocity) data for
@@ -181,7 +183,7 @@ class Dat:
 
 	def displacement(self, time0, time1, *particle):
 		"""
-		Returns array of displacement between time 'time0' and 'time1'.
+		Returns array of displacement between times 'time0' and 'time1'.
 		(see active_particles.dat.Dat.position)
 
 		Parameters
@@ -226,11 +228,14 @@ class Gsd(HOOMDTrajectory):
 			Dimension of space. (default: 2)
 		"""
 
+		self.filename = file.name	# file name
 		self.file = GSDFile(file)	# gsd file
 		super().__init__(self.file)	# initialising gsd.hoomd.HOOMDTrajectory
 
 		self.prep_frames = prep_frames
 		self.dimensions = dimensions
+
+		self.node = ovito.io.import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
 
 	def __getitem__(self, key):
 		"""
@@ -358,3 +363,43 @@ class Gsd(HOOMDTrajectory):
 		"""
 
 		return self[time].configuration.box[0]
+
+	def d2min(self, time0, time1, *particle):
+		"""
+		Returns nonaffine squared displacement computed by OVITO (see
+		https://ovito.org/manual/particles.modifiers.atomic_strain.html and
+		https://ovito.org/manual/python/modules/ovito_modifiers.html) between
+		frames 'time0' and 'time1'.
+
+		Parameters
+		----------
+		time0 : int
+			Initial frame index.
+		time1 : int
+			Final frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particles indexes.
+			When called with particles indexes, function returns array of
+			particles' diameters at frame 'time' in the same order.
+
+		Returns
+		-------
+		d2min : float Numpy array
+			Array of nonaffine square displacements between frames 'time0' and
+			'time1'.
+		"""
+
+		self.node.modifiers.clear()											# clear modification pipeline
+		self.node.modifiers.append(
+			ovito.modifiers.AtomicStrainModifier(
+				output_nonaffine_squared_displacements=True,
+				reference_frame=self.prep_frames + time0))					# add AtomicStrainModifier modifier to modification pipeline
+		self.node.modifiers[-1].reference.load(self.filename)				# load trajectory file as reference
+		self.node_out = self.node.compute(frame=self.prep_frames + time1)	# compute d2min
+
+		d2min = self.node_out['Nonaffine Squared Displacement'].array	# array of nonaffine squared displacement
+		if particle == ():	return d2min								# returns all nonaffine squared displacement
+		return np.array(itemgetter(*particle)(d2min))					# non affine square displacements
