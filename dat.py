@@ -12,8 +12,8 @@ from active_particles.maths import relative_positions
 from gsd.pygsd import GSDFile
 from gsd.hoomd import HOOMDTrajectory
 
-from ovito.io import import_file as ovito_import_file
-from ovito.modifiers import AtomicStrainModifier
+# from ovito.io import import_file as ovito_import_file
+# from ovito.modifiers import AtomicStrainModifier
 
 class Dat:
 	"""
