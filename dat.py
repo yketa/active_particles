@@ -236,7 +236,7 @@ class Gsd(HOOMDTrajectory):
 		self.prep_frames = prep_frames
 		self.dimensions = dimensions
 
-		self.node = ovito_import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
+		# self.node = ovito_import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
 
 	def __getitem__(self, key):
 		"""
