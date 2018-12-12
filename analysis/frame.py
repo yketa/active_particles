@@ -363,7 +363,7 @@ class D2min(_Frame):
 
         self.d2min = w_traj.d2min(frame, frame + dt, *self.particles)   # particles' nonaffine squared displacement between frame and frame + dt
 
-        self.vmin = np.log10(np.min(self.d2min))
+        self.vmin = np.log10(np.min(self.d2min[self.d2min != 0]))
         self.vmax = np.log10(np.max(self.d2min))
         try:
             self.vmin = np.log10(kwargs['vmin'])
