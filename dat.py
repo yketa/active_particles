@@ -15,7 +15,7 @@ from gsd.hoomd import HOOMDTrajectory
 from ovito.io import import_file as ovito_import_file
 from ovito.modifiers import AtomicStrainModifier
 from PyQt5.QtWidgets import QApplication
-QApplication([])	# creation of a QApplication to avoid crash when using matplotlib after OVITO import
+qapp = QApplication([])	# creation of a QApplication to avoid crash when using matplotlib after OVITO import
 
 class Dat:
 	"""
