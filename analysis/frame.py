@@ -13,6 +13,11 @@ MODE : string
      _________________________________________________________________________
     | Mode           | Arrow direction        | Arrow length | Particle color |
     |________________|________________________|______________|________________|
+    | 'd2min'        | None                   | None         | Amplitude of   |
+    |                |                        |              | nonaffine      |
+    |                |                        |              | squared        |
+    |                |                        |              | displacement   |
+    |________________|________________________|______________|________________|
     | 'velocity'     | Instantaneous velocity | Relative to  | Amplitude of   |
     |                | direction              | diameter     | velocity       |
     |________________|________________________|______________|________________|
@@ -22,7 +27,7 @@ MODE : string
     | 'displacement' | Displacement direction | Relative to  | Amplitude of   |
     |                |                        | diameter     | displacement   |
     |________________|________________________|______________|________________|
-    DEFAULT: velocity
+    DEFAULT: displacement
 PLOT : bool
     Plot single frame.
     DEFAULT: False
@@ -287,7 +292,7 @@ class _Frame:
             head_width=length*self.arrow_head_width,
             head_length=length*self.arrow_head_length, zorder=1)
 
-    def colorbar(self, vmin, vmax):
+    def colorbar(self, vmin, vmax, cmap=plt.cm.jet):
         """
         Adds colorbar to plot.
 
@@ -297,9 +302,10 @@ class _Frame:
             Minimum value of the colorbar.
         vmax : float
             Maximum value of the colorbar.
+        cmap : matplotlib colorbar
+            Matplotlib colorbar to be used. (default: matplotlib.pyplot.cm.jet)
         """
 
-        cmap = plt.cm.jet
         vNorm = ColorsNormalise(vmin=vmin, vmax=vmax)
         self.scalarMap = ScalarMappable(norm=vNorm, cmap=cmap)
 
@@ -307,6 +313,79 @@ class _Frame:
             size='5%', pad=0.05)
         self.colormap = mpl.colorbar.ColorbarBase(self.colormap_ax, cmap=cmap,
             norm=vNorm, orientation='vertical')
+
+class D2min(_Frame):
+    """
+    Plotting class specific to 'd2min' mode.
+    """
+
+    def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
+        arrow_head_width, arrow_head_length, pad, dt=0, **kwargs):
+        """
+        Initialises and plots figure.
+
+        Parameters
+        ----------
+        u_traj : active_particles.dat.Dat
+    		Unwrapped trajectory object.
+        w_traj : active_particles.dat.Gsd
+    		Wrapped trajectory object.
+        frame : int
+            Frame to render.
+        box_size : float
+            Length of the square box to render.
+        centre : 2-uple like
+            Centre of the box to render.
+        arrow_width : float
+            Width of the arrows.
+            NOTE: not used.
+        arrow_head_width : float
+            Width of the arrows' head.
+            NOTE: not used.
+        arrow_head_length : float
+            Length of the arrows' head.
+            NOTE: not used.
+        pad : float
+            Separation between label and colormap.
+        dt : int
+            Lag time for displacement. (default=0)
+
+        Optional keyword parameters
+        ---------------------------
+        vmin : float
+            Minimum value of the colorbar.
+        vmax : float
+            Maximum value of the colorbar.
+        """
+
+        super().__init__(w_traj, frame, box_size, centre,
+            arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
+
+        self.d2min = w_traj.d2min(frame, frame + dt, *self.particles)   # particles' nonaffine squared displacement between frame and frame + dt
+
+        self.vmin = np.log10(np.min(self.d2min))
+        self.vmax = np.log10(np.max(self.d2min))
+        try:
+            self.vmin = np.log10(kwargs['vmin'])
+        except (KeyError, AttributeError): pass # 'vmin' not in keyword arguments or None
+        try:
+            self.vmax = np.log10(kwargs['vmax'])
+        except (KeyError, AttributeError): pass # 'vmax' not in keyword arguments or None
+
+        self.colorbar(self.vmin, self.vmax, cmap=plt.cm.Greys)  # add colorbar to figure
+        self.colormap.set_label(r'$\log D^2_{min}$',
+            labelpad=pad, rotation=270)                         # colorbar legend
+
+        self.draw()
+
+    def draw(self):
+        """
+        Plots figure.
+        """
+
+        for particle, d2min in zip(self.particles, self.d2min): # for particle and particle's nonaffine squared displacement in rendered box
+            self.draw_circle(particle, color=self.scalarMap.to_rgba(
+                np.log10(np.linalg.norm(d2min))), fill=True)    # draw particle circle with color corresponding to nonaffine square displacement
 
 class Velocity(_Frame):
     """
@@ -482,10 +561,6 @@ class Displacement(_Frame):
             Length of the square box to render.
         centre : 2-uple like
             Centre of the box to render.
-        vmin : float
-            Minimum value of the colorbar.
-        vmax : float
-            Maximum value of the colorbar.
         arrow_width : float
             Width of the arrows.
         arrow_head_width : float
@@ -545,8 +620,11 @@ if __name__ == '__main__':  # executing as script
 
     # VARIABLE DEFINITIONS
 
-    mode = get_env('MODE', default='velocity')              # plotting mode
-    if mode == 'velocity':
+    mode = get_env('MODE', default='displacement')          # plotting mode
+    if mode == 'd2min':
+        plotting_object = D2min
+        naming_standard = naming.D2min()
+    elif mode == 'velocity':
         plotting_object = Velocity
         naming_standard = naming.Velocity()
     elif mode == 'trajectory':
@@ -647,7 +725,7 @@ if __name__ == '__main__':  # executing as script
             suptitle += str(r'$x_0 = %.3e, y_0 = %.3e$' % centre) + '\n'
         suptitle += str(r'$t = %.5e$'
             % (frame*parameters['period_dump']*parameters['time_step']))
-        if mode == 'trajectory' or mode == 'displacement':
+        if mode == 'trajectory' or mode == 'displacement' or mode == 'd2min':
             suptitle += str(r'$, \Delta t = %.5e$'
                 % (dt*parameters['period_dump']*parameters['time_step']))
 
