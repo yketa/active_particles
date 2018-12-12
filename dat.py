@@ -12,8 +12,10 @@ from active_particles.maths import relative_positions
 from gsd.pygsd import GSDFile
 from gsd.hoomd import HOOMDTrajectory
 
-# from ovito.io import import_file as ovito_import_file
-# from ovito.modifiers import AtomicStrainModifier
+from ovito.io import import_file as ovito_import_file
+from ovito.modifiers import AtomicStrainModifier
+from PyQt5.QtWidgets import QApplication
+QApplication([])	# creation of a QApplication to avoid crash when using matplotlib after OVITO import
 
 class Dat:
 	"""
@@ -236,7 +238,7 @@ class Gsd(HOOMDTrajectory):
 		self.prep_frames = prep_frames
 		self.dimensions = dimensions
 
-		# self.node = ovito_import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
+		self.node = ovito_import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
 
 	def __getitem__(self, key):
 		"""
