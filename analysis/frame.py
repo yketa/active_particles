@@ -95,12 +95,14 @@ Y_ZERO : float
     DEFAULT: 0
 V_MIN : float
     Minimum value of the colorbar.
-    DEFAULT: ['velocity' mode] 10^{E(log(||\\vec{v}||))-2*V(log(||\\vec{v}||))}
+    DEFAULT: ['d2min' mode] minimum nonaffine squared displacement value
+             ['velocity' mode] 10^{E(log(||\\vec{v}||))-2*V(log(||\\vec{v}||))}
              [other modes] 10^{E(log(||\\vec{u}||))-2*V(log(||\\vec{u}||))}
     NOTE: Colorbar is represented in logarithmic scale so V_MIN > 0.
 V_MAX : float
     Maximum value of the colorbar.
-    DEFAULT: ['velocity' mode] 10^{E(log(||\\vec{v}||))+2*V(log(||\\vec{v}||))}
+    DEFAULT: ['d2min' mode] maximum nonaffine squared displacement value
+             ['velocity' mode] 10^{E(log(||\\vec{v}||))+2*V(log(||\\vec{v}||))}
              [other modes] 10^{E(log(||\\vec{u}||))+2*V(log(||\\vec{u}||))}
     NOTE: Colorbar is represented in logarithmic scale so V_MAX > 0.
 ARROW_WIDTH : float
@@ -190,7 +192,7 @@ _arrow_width = 1e-3                         # default width of the arrows
 _arrow_head_width = _arrow_width*3e2        # default width of the arrows' head
 _arrow_head_length = _arrow_head_width*1.5  # default length of the arrows' head
 
-_font_size = 20 # font size
+_font_size = 15 # font size
 
 _colormap_label_pad = 30    # default separation between label and colormap
 
