@@ -91,7 +91,7 @@ PPHILOC_MAX : float
     Maximum local density probability.
     DEFAULT: active_particles.plot.pphiloc._pphilocmin
 CONTOURS : int
-    Contour level value.
+    Number of contour lines.
     DEFAULT: active_particles.plot.pphiloc._contours
 FONT_SIZE : int
     Font size for the plot.
@@ -347,7 +347,7 @@ if __name__ == '__main__':  # executing as script
         get_env('PPHILOC_MIN', default=_pphilocmin, vartype=float)) # minimum local density probability
     pphilocmax = np.log10(
         get_env('PPHILOC_MAX', default=_pphilocmax, vartype=float)) # maximum local density probability
-    contours = get_env('CONTOURS', default=_contours, vartype=int)  # contour level value
+    contours = get_env('CONTOURS', default=_contours, vartype=int)  # number of contour lines
 
     philocmax = get_env('PHILOCMAX', default=False, vartype=bool)   # plot most probable packing fraction instead of global system packing fraction
 
