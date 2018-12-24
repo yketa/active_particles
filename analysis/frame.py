@@ -34,6 +34,9 @@ PLOT : bool
 MOVIE : bool
     Make movie out of several plotted frames.
     DEFAULT: False
+FIXED_FRAME [MOVIE mode] : bool
+    Keep initial frame fixed in movie and vary lag time.
+    DEFAULT: False
 SHOW [PLOT mode] : bool
     Show figure.
     DEFAULT: False
@@ -79,10 +82,13 @@ FRAME_MAXIMUM : int
     DEFAULT: active_particles.analysis.frame._frame_max
 DT : int
     Lag time for displacement.
-    NOTE: [PLOT mode] TIME < 0 will be interpreted as a lag time corresponding
-                      to the total number of simulation frames - FRAME + TIME.
-          [MOVIE mode] TIME < 0 will be interpreted as a lag time
-                       corresponding to the minimum distance between frames.
+    NOTE: [PLOT mode] DT < 0 will be interpreted as a lag time corresponding to
+                      the total number of simulation frames - FRAME + TIME.
+          [MOVIE and not(FIXED_FRAME) mode] DT < 0 will be interpreted as a lag
+                                            time corresponding to the minimum
+                                            distance between frames.
+          [MOVIE and FIXED_FRAME mode] Setting DT has no influence, lag times
+                                       are determined by rendered frames.
     DEFAULT: -1
 BOX_SIZE : float
     Length of the square box to render.
@@ -322,9 +328,12 @@ class D2min(_Frame):
     """
 
     def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
-        arrow_head_width, arrow_head_length, pad, dt=0, **kwargs):
+        arrow_head_width, arrow_head_length, pad=_colormap_label_pad, dt=0,
+        **kwargs):
         """
         Initialises and plots figure.
+
+        NOTE: Particles are drawn at their positions at frame + dt.
 
         Parameters
         ----------
@@ -349,8 +358,9 @@ class D2min(_Frame):
             NOTE: not used.
         pad : float
             Separation between label and colormap.
+            (default: active_particles.analysis.frame._colormap_label_pad)
         dt : int
-            Lag time for displacement. (default=0)
+            Lag time for displacement. (default: 0)
 
         Optional keyword parameters
         ---------------------------
@@ -362,6 +372,8 @@ class D2min(_Frame):
 
         super().__init__(w_traj, frame, box_size, centre,
             arrow_width, arrow_head_width, arrow_head_length)   # initialise superclass
+
+        self.positions = w_traj.position(frame + dt, centre=centre) # particles' positions at frame frame with centre as centre of frame
 
         self.d2min = w_traj.d2min(frame, frame + dt, *self.particles)   # particles' nonaffine squared displacement between frame and frame + dt
 
@@ -395,7 +407,8 @@ class Velocity(_Frame):
     """
 
     def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
-        arrow_head_width, arrow_head_length, pad, **kwargs):
+        arrow_head_width, arrow_head_length, pad=_colormap_label_pad,
+        **kwargs):
         """
         Initialises and plots figure.
 
@@ -419,6 +432,7 @@ class Velocity(_Frame):
             Length of the arrows' head.
         pad : float
             Separation between label and colormap.
+            (default: active_particles.analysis.frame._colormap_label_pad)
 
         Optional keyword parameters
         ---------------------------
@@ -547,7 +561,8 @@ class Displacement(_Frame):
     """
 
     def __init__(self, u_traj, w_traj, frame, box_size, centre, arrow_width,
-        arrow_head_width, arrow_head_length, pad, dt=0, **kwargs):
+        arrow_head_width, arrow_head_length, pad=_colormap_label_pad, dt=0,
+        **kwargs):
         """
         Initialises and plots figure.
 
@@ -571,6 +586,7 @@ class Displacement(_Frame):
             Length of the arrows' head.
         pad : float
             Separation between label and colormap.
+            (default: active_particles.analysis.frame._colormap_label_pad)
         dt : int
             Lag time for displacement. (default=0)
 
@@ -703,7 +719,7 @@ if __name__ == '__main__':  # executing as script
 
     display_suptitle = get_env('SUPTITLE', default=True, vartype=bool)  # display suptitle
 
-    def suptitle(frame):
+    def suptitle(frame, lag_time):
         """
         Returns figure suptitle.
 
@@ -713,15 +729,24 @@ if __name__ == '__main__':  # executing as script
         ----------
         frame : int
             Index of rendered frame.
+        lag_time : int
+            Lag time.
+
+        Returns
+        -------
+        suptitle : string
+            Suptitle.
         """
 
         if not(display_suptitle): return ''
 
-        suptitle = str(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+        suptitle = (
+            str(r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
     		% (parameters['N'], parameters['density'], parameters['vzero'],
-    		parameters['dr']))
+    		parameters['dr'])))
         suptitle += str(r'$, L=%.3e$' % parameters['box_size'])
-        if 'BOX_SIZE' in envvar: suptitle += str(r'$, L_{new}=%.3e$' % box_size)
+        if 'BOX_SIZE' in envvar:
+            suptitle += str(r'$, L_{new}=%.3e$' % box_size)
         suptitle += '\n'
         if 'X_ZERO' in envvar or 'Y_ZERO' in envvar:
             suptitle += str(r'$x_0 = %.3e, y_0 = %.3e$' % centre) + '\n'
@@ -729,7 +754,7 @@ if __name__ == '__main__':  # executing as script
             % (frame*parameters['period_dump']*parameters['time_step']))
         if mode == 'trajectory' or mode == 'displacement' or mode == 'd2min':
             suptitle += str(r'$, \Delta t = %.5e$'
-                % (dt*parameters['period_dump']*parameters['time_step']))
+                % (lag_time*parameters['period_dump']*parameters['time_step']))
 
         return suptitle
 
@@ -779,6 +804,8 @@ if __name__ == '__main__':  # executing as script
 
         frames = frames[frames + dt < Nentries - 1][:frame_max] # rendered frames
 
+        fixed_frame = get_env('FIXED_FRAME', default=False, vartype=bool)   # FIXED_FRAME mode
+
         with open(wrap_file_name, 'rb') as wrap_file,\
             open(unwrap_file_name, 'rb') as unwrap_file:    # opens wrapped and unwrapped trajectory files
 
@@ -790,10 +817,23 @@ if __name__ == '__main__':  # executing as script
                     'Frame: %d' % (frames.tolist().index(frame) + 1)
                     + "/%d \r" % len(frames))
 
-                figure = plotting_object(u_traj, w_traj, frame, box_size,
-                    centre, arrow_width, arrow_head_width, arrow_head_length,
-                    dt=dt, vmin=vmin, vmax=vmax)                        # plot frame
-                figure.fig.suptitle(suptitle(frame))
+                if fixed_frame: # FIXED_FRAME mode
+
+                    figure = plotting_object(u_traj, w_traj, init_frame,
+                        box_size, centre,
+                        arrow_width, arrow_head_width, arrow_head_length,
+                        pad=pad, dt=frame - init_frame, vmin=vmin, vmax=vmax)   # plot frame
+                    figure.fig.suptitle(
+                        suptitle(init_frame, frame - init_frame))
+
+                else:   # not(FIXED_FRAME) mode
+
+                    figure = plotting_object(u_traj, w_traj, frame,
+                        box_size, centre,
+                        arrow_width, arrow_head_width, arrow_head_length,
+                        pad=pad, dt=dt, vmin=vmin, vmax=vmax)   # plot frame
+                    figure.fig.suptitle(suptitle(frame, dt))
+
                 figure.fig.savefig(joinpath(movie_dir, 'frames',
                     '%010d' % frames.tolist().index(frame) + '.png'))   # save frame
                 del figure                                              # delete (close) figure
