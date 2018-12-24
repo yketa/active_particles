@@ -774,7 +774,7 @@ if __name__ == '__main__':  # executing as script
             figure = plotting_object(u_traj, w_traj, init_frame, box_size,
                 centre, arrow_width, arrow_head_width, arrow_head_length,
                 pad=pad, dt=dt, vmin=vmin, vmax=vmax)
-            figure.fig.suptitle(suptitle(init_frame))
+            figure.fig.suptitle(suptitle(init_frame, dt))
 
             if get_env('SAVE', default=False, vartype=bool):    # SAVE mode
                 figure_name, = naming_standard.filename(**attributes)
