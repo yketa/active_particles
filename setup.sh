@@ -27,6 +27,7 @@ export AP_MSD="$AP_PYTHON ${AP_DIR}/analysis/msd.py"
 export AP_VARN="$AP_PYTHON ${AP_DIR}/analysis/varn.py"
 
 # PLOTS
+alias ap_pd2min="$AP_PYTHON ${AP_DIR}/analysis/pd2min.py"
 alias ap_c44="$AP_PYTHON ${AP_DIR}/plot/c44.py"
 alias ap_chi_msd="$AP_PYTHON ${AP_DIR}/plot/chi_msd.py"
 alias ap_cmsd="$AP_PYTHON ${AP_DIR}/plot/cmsd.py"
