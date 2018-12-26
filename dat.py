@@ -502,8 +502,6 @@ class Gsd(HOOMDTrajectory):
 		-----------------------------
 		particle : int
 			Particles indexes.
-			When called with particles indexes, function returns array of
-			particles' diameters at frame 'time' in the same order.
 
 		Returns
 		-------
@@ -521,5 +519,66 @@ class Gsd(HOOMDTrajectory):
 		self.node_out = self.node.compute(frame=self.prep_frames + time1)	# compute d2min
 
 		d2min = self.node_out['Nonaffine Squared Displacement'].array	# array of nonaffine squared displacement
-		if particle == ():	return d2min								# returns all nonaffine squared displacement
+		if particle == (): return d2min									# returns all nonaffine squared displacement
 		return np.array(itemgetter(*particle)(d2min))					# non affine square displacements
+
+	def strain_tensor(self, time0, time1, *particle):
+		"""
+		Returns strain tensors computed by OVITO (see
+		https://ovito.org/manual/particles.modifiers.atomic_strain.html and
+		https://ovito.org/manual/python/modules/ovito_modifiers.html) between
+		frames 'time0' and 'time1'.
+
+		Parameters
+		----------
+		time0 : int
+			Initial frame index.
+		time1 : int
+			Final frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particles indexes.
+
+		Returns
+		-------
+		strain_tensor : float Numpy array
+			Array of strain tensors between frames 'time0' and 'time1'.
+		"""
+
+		self.node.modifiers.clear()											# clear modification pipeline
+		self.node.modifiers.append(
+			AtomicStrainModifier(
+				output_strain_tensors=True,
+				reference_frame=self.prep_frames + time0))					# add AtomicStrainModifier modifier to modification pipeline
+		self.node.modifiers[-1].reference.load(self.filename)				# load trajectory file as reference
+		self.node_out = self.node.compute(frame=self.prep_frames + time1)	# compute d2min
+
+		strain_tensor = self.node_out['Strain Tensor'].array	# array of strain tensors
+		if particle == (): return strain_tensor					# returns all strain tensors
+		return np.array(itemgetter(*particle)(d2min))			# strain tensors
+
+	def xy_strain(self, time0, time1, *particle):
+		"""
+		Returns xy-strain computed from active_particles.dat.Gsd.strain_tensor.
+
+		Parameters
+		----------
+		time0 : int
+			Initial frame index.
+		time1 : int
+			Final frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particles indexes.
+
+		Returns
+		-------
+		xy_strain : float Numpy array
+			Array of xy-strain between frames 'time0' and 'time1'.
+		"""
+
+		return self.strain_tensor(time0, time1, *particle)[:, 3]
