@@ -238,7 +238,7 @@ class Gsd(HOOMDTrajectory):
 		self.prep_frames = prep_frames
 		self.dimensions = dimensions
 
-		self.node = ovito_import_file(self.filename)	# OVITO ObjectNode used for nonaffine squared displacement computation
+		self.node = ovito_import_file(self.filename)	# OVITO ObjectNode
 
 	def __getitem__(self, key):
 		"""
@@ -366,6 +366,123 @@ class Gsd(HOOMDTrajectory):
 		"""
 
 		return self[time].configuration.box[0]
+
+	def N(self, time=0):
+		"""
+		Returns number of particles at time 'time'.
+
+		Parameters
+		----------
+		time : int
+			Frame index. (default: 0)
+
+		Returns
+		-------
+		N : int
+			Number of particles.
+		"""
+
+		return self[time].particles.N
+
+	def is_in_box(self, time, box_size, centre, *particle):
+		"""
+		Returns boolean corresponding to the particle 'particle' being in the
+		hypercubic box of centre 'centre' and length 'box_size' at time 'time'.
+
+		Parameters
+		----------
+		time : int
+			Frame index.
+		box_size : float
+			Box length.
+		centre : self.dimensions-dimensional array-like
+			Coordinates of the centre of the box.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particles indexes.
+
+		Returns
+		-------
+		in_box : bool Numpy array
+			Particles in the box.
+		"""
+
+		in_box = (
+			np.abs(self.position(time, centre=centre))
+			<= box_size/2).all(axis=-1)
+
+		if particle == (): return in_box
+		return np.array(itemgetter(*particle)(in_box))
+
+	def to_grid(self, time, array, Ncases=None, box_size=None, centre=None):
+		"""
+		This function maps the hypercubic sub-system of centre 'centre' and
+		length 'box_size' to a hypercubic grid with 'Ncases' boxes in every
+		direction, and associates to each box of this grid the averaged value
+		of the (self.N('time'), *)-array 'array' over the indexes corresponding
+		to particles within this box at time 'time'.
+
+		NOTE: This function assumes the system box is hypercubic (lenth equal
+		      in all directions).
+
+		Parameters
+		----------
+		time : int
+			Frame index.
+		array : (self.N(time), *) array-like
+			Array of values to be put on the grid.
+		Ncases : int
+			Number of grid boxes in each direction.
+			NOTE: if Ncases==None,
+			      then Ncases = int((self.N(time))**(1/self.dimensions)).
+			DEFAULT: None
+		box_size : float
+			Length of the sub-system to consider.
+			NOTE: if box_size==None, then box_size = self.box_size(time).
+			DEFAULT: None
+		centre : self.dimensions-dimensional array-like
+			Coordinates of the centre of the sub-system.
+			NOTE: if centre==None, then centre = (0,)*self.dimensions
+
+		Returns
+		-------
+		grid : (Ncases,)*self.dimensions + (*) Numpy array
+			Averaged grid.
+		"""
+
+		time = int(time)
+
+		array = np.array(array)
+		if array.shape[0] != self.N(time): raise ValueError(
+			'Array first-direction length different than number of particles.')
+
+		if Ncases == None: Ncases = (self.N(time))**(1/self.dimensions)
+		Ncases = int(Ncases)
+
+		if box_size == None: box_size = self.box_size(time)
+
+		if centre == None: centre = (0,)*self.dimensions
+		centre = np.array(centre)
+
+		grid = np.zeros((Ncases,)*self.dimensions + array.shape[1:])
+		sumN = np.zeros((Ncases,)*self.dimensions)	# array of the number of particles in each grid box
+
+		in_box = self.is_in_box(time, box_size, centre)
+		positions = self.position(time, centre=centre)
+		for particle in range(self.N(time)):
+			if in_box[particle]:
+				grid_index = tuple(np.array(
+					((positions[particle] + box_size/2)//(box_size/Ncases))
+					% ((Ncases,)*self.dimensions),
+					dtype=int))
+				grid[grid_index] += array[particle]
+				sumN[grid_index] += 1
+		sumN = np.reshape(sumN,
+			(Ncases,)*self.dimensions + (1,)*len(array.shape[1:]))
+
+		return np.divide(grid, sumN, out=np.zeros(grid.shape), where=sumN!=0)
 
 	def d2min(self, time0, time1, *particle):
 		"""
