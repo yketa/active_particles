@@ -401,8 +401,8 @@ def strain_vorticity_grid(box_size, Ncases, grid_points, time, dt, w_traj,
 		np.reshape(grid, (Ncases, Ncases)))[::-1]	# get grids with the same orientation as positions
 	return correct_grid(sgrid), correct_grid(cgrid)	# shear strain and displacement vorticity grids
 
-def strain_vorticity_fftsqnorm_grid(box_size, new_box_size, centre, Ncases,
-	time, dt, w_traj, u_traj):
+def strain_vorticity_fftsqnorm_grid(box_size, centre, Ncases, time, dt,
+	w_traj, u_traj):
 	"""
 	Calculates grids of square norm of fast Fourier transforms of (linearised)
 	shear strain and displacement vorticity from fast Fourier transform of
@@ -411,8 +411,6 @@ def strain_vorticity_fftsqnorm_grid(box_size, new_box_size, centre, Ncases,
 	Parameters
 	----------
 	box_size : float
-		Length of the system's square box.
-	new_box_size : float
 		Length of the considered system's square box.
 	centre : float array
 		Centre of the box.
@@ -438,15 +436,15 @@ def strain_vorticity_fftsqnorm_grid(box_size, new_box_size, centre, Ncases,
 
 	# DISPLACEMENT GRID FOURIER TRANSFORM
 
-	ugrid = displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
+	ugrid = displacement_grid(box_size, centre, Ncases, time, dt,
 		w_traj, u_traj)							# displacment grid
 	FFTugrid = np.fft.fft2(ugrid, axes=(0, 1))	# displacement grid Fourier transform
 
 	# SHEAR STRAIN AND DISPLACEMENT VORTICITY FOURIER TRANSFORM CALCULATION
 
-	wave_vectors = wave_vectors_2D(Ncases, Ncases, d=new_box_size/Ncases)	# wave vectors corresponding to displacement grid Fourier transform
-	eikxm1 = np.exp(1j*wave_vectors[:, :, 0]) - 1							# grid exponential of i times wave vectors' x-coordinates - 1
-	eikym1 = np.exp(1j*wave_vectors[:, :, 1]) - 1							# grid exponential of i times wave vectors' y-coordinates - 1
+	wave_vectors = wave_vectors_2D(Ncases, Ncases, d=box_size/Ncases)	# wave vectors corresponding to displacement grid Fourier transform
+	eikxm1 = np.exp(1j*wave_vectors[:, :, 0]) - 1						# grid exponential of i times wave vectors' x-coordinates - 1
+	eikym1 = np.exp(1j*wave_vectors[:, :, 1]) - 1						# grid exponential of i times wave vectors' y-coordinates - 1
 
 	FFTsgrid = (eikxm1*FFTugrid[:, :, 1] + eikym1*FFTugrid[:, :, 0])/2	# shear strain Fourier transform grid
 	FFTcgrid = eikxm1*FFTugrid[:, :, 1] - eikym1*FFTugrid[:, :, 0]		# displacement vorticity Fourier transform grid
@@ -599,8 +597,8 @@ class StrainCorrelations:
 			Strain correlations Fourrier transform.
 		"""
 
-		self.wave_vectors = wave_vectors
-		self.strain_correlations_FFT = FFTCss
+		self.wave_vectors = np.array(wave_vectors)
+		self.strain_correlations_FFT = np.array(FFTCss)
 
 	def strain_correlations(self, r_cut=0):
 		"""
@@ -1253,8 +1251,8 @@ if __name__ == '__main__':	# executing as script
 				u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
 				FFTsgridsqnorm, FFTcgridsqnorm = tuple(np.mean(np.transpose(
 					list(map(lambda time:
-					strain_vorticity_fftsqnorm_grid(parameters['box_size'],
-					box_size, centre, Ncases, time, dt, w_traj, u_traj),
+					strain_vorticity_fftsqnorm_grid(
+						box_size, centre, Ncases, time, dt, w_traj, u_traj),
 					times)), (1, 0, 2, 3)), axis=1))				# average square norm of shear strain and displacement vorticity Fourier transforms
 
 			# SAVING

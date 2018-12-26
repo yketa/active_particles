@@ -1056,8 +1056,8 @@ if __name__ == '__main__':  # executing as script
             w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
             u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
             Ugrid = list(map(
-                lambda time: displacement_grid(parameters['box_size'],
-                box_size, centre, Ncases, time, dt, w_traj, u_traj),
+                lambda time: displacement_grid(
+                	box_size, centre, Ncases, time, dt, w_traj, u_traj),
                 times))											# lists of displacement variables
 
         wave_vectors = wave_vectors_2D(Ncases, Ncases, d=box_size/Ncases)	# wave vectors grid

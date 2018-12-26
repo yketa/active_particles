@@ -185,16 +185,13 @@ _Cee_max = 1    # default maximum displacement direction correlation for correla
 
 # FUNCTIONS AND CLASSES
 
-def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
-	u_traj):
+def displacement_grid(box_size, centre, Ncases, time, dt, w_traj, u_traj):
     """
     Calculates displcament grid from square uniform coarse-graining.
 
     Parameters
 	----------
 	box_size : float
-		Length of the system's square box.
-    new_box_size : float
 		Length of the considered system's square box.
     centre : float array
         Centre of the box.
@@ -216,25 +213,10 @@ def displacement_grid(box_size, new_box_size, centre, Ncases, time, dt, w_traj,
         Displacement grid.
     """
 
-    positions = w_traj.position(time +
-		dt*get_env('ENDPOINT', default=False, vartype=bool), centre=centre)   # array of wrapped particle positions
-    dL = new_box_size/Ncases                                                  # box separation
-
-    displacements = u_traj.displacement(time, time + dt)	# displacements between times time and time + dt
-
-    # DISPLACEMENT GRIDS CALCULATION
-
-    ugrid = np.zeros((Ncases, Ncases, 3))
-    for particle in range(len(positions)):
-        position = positions[particle]
-        if (np.abs(position) <= new_box_size/2).all():
-            ugrid[tuple(np.array(
-				((position + new_box_size/2)//dL)%ugrid.shape[:2],
-				dtype=int))] += np.concatenate(([1], displacements[particle]))
-    ugrid = np.divide(ugrid[:, :, 1:], ugrid[:, :, :1],
-        out=np.zeros((Ncases, Ncases, 2)), where=ugrid[:, :, :1]!=0) # displacement grid
-
-    return ugrid
+	return w_traj.to_grid(
+		time + dt*get_env('ENDPOINT', default=False, vartype=bool),
+		u_traj.displacment(time, time + dt),
+		Ncases=Ncases, box_size=box_size, centre=centre)
 
 def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
 	dt, w_traj, u_traj):
