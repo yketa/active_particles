@@ -365,7 +365,7 @@ class _ShearStrainVorticity(_CorFile):
     Naming shear strain and displacement vorticity files.
     """
 
-    def __init__(self, name, from_ft=False):
+    def __init__(self, name, mode='fourier'):
         """
         Architecture of file name.
 
@@ -373,18 +373,20 @@ class _ShearStrainVorticity(_CorFile):
         ----------
         name : string
             Generic name.
-        from_ft : bool
-            Calculation of shear strain in real space (False) or in Fourier
-            space (True).
+        mode : bool
+            Computation mode (default: fourier).
         """
 
-        self.from_ft = from_ft
-        if self.from_ft:    # calculation in Fourier space
-            name += 'ft'
-            ext_parameters = OrderedDict()
-        else:       # calculation in real space
+        self.mode = mode
+        if self.mode == 'real':         # calculation in real space
             ext_parameters = OrderedDict([('r_cut', '_RCUT'),
-                ('sigma', '_SIGM')])
+            ('sigma', '_SIGM')])
+        else:
+            ext_parameters = OrderedDict()
+            if self.mode == 'fourier':  # calculation in Fourier space
+                name += 'ft'
+            elif self.mode == 'ovito':  # calculation with OVITO
+                name += 'OVITO'
 
         super().__init__(name, ext_parameters=ext_parameters)   # initialise with superclass
 
@@ -402,36 +404,34 @@ class Css(_ShearStrainVorticity):
     Naming shear strain files.
     """
 
-    def __init__(self, from_ft=False):
+    def __init__(self, mode='fourier'):
         """
         Architecture of file name.
 
         Parameters
         ----------
-        from_ft : bool
-            Calculation of shear strain in real space (False) or in Fourier
-            space (True).
+        mode : bool
+            Computation mode (default: fourier).
         """
 
-        super().__init__('Css', from_ft=from_ft)    # initialise with superclass
+        super().__init__('Css', mode=mode)  # initialise with superclass
 
 class Ccc(_ShearStrainVorticity):
     """
     Naming displacement vorticity files.
     """
 
-    def __init__(self, from_ft=False):
+    def __init__(self, mode='fourier'):
         """
         Architecture of file name.
 
         Parameters
         ----------
-        from_ft : bool
-            Calculation of displacement vorticity in real space (False) or in
-            Fourier space (True).
+        mode : bool
+            Computation mode (default: fourier).
         """
 
-        super().__init__('Ccc', from_ft=from_ft)    # initialise with superclass
+        super().__init__('Ccc', mode=mode)  # initialise with superclass
 
 class Cuu(_CorFile):
     """
