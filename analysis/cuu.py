@@ -215,7 +215,7 @@ def displacement_grid(box_size, centre, Ncases, time, dt, w_traj, u_traj):
 
     return w_traj.to_grid(
         time + dt*get_env('ENDPOINT', default=False, vartype=bool),
-        u_traj.displacment(time, time + dt),
+        u_traj.displacement(time, time + dt),
         Ncases=Ncases, box_size=box_size, centre=centre)
 
 def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
