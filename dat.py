@@ -557,7 +557,7 @@ class Gsd(HOOMDTrajectory):
 
 		strain_tensor = self.node_out['Strain Tensor'].array	# array of strain tensors
 		if particle == (): return strain_tensor					# returns all strain tensors
-		return np.array(itemgetter(*particle)(d2min))			# strain tensors
+		return np.array(itemgetter(*particle)(strain_tensor))	# strain tensors
 
 	def xy_strain(self, time0, time1, *particle):
 		"""
@@ -582,3 +582,39 @@ class Gsd(HOOMDTrajectory):
 		"""
 
 		return self.strain_tensor(time0, time1, *particle)[:, 3]
+
+	def shear_strain(self, time0, time1, *particle):
+		"""
+		Returns shear strain computed by OVITO (see
+		https://ovito.org/manual/particles.modifiers.atomic_strain.html and
+		https://ovito.org/manual/python/modules/ovito_modifiers.html) between
+		frames 'time0' and 'time1'.
+
+		Parameters
+		----------
+		time0 : int
+			Initial frame index.
+		time1 : int
+			Final frame index.
+
+		Optional positional arguments
+		-----------------------------
+		particle : int
+			Particles indexes.
+
+		Returns
+		-------
+		xy_strain : float Numpy array
+			Array of xy-strain between frames 'time0' and 'time1'.
+		"""
+
+		self.node.modifiers.clear()											# clear modification pipeline
+		self.node.modifiers.append(
+			AtomicStrainModifier(
+				reference_frame=self.prep_frames + time0))					# add AtomicStrainModifier modifier to modification pipeline
+		self.node.modifiers[-1].reference.load(self.filename)				# load trajectory file as reference
+		self.node_out = self.node.compute(frame=self.prep_frames + time1)	# compute d2min
+
+		xy_strain = self.node_out['Shear Strain'].array		# array of strain tensors
+		if particle == (): return xy_strain					# returns all strain tensors
+		return np.array(itemgetter(*particle)(xy_strain))	# strain tensors
