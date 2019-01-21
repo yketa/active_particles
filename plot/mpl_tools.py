@@ -63,7 +63,8 @@ class FittingLine:
 
     def __init__(self, ax, slope, slope_min=None, slope_max=None,
         color='black', linestyle='--', slider=True,
-        legend=True, exp_format='{:.2e}', font_size=None, **kwargs):
+        legend=True, exp_format='{:.2e}', font_size=None, legend_frame=True,
+        **kwargs):
         """
         Parameters
         ----------
@@ -99,6 +100,9 @@ class FittingLine:
             Legend font size.
             NOTE: if font_size=None, the font size is not imposed.
             DEFAULT: None
+        legend_frame : bool
+            Display legend frame.
+            DEFAULT: True
 
         Optional keyword arguments
         --------------------------
@@ -132,7 +136,8 @@ class FittingLine:
             self.y_legend = np.mean(self.ax.get_ylim())             # y coordinate of fitting line legend
             self.legend = plt.legend(handles=[self.line], loc=10,
                 bbox_to_anchor=(self.x_legend, self.y_legend),
-                bbox_transform=self.ax.transData)                   # fitting line legend
+                bbox_transform=self.ax.transData,
+                frameon=legend_frame)                               # fitting line legend
             self.set_fontsize(font_size)                            # set legend font size
             self.legend_artist = self.ax.add_artist(self.legend)    # fitting line legend artist object
             self.legend_artist.set_picker(10)                       # epsilon tolerance in points to fire pick event
