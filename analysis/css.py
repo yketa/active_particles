@@ -10,12 +10,25 @@ https://yketa.github.io/UBC_2018_Wiki/#Shear%20strain%20and%20vorticity%20fields
 
 Environment modes
 -----------------
+MODE : string
+	Computation mode.
+     __________________________________________________________________
+	| Mode      | Computation                                          |
+	|___________|______________________________________________________|
+	| 'real'    | Real space (from coarse-grained displacements)       |
+	|___________|______________________________________________________|
+	| 'fourier' | Fourier space (from displacements Fourier transform) |
+	|___________|______________________________________________________|
+	| 'ovito'   | OVITO                                                |
+	|___________|______________________________________________________|
+	DEFAULT: fourier
 COMPUTE : bool
-	Compute shear strain and displacement vorticity.
+	Compute shear strain (all modes) and displacement vorticity ('real' and
+	'fourier' modes) correlations.
 	DEFAULT: False
 PLOT : bool
-	Plot saved shear strain and displacement vorticity as well as their
-	correlations.
+	Plot saved shear strain (all modes) and displacement vorticity ('real'
+	mode) as well as their correlations.
 	DEFAULT: False
 SHOW [COMPUTE or PLOT mode] : bool
 	Show graphs.
@@ -23,17 +36,13 @@ SHOW [COMPUTE or PLOT mode] : bool
 SAVE [COMPUTE or PLOT mode] : bool
 	Save graphs.
 	DEFAULT: False
-FROM_FT [COMPUTE or PLOT mode] : bool
-	Calculates shear strain and displacement vorticity in Fourier space rather
-	than in real space, or plots the resulting correlations in real space.
-	DEFAULT: True
-LINEAR_INTERPOLATION [FROM_FT and SHOW mode] : bool
+LINEAR_INTERPOLATION [not('real') and SHOW mode] : bool
 	Get value on grid by linear interpolation of neighbouring grid boxes.
 	DEFAULT: False
-SUPERIMPOSE_C44 [FROM_FT and SHOW mode] : bool
+SUPERIMPOSE_C44 [not('real') and SHOW mode] : bool
 	Superimpose C44 curve to Css(r, theta) curve.
 	DEFAULT: False
-FITTING_LINE [FROM_FT and SHOW mode] : bool
+FITTING_LINE [not('real') and SHOW mode] : bool
 	Display adjustable fitting line on graph of projection of shear strain on
 	cos(4 \\theta).
 	DEFAULT: False
@@ -67,12 +76,12 @@ INTERVAL_MAXIMUM : int
 	Maximum number of intervals of length dt considered in correlations
 	calculations.
 	DEFAULT: 1
-R_CUT [not(FROM_FT) mode] : float
+R_CUT ['real' mode] : float
 	Cut-off radius for coarse graining function.
 	NOTE: Value of R_CUT is then multiplied by average particle diameter from
 	      simulation parameters file.
 	DEFAULT: active_particles.analysis.css._r_cut
-SIGMA [not(FROM_FT) mode] : float
+SIGMA ['real' mode] : float
 	Length scale of the spatial extent of the coarse graining function.
 	DEFAULT: R_CUT
 N_CASES : int
@@ -94,80 +103,80 @@ R_MAX [PLOT or SHOW mode] : float
 	NOTE: R_MAX < 0 will be interpreted as the box shown being the actual
 	      simulation box.
 	DEFAULT: active_particles.analysis.css._r_max
-DISPLAY_GRID [COMPUTE and not(FROM_FT) mode] : int
+DISPLAY_GRID [COMPUTE and 'real' mode] : int
 	Index of map in list of variable maps to display.
 	DEFAULT : 0
 FONT_SIZE : int
     Plot font size.
     DEFAULT: active_particles.analysis.css._font_size
-POINTS_X_C44 [FROM_FT and PLOT mode] : int
+POINTS_X_C44 [not('real') and PLOT mode] : int
 	Number of radii at which to evaluate integrated strain correlation.
 	DEFAULT: active_particles.analysis.css._points_x_c44
-POINTS_THETA_C44 [FROM_FT and PLOT mode] : int
+POINTS_THETA_C44 [not('real') and PLOT mode] : int
 	Number of angles to evaluate integrated strain correlation.
 	DEFAULT: active_particles.analysis.css._points_theta_c44
-Y_MIN_C44 [FROM_FT and PLOT mode] : float
+Y_MIN_C44 [not('real') and PLOT mode] : float
 	Minimum plot value for C44.
 	DEFAULT: active_particles.analysis.css._y_min_c44
-Y_MAX_C44 [FROM_FT and PLOT mode] : float
+Y_MAX_C44 [not('real') and PLOT mode] : float
 	Maximum plot value for C44.
 	DEFAULT: active_particles.analysis.css._y_max_c44
-R_MIN_C44 [FROM_FT and PLOT mode] : float
+R_MIN_C44 [not('real') and PLOT mode] : float
 	Minimum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_min_c44
-R_MAX_C44 [FROM_FT and PLOT mode] : float
+R_MAX_C44 [not('real') and PLOT mode] : float
 	Maximum radius in average particle separation for C44 calculation.
 	DEFAULT: active_particles.analysis.css._r_max_c44
-SMOOTH [FROM_FT and PLOT mode] : float
+SMOOTH [not('real') and PLOT mode] : float
 	C44 Gaussian smoothing length scale in units of average particle
 	separation.
 	DEFAULT: 0
-R_CUT_FOURIER [FROM_FT and PLOT mode] : float
+R_CUT_FOURIER [not('real') and PLOT mode] : float
     Initial wave length Gaussian cut-off radius in units of average particle
 	separation.
     DEFAULT: active_particles.analysis.css._r_cut_fourier
-SLOPE_C44 [FROM_FT, PLOT and FITTING_LINE mode] : slope
+SLOPE_C44 [not('real'), PLOT and FITTING_LINE mode] : slope
 	Initial slope for fitting line in C44 figure.
 	DEFAULT: active_particles.analysis.css._slope0_c44
-SLOPE_MIN_C44 [FROM_FT, PLOT and FITTING_LINE mode] : float
+SLOPE_MIN_C44 [not('real'), PLOT and FITTING_LINE mode] : float
 	Minimum slope for fitting line in C44 figure.
 	DEFAULT: active_particles.analysis.css._slope_min_c44
-SLOPE_MAX_C44 [FROM_FT, PLOT and FITTING_LINE mode] : float
+SLOPE_MAX_C44 [not('real'), PLOT and FITTING_LINE mode] : float
 	Maximum slope for fitting line in C44 figure.
 	DEFAULT: active_particles.analysis.css._slope_max_c44
-THETA [FROM_FT and PLOT mode] : float
+THETA [not('real') and PLOT mode] : float
 	Angle at which to evaluate Css(r, theta) (in multiple of pi).
 	DEFAULT:  active_particles.analysis.css._theta
-POINTS_X_THETA [FROM_FT and PLOT mode] : int
+POINTS_X_THETA [not('real') and PLOT mode] : int
 	Number of radii at which to evaluate Css(r, theta).
 	DEFAULT: POINTS_X_C44
-Y_MIN_THETA [FROM_FT and PLOT mode] : float
+Y_MIN_THETA [not('real') and PLOT mode] : float
 	Minimum plot value for Css(r, theta).
 	DEFAULT: active_particles.analysis.css._y_min_theta
-Y_MAX_THETA [FROM_FT and PLOT mode] : float
+Y_MAX_THETA [not('real') and PLOT mode] : float
 	Maximum plot value for Css(r, theta).
 	DEFAULT: active_particles.analysis.css._y_max_theta
-R_MIN_THETA [FROM_FT and PLOT mode] : float
+R_MIN_THETA [not('real') and PLOT mode] : float
 	Minimum radius in average particle separation for Css(r, theta)
 	calculation.
 	DEFAULT: active_particles.analysis.css._r_min_theta
-R_MAX_THETA [FROM_FT and PLOT mode] : float
+R_MAX_THETA [not('real') and PLOT mode] : float
 	Maximum radius in average particle separation for Css(r, theta)
 	calculation.
 	DEFAULT: active_particles.analysis.css._r_max_theta
-SLOPE_THETA [FROM_FT, PLOT and FITTING_LINE mode] : slope
+SLOPE_THETA [not('real'), PLOT and FITTING_LINE mode] : slope
 	Initial slope for fitting line in Css(r, theta) figure.
 	DEFAULT: SLOPE_C44
-SLOPE_MIN_THETA [FROM_FT, PLOT and FITTING_LINE mode] : float
+SLOPE_MIN_THETA [not('real'), PLOT and FITTING_LINE mode] : float
 	Minimum slope for fitting line in Css(r, theta) figure.
 	DEFAULT: SLOPE_MIN_C44
-SLOPE_MAX_THETA [FROM_FT, PLOT and FITTING_LINE mode] : float
+SLOPE_MAX_THETA [not('real'), PLOT and FITTING_LINE mode] : float
 	Maximum slope for fitting line in Css(r, theta) figure.
 	DEFAULT: SLOPE_MAX_C44
 
 Output
 ------
-[COMPUTE and not(FROM_FT) mode]
+[COMPUTE and 'real' mode]
 > Prints neigbours grid computation time and execution time.
 > Saves a computed map of shear strain and the averaged shear strain
 correlation according to active_particles.naming.Css standards in
@@ -175,17 +184,20 @@ DATA_DIRECTORY.
 > Saves a computed map of displacement vorticity and the averaged displacement
 vorticity correlations according to active_particles.naming.Ccc standards
 in DATA_DIRECTORY.
-[COMPUTE and FROM_FT mode]
+[COMPUTE and 'fourier' mode]
 > Saves average square norm of shear strain Fourier transforms according to
 active_particles.naming.Css standards in DATA_DIRECTORY.
 > Saves average square norm of displacement vorticity Fourier transforms
 according to active_particles.naming.Ccc standards in DATA_DIRECTORY.
+[COMPUTE and 'ovito' mode]
+> Saves average square norm of shear strain Fourier transforms according to
+active_particles.naming.Css standards in DATA_DIRECTORY.
 [SHOW or PLOT mode]
 > Plots data map and/or correlation for shear strain and/or displacement
 vorticity.
-[SAVE and not(FROM_FT) mode]
+[SAVE and 'real' mode]
 > Saves data map and correlation figures in DATA_DIRECTORY.
-[SAVE and FROM_FT mode]
+[SAVE and not('real') mode]
 > Saves shear strain correlation figure in DATA_DIRECTORY.
 """
 
@@ -450,6 +462,41 @@ def strain_vorticity_fftsqnorm_grid(box_size, centre, Ncases, time, dt,
 	FFTcgrid = eikxm1*FFTugrid[:, :, 1] - eikym1*FFTugrid[:, :, 0]		# displacement vorticity Fourier transform grid
 
 	return np.conj(FFTsgrid)*FFTsgrid, np.conj(FFTcgrid)*FFTcgrid
+
+def strain_OVITO_fftsqnorm_grid(box_size, centre, Ncases, time, dt, w_traj):
+	"""
+	Calculates grid of square norm of fast Fourier transforms of (linearised)
+	shear strain with OVITO.
+
+	Parameters
+	----------
+	box_size : float
+		Length of the considered system's square box.
+	centre : float array
+		Centre of the box.
+	Ncases : int
+		Number of boxes in each direction to compute the displacements.
+	time : int
+		Frame at which displacements will be calculated.
+	dt : int
+		Length of the interval of time for which the displacements are
+		calculated.
+	w_traj : active_particles.dat.Gsd
+		Wrapped trajectory object.
+
+	Returns
+	-------
+	FFTsgridsqnorm : 2D Numpy array
+		Square norm of shear strain fast Fourier transform grid.
+	"""
+
+	sgrid = w_traj.to_grid(
+		time + dt*get_env('ENDPOINT', default=False, vartype=bool),
+		w_traj.xy_strain(time, time + dt),
+		Ncases=Ncases, box_size=box_size, centre=centre)	# shear strain grid
+	FFTsgrid = np.fft.fft2(sgrid, axes=(0, 1))				# shear strain Fourier transform grid
+
+	return np.conj(FFTsgrid)*FFTsgrid
 
 def suptitle():
 	"""
@@ -1136,7 +1183,9 @@ if __name__ == '__main__':	# executing as script
 	data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
 	wrap_file_name = get_env('WRAPPED_FILE',
-		default=joinpath(data_dir, naming.wrapped_trajectory_file))	# wrapped trajectory file (.gsd)
+		default=joinpath(data_dir, naming.wrapped_trajectory_file))		# wrapped trajectory file (.gsd)
+	unwrap_file_name = get_env('UNWRAPPED_FILE',
+		default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
 
 	dt = get_env('TIME', default=-1, vartype=int)	# lag time for displacement
 
@@ -1169,7 +1218,9 @@ if __name__ == '__main__':	# executing as script
 
 	times = linframes(init_frame, Nentries - dt, int_max)	# frames at which shear strain is calculated
 
-	from_ft = get_env('FROM_FT', default=True, vartype=bool)	# calculation of shear strain and vorticity in real space (False) or in Fourier space (True)
+	mode = get_env('MODE', default='fourier')				# computation mode
+	if not(mode in ('real', 'fourier', 'ovito')):
+		raise ValueError('Mode %s is not known.' % mode)	# mode is not known
 
 	# NAMING
 
@@ -1177,11 +1228,11 @@ if __name__ == '__main__':	# executing as script
 		'vzero': parameters['vzero'], 'dr': parameters['dr'],
 		'N': parameters['N'], 'init_frame': init_frame, 'dt': dt,
 		'int_max': int_max, 'Ncases': Ncases, 'r_cut': r_cut, 'sigma': sigma,
-		'box_size': box_size, 'x_zero': centre[0], 'y_zero': centre[1]}			# attributes displayed in filenames
-	naming_Css = naming.Css(from_ft=from_ft)									# Css naming object
-	Css_filename, = naming_Css.filename(**attributes)							# Css filename
-	naming_Ccc = naming.Ccc(from_ft=from_ft)									# Ccc naming object
-	Ccc_filename, = naming_Ccc.filename(**attributes)							# Css filename
+		'box_size': box_size, 'x_zero': centre[0], 'y_zero': centre[1]}	# attributes displayed in filenames
+	naming_Css = naming.Css(mode=mode)									# Css naming object
+	Css_filename, = naming_Css.filename(**attributes)					# Css filename
+	naming_Ccc = naming.Ccc(mode=mode)									# Ccc naming object
+	Ccc_filename, = naming_Ccc.filename(**attributes)					# Css filename
 
 	# STANDARD OUTPUT
 
@@ -1194,12 +1245,7 @@ if __name__ == '__main__':	# executing as script
 
 		startTime = datetime.now()
 
-		# VARIABLE DEFINITIONS
-
-		unwrap_file_name = get_env('UNWRAPPED_FILE',
-			default=joinpath(data_dir, naming.unwrapped_trajectory_file))	# unwrapped trajectory file (.dat)
-
-		if not(from_ft):	# calculation of shear strain and vorticity in real space
+		if mode == 'real':	# calculation of shear strain and vorticity in real space
 
 			grid_points = np.array([(x, y) for x in\
 				relative_positions(np.linspace(- box_size*(1 - 1./Ncases)/2,
@@ -1240,7 +1286,7 @@ if __name__ == '__main__':	# executing as script
 				pickle.dump([sgrid, Css2D], Css_dump_file)
 				pickle.dump([cgrid, Ccc2D], Ccc_dump_file)
 
-		else:	# calculation of shear strain and vorticity in Fourier space
+		elif mode == 'fourier':	# calculation of shear strain and vorticity in Fourier space
 
 			# SHEAR STRAIN AND DISPLACEMENT VORTICITY FAST FOURIER TRANSFORMS
 
@@ -1264,6 +1310,23 @@ if __name__ == '__main__':	# executing as script
 				pickle.dump(FFTsgridsqnorm, Css_dump_file)
 				pickle.dump(FFTcgridsqnorm, Ccc_dump_file)
 
+		elif mode == 'ovito': # calculation of shear strain from OVITO
+
+			# SHEAR STRAIN FAST FOURIER TRANSFORT
+
+			with open(wrap_file_name, 'rb') as wrap_file:	# opens wrapped trajectory file
+
+				w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
+				FFTsgridsqnorm = np.mean(list(map(lambda time:
+					strain_OVITO_fftsqnorm_grid(
+						box_size, centre, Ncases, time, dt, w_traj),
+					times)), axis=0)								# average square norm of shear strain Fourier transform
+
+			# SAVING
+
+			with open(joinpath(data_dir, Css_filename), 'wb') as Css_dump_file:
+				pickle.dump(FFTsgridsqnorm, Css_dump_file)
+
 		# EXECUTION TIME
 
 		print("Execution time: %s" % (datetime.now() - startTime))
@@ -1272,7 +1335,7 @@ if __name__ == '__main__':	# executing as script
 
 		# DATA
 
-		if not(from_ft):	# shear strain and vorticity in real space
+		if mode == 'real':	# shear strain and vorticity in real space
 			with open(joinpath(data_dir, Css_filename),
 				'rb') as Css_dump_file,\
 				open(joinpath(data_dir, Ccc_filename),
@@ -1307,7 +1370,7 @@ if __name__ == '__main__':	# executing as script
 		r_max = get_env('R_MAX', default=_r_max, vartype=float)	# half size of the box showed for 2D correlation
 		r_max = box_size/2 if r_max < 0 else r_max
 
-		if not(from_ft):	# shear strain and vorticity in real space
+		if mode == 'real':	# shear strain and vorticity in real space
 
 			fig_Css, ax_Css, gridcircle_Css = plot(sgrid, Css2D, box_size,
 				'\epsilon_{xy}', naming_Css)	# plotting shear strain map and correlation
