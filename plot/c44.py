@@ -228,12 +228,11 @@ if __name__ == '__main__':  # executing as script
 
     mode = get_env('MODE', default='real')  # strain correlations computation mode
 
-    if mode == 'real': naming_Css = naming.Css(from_ft=False)       # Css naming object
-    elif mode == 'fourier': naming_Css = naming.Css(from_ft=True)   # Css naming object
+    if mode in ('real', 'fourier'): naming_Css = naming.Css(mode=mode)  # Css naming object
     elif mode == 'cmsd':
-        naming_Ctt = naming.Ctt()                                   # Ctt naming object
-        naming_Cll = naming.Cll()                                   # Cll naming object
-    else: raise ValueError('Mode %s is not known.' % mode)          # mode is not known
+        naming_Ctt = naming.Ctt()                                       # Ctt naming object
+        naming_Cll = naming.Cll()                                       # Cll naming object
+    else: raise ValueError('Mode %s is not known.' % mode)              # mode is not known
 
     data_dir = get_env('DATA_DIRECTORY', default=getcwd())	# data directory
 
