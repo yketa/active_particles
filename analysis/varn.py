@@ -344,7 +344,8 @@ class PlotTime:
 
 		self.ax.set_xlabel(r'$t$')
 		self.ax.set_ylabel(r'$\phi_{loc}$')
-		self.colorbar.set_label(r'$P(\phi_{loc})$', labelpad=pad, rotation=270)
+		self.colorbar.set_label(r'$\log P(\phi_{loc})$',
+			labelpad=pad, rotation=270)
 
 	def plot(self, times, densities, peak=True):
 		"""
