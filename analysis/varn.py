@@ -16,15 +16,28 @@ CHECK : bool
 PLOT : bool
 	Plots histogram of local densities.
 	DEFAULT: False
-PEAK [COMPUTE or PLOT mode] : bool
-	Highlight tallest peak of histogram.
-	DEFAULT: True
-SHOW [COMPUTE or PLOT mode] : bool
+PLOT_MODE : string
+	Histogram type.
+	 _______________________________________________________________________
+	| Mode   | Histogram                                                    |
+	|________|______________________________________________________________|
+	| 'mean' | Simple histogram of local densities from all computed times. |
+	|________|______________________________________________________________|
+	| 'time' | Histogram of local densities as function of time.            |
+	|________|______________________________________________________________|
+	DEFAULT: mean
+SHOW : bool
 	Show graphs.
 	DEFAULT: False
-SAVE [COMPUTE or PLOT mode] : bool
+PEAK [(COMPUTE and SHOW) or PLOT mode] : bool
+	Highlight highest peak of the histogram.
+	DEFAULT: True
+SAVE [(COMPUTE and SHOW) or PLOT mode] : bool
 	Save graphs.
 	DEFAULT: False
+SUPTITLE [(COMPUTE and SHOW) or PLOT mode] : bool
+	Display suptitle.
+	DEFAULT: True
 
 Environment parameters
 ----------------------
@@ -60,6 +73,15 @@ N_BINS [PLOT or SHOW mode] : int
 PHIMAX [PLOT or SHOW mode] : int
 	Maximum local density for the histogram of local densities.
 	DEFAULT: active_particles.analysis.varn._phimax
+PPHILOCMIN [PLOT or SHOW and 'time' mode] : float
+	Minimum local density probability.
+    DEFAULT: active_particles.analysis.varn._pphilocmin
+PPHILOCMAX [PLOT or SHOW and 'time' mode] : float
+	Maximum local density probability.
+    DEFAULT: active_particles.analysis.varn._pphilocmax
+CONTOURS : int
+    Number of contour lines.
+    DEFAULT: active_particles.analysis.varn._contours
 
 Output
 ------
@@ -97,6 +119,9 @@ import matplotlib as mpl
 if not(get_env('SHOW', default=False, vartype=bool)):
 	mpl.use('Agg')	# avoids crash if launching without display
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # DEFAULT VARIABLES
 
@@ -107,6 +132,10 @@ _box_size = 10  # default length of the square box in which particles are counte
 
 _Nbins = 10 # default number of bins for the histogram
 _phimax = 1 # default maximum local density for histogram
+
+_pphilocmin = 1e-4  # default minimum local density probability
+_pphilocmax = 1e-1  # default maximum local density probability
+_contours = 20      # default contour level value
 
 # FUNCTIONS AND CLASSES
 
@@ -201,7 +230,7 @@ def histogram(densities, Nbins, phimax):
 
 class Plot:
 	"""
-	Plots histograms of densities.
+	Plot mean histograms of densities.
 	"""
 
 	def __init__(self, suptitle=True):
@@ -258,6 +287,104 @@ class Plot:
 
 		return line
 
+class PlotTime:
+	"""
+	Plot histograms of densities as functions of time.
+	"""
+
+	def __init__(self, Nbins, phimax,
+		pphilocmin=_pphilocmin, pphilocmax=_pphilocmax, contours=_contours,
+		colormap=plt.cm.inferno, pad=20, suptitle=True):
+		"""
+		Set figure and histogram parameters.
+
+		Parameters
+		----------
+		Nbins : int
+			Number of bins for the histogram.
+		phimax : float
+			Maximum local density for histogram.
+		pphilocmin : float
+			Minimum local density probability.
+			(default: active_particles.analysis.varn._pphilocmin)
+		pphilocmax : float
+			Maximum local density probability.
+			(default: active_particles.analysis.varn._pphilocmax)
+		contours : int
+			Number of contour lines.
+			(default: active_particles.analysis.varn._contours)
+		colormap : matplotlib colormap
+			Histogram colormap. (default: matplotlib.pyplot.cm.inferno)
+		pad : float
+			Separation between label and colormap. (default: 20)
+		suptitle : bool
+			Display suptitle. (default: True)
+		"""
+
+		self.Nbins = Nbins
+		self.phimax = phimax
+		self.pphilocmin = np.log10(pphilocmin)
+		self.pphilocmax = np.log10(pphilocmax)
+		self.contours = contours
+
+		self.fig, self.ax = plt.subplots()
+		self.cmap = colormap
+		self.norm = colors.Normalize(
+			vmin=self.pphilocmin, vmax=self.pphilocmax)
+		self.colorbar = mpl.colorbar.ColorbarBase(
+			make_axes_locatable(self.ax).append_axes(
+				"right", size="5%", pad=0.05),
+			cmap=self.cmap, norm=self.norm, orientation='vertical')
+
+		if suptitle: self.fig.suptitle(
+	        r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
+	        % (parameters['N'], parameters['density'], parameters['vzero'],
+	        parameters['dr']) + '\n' +
+	        r'$N_{cases}=%.2e, l=%.2e$' % (Ncases, box_size))
+
+		self.ax.set_xlabel(r'$t$')
+		self.ax.set_ylabel(r'$\phi_{loc}$')
+		self.colorbar.set_label(r'$P(\phi_{loc})$', labelpad=pad, rotation=270)
+
+	def plot(self, times, densities, peak=True):
+		"""
+		Plot histogram.
+
+		Parameters
+		----------
+		times : array-like
+			Array of times at which densities have been calculated.
+		densities : array-like of array-like
+			Array of densities arrays at times times.
+		peak : bool
+			Highlight tallest peak of histogram. (default: True)
+		"""
+
+		self.times = times
+
+		self.histogram3D = []	# local densities histogram
+		self.philocmax = []		# most probable local densities at times
+
+		for time, density in zip(self.times, densities):
+
+			time_value = np.full(self.Nbins, fill_value=time)
+
+			bins, hist = histogram(density, self.Nbins, self.phimax)	# histogram of local densities with corresponding bins
+			hist = np.log10(hist)
+
+			histogram3D_time = np.transpose([time_value, bins, hist]).tolist()
+			self.histogram3D += histogram3D_time
+			self.philocmax += [max(histogram3D_time, key=lambda el: el[2])[1]]
+
+		self.histogram3D = np.transpose(self.histogram3D)
+		self.histogram3D[2][
+			self.histogram3D[2] < self.pphilocmin] = self.pphilocmin	# set minimum histogram value as pphilocmin
+
+		self.ax.tricontourf(*self.histogram3D, self.contours,
+			cmap=self.cmap, norm=self.norm)				# local density histogram
+		if peak: self.ax.plot(self.times, self.philocmax,
+			linestyle='--', color='red', linewidth=4)	# most probable packing fraction line
+
 # SCRIPT
 
 if __name__ == '__main__':  # executing as script
@@ -278,8 +405,14 @@ if __name__ == '__main__':  # executing as script
 
     prep_frames = ceil(parameters['prep_steps']/parameters['period_dump'])	# number of preparation frames (FIRE energy minimisation)
 
-    Nentries = parameters['N_steps']//parameters['period_dump']		# number of time snapshots in unwrapped trajectory file
-    init_frame = int(Nentries/2) if init_frame < 0 else init_frame	# initial frame
+    Nentries = parameters['N_steps']//parameters['period_dump']			# number of time snapshots in unwrapped trajectory file
+    Nentries = get_env('FINAL_FRAME', default=Nentries, vartype=int)	# final frame to consider
+    init_frame = int(Nentries/2) if init_frame < 0 else init_frame		# initial frame
+
+    frames = list(OrderedDict.fromkeys(map(
+		int,
+		np.linspace(init_frame, Nentries - 1, int_max)
+		)))	# linearly spaced frames at which to calculate the densities
 
     Ncases = get_env('N_CASES', default=ceil(np.sqrt(parameters['N'])),
 		vartype=int)	# number of boxes in each direction to compute the local density
@@ -289,9 +422,9 @@ if __name__ == '__main__':  # executing as script
     attributes = {'density': parameters['density'],
 		'vzero': parameters['vzero'], 'dr': parameters['dr'],
 		'N': parameters['N'], 'init_frame': init_frame, 'int_max': int_max,
-        'Ncases': Ncases, 'box_size': box_size}         # attributes displayed in filenames
-    naming_varN = naming.VarN()                         # varN naming object
-    varN_filename, = naming_varN.filename(**attributes) # varN file name
+        'fin_frame': Nentries, 'Ncases': Ncases, 'box_size': box_size}	# attributes displayed in filenames
+    naming_varN = naming.VarN(final_frame='FINAL_FRAME' in envvar)		# varN naming object
+    varN_filename, = naming_varN.filename(**attributes) 				# varN file name
 
     # STANDARD OUTPUT
 
@@ -308,11 +441,6 @@ if __name__ == '__main__':  # executing as script
 
         wrap_file_name = get_env('WRAPPED_FILE',
 			default=joinpath(data_dir, naming.wrapped_trajectory_file))		# wrapped trajectory file (.gsd)
-
-        frames = list(OrderedDict.fromkeys(map(
-            int,
-            np.linspace(init_frame, Nentries - 1, int_max)
-            ))) # logarithmically spaced frames at which to calculate the densities
 
         with open(wrap_file_name, 'rb') as wrap_file:   # opens wrapped trajectory file
 
@@ -364,12 +492,35 @@ if __name__ == '__main__':  # executing as script
         Nbins = get_env('N_BINS', default=_Nbins, vartype=int)      # number of bins for the histogram
         phimax = get_env('PHIMAX', default=_phimax, vartype=float)  # maximum local density for histogram
 
-        peak = get_env('PEAK', default=True, vartype=bool)	#
+        peak = get_env('PEAK', default=True, vartype=bool)	# highlight highest peak of the histogram
 
-        plot = Plot()
-        plot.add_hist(*histogram(densities, Nbins, phimax), peak=peak)
+        suptitle = get_env('SUPTITLE', default=True, vartype=bool)	# display suptitle
 
-        if peak: plot.ax.legend()	# display legend of highlighted peaks in histograms
+        mode = get_env('PLOT_MODE', default='mean')	# histogram plot mode
+
+        if mode == 'mean':
+
+	        plot = Plot(suptitle=suptitle)
+	        plot.add_hist(*histogram(densities, Nbins, phimax), peak=peak)
+	        if peak: plot.ax.legend()	# display legend of highlighted peaks in histograms
+
+        elif mode == 'time':
+
+	        pphilocmin = get_env('PPHILOCMIN',
+				default=_pphilocmin, vartype=float)							# minimum local density probability
+	        pphilocmax = get_env('PPHILOCMIN',
+				default=_pphilocmax, vartype=float)							# maximum local density probability
+	        contours = get_env('CONTOURS', default=_contours, vartype=int)	# number of contour lines
+
+	        plot = PlotTime(Nbins, phimax,
+				pphilocmin=pphilocmin, pphilocmax=pphilocmax,
+				contours=contours, suptitle=suptitle)
+	        plot.plot(
+				parameters['period_dump']*parameters['time_step']
+					*np.array(frames),
+				densities, peak=peak)
+
+        else: raise ValueError('Mode %s is not known.' % mode)	# mode is not known
 
 		# SAVING
 
