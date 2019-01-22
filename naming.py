@@ -668,9 +668,14 @@ class VarN(_File):
     Naming local densities densities.
     """
 
-    def __init__(self):
+    def __init__(self, final_frame=False):
         """
         Architecture of file name.
+
+        Parameters
+        ----------
+        final_frame : bool
+            Compute with a maximum frame. (default: False)
         """
 
         self.name = 'varN'          # generic name
@@ -679,6 +684,9 @@ class VarN(_File):
             ('init_frame', '_I'), ('int_max', '_M'), ('Ncases', '_C'),
             ('box_size', '_B')
         ])                          # parameters and corresponding abbreviations (in order)
+        if final_frame: self.parameters = OrderedDict(chain(
+            self.parameters.items(),
+            OrderedDict([('fin_frame', '_F')]).items()))
         self.extension = '.pickle'  # file extension
 
 class AHB2D(_File):
