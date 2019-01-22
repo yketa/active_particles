@@ -340,7 +340,8 @@ class PlotTime:
 	        r'$N=%.2e, \phi=%1.2f, \tilde{v}=%.2e, \tilde{\nu}_r=%.2e$'
 	        % (parameters['N'], parameters['density'], parameters['vzero'],
 	        parameters['dr']) + '\n' +
-	        r'$N_{cases}=%.2e, l=%.2e$' % (Ncases, box_size))
+	        r'$S_{max}=%.2e, N_{cases}=%.2e, l=%.2e$'
+			% (int_max, Ncases, box_size))
 
 		self.ax.set_xlabel(r'$t$')
 		self.ax.set_ylabel(r'$\phi_{loc}$')
