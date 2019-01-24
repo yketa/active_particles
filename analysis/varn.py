@@ -82,6 +82,9 @@ PPHILOCMAX [PLOT or SHOW and 'time' mode] : float
 CONTOURS : int
     Number of contour lines.
     DEFAULT: active_particles.analysis.varn._contours
+FONT_SIZE : int
+	Plot font size.
+	DEFAULT: active_particles.analysis.varn._font_size
 
 Output
 ------
@@ -136,6 +139,8 @@ _phimax = 1 # default maximum local density for histogram
 _pphilocmin = 1e-4  # default minimum local density probability
 _pphilocmax = 1e-1  # default maximum local density probability
 _contours = 20      # default contour level value
+
+_font_size = 10 # default plot font size
 
 # FUNCTIONS AND CLASSES
 
@@ -497,6 +502,9 @@ if __name__ == '__main__':  # executing as script
         peak = get_env('PEAK', default=True, vartype=bool)	# highlight highest peak of the histogram
 
         suptitle = get_env('SUPTITLE', default=True, vartype=bool)	# display suptitle
+
+        font_size = get_env('FONT_SIZE', default=_font_size, vartype=int)	# plot font size
+        mpl.rcParams.update({'font.size': font_size})
 
         mode = get_env('PLOT_MODE', default='mean')	# histogram plot mode
 
