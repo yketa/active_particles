@@ -333,6 +333,7 @@ class PlotTime:
 		self.contours = contours
 
 		self.fig, self.ax = plt.subplots()
+		self.fig.subplots_adjust(top=0.98, bottom=0.10, left=0.10, right=0.88)
 		self.cmap = colormap
 		self.norm = colors.Normalize(
 			vmin=self.pphilocmin, vmax=self.pphilocmax)
