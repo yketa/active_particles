@@ -218,7 +218,7 @@ def displacement_grid(box_size, centre, Ncases, time, dt, w_traj, u_traj):
         u_traj.displacement(time, time + dt),
         Ncases=Ncases, box_size=box_size, centre=centre)
 
-def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
+def displacement_related_grids(box_size, centre, Ncases, time,
 	dt, w_traj, u_traj):
 	"""
 	Calculates grids of displacement (from
@@ -228,8 +228,6 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
     Parameters
 	----------
 	box_size : float
-		Length of the system's square box.
-    new_box_size : float
 		Length of the considered system's square box.
     centre : float array
         Centre of the box.
@@ -262,7 +260,7 @@ def displacement_related_grids(box_size, new_box_size, centre, Ncases, time,
 	Prints neighbours grid computation time.
 	"""
 
-	ugrid = displacement_grid(box_size, new_box_size, centre, Ncases, time, dt,
+	ugrid = displacement_grid(box_size, centre, Ncases, time, dt,
 		w_traj, u_traj)	# displacement grid
 
 	wgrid = ugrid - np.mean(ugrid, axis=(0, 1)) # relative displacement grid
@@ -605,8 +603,8 @@ if __name__ == '__main__':  # executing as script
             w_traj = Gsd(wrap_file, prep_frames=prep_frames)	# wrapped trajectory object
             u_traj = Dat(unwrap_file, parameters['N'])			# unwrapped trajectory object
             DDgrid, Ugrid, Wgrid, Egrid = tuple(np.transpose(list(map(
-                lambda time: displacement_related_grids(parameters['box_size'],
-                box_size, centre, Ncases, time, dt, w_traj, u_traj),
+                lambda time: displacement_related_grids(
+                	box_size, centre, Ncases, time, dt, w_traj, u_traj),
                 times)), (1, 0, 2, 3, 4)))						# lists of displacement variables
 
         Dgrid = DDgrid[:, :, :, 0]  				# list of displacement norm grids
