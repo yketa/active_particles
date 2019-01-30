@@ -314,7 +314,7 @@ class Cnn:
 		with open(joinpath(dir, self.filename), 'wb') as dump_file:
 			pickle.dump([self.cnn2D, self.cnn1D], dump_file)
 
-def c2Dtochi(c2D):
+def c2Dtochi(c2D, box_size, r_min=None, r_max=None):
 	"""
 	For the 2D correlation grid c2D, this function returns the susceptibility
 	of the square box system of length L, defined as
@@ -324,6 +324,16 @@ def c2Dtochi(c2D):
 	----------
 	c2D : 2D array
 		2D correlation grid.
+	box_size : float
+		System square box size.
+	r_min : float
+		Minimum radius to consider in correlation integration.
+		NOTE: if r_min == None, no minimum is considered.
+		DEFAULT: None
+	r_max : float
+		Maximum radius to consider in correlation integration.
+		NOTE: if r_max == None, r_max is considered to be box_size/2.
+		DEFAULT: None
 
 	Returns
 	-------
@@ -331,10 +341,15 @@ def c2Dtochi(c2D):
 		Susceptibility.
 	"""
 
-	c2Dgrid = CorGrid(c2D, 1)
+	c2Dgrid = CorGrid(c2D, box_size)
+	if r_max == None: r_max = box_size/2
 
+	c2Dr = np.sqrt(np.sum(
+		c2Dgrid.display_grid.get_grid_coordinates()**2,
+		axis=-1))
+		
 	c2D = c2Dgrid.display_grid[
-		np.sum(c2Dgrid.display_grid.get_grid_coordinates()**2, axis=-1) <= 1/2]	# keep only boxes within a half box size of the centre
+		(r_min == None or c2Dr >= r_min) & (c2Dr <= r_max)]
 	return np.sum(c2D)/np.prod(c2D.shape)
 
 def c1Dtochi(c1D, box_size, r_min=None, r_max=None):
