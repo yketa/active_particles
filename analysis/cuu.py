@@ -314,6 +314,29 @@ class Cnn:
 		with open(joinpath(dir, self.filename), 'wb') as dump_file:
 			pickle.dump([self.cnn2D, self.cnn1D], dump_file)
 
+def c2Dtochi(c2D):
+	"""
+	For the 2D correlation grid c2D, this function returns the susceptibility
+	of the square box system of length L, defined as
+		chi = 1/L^2 \int dx dy c2D(x, y).
+
+	Parameters
+	----------
+	c2D : 2D array
+		2D correlation grid.
+
+	Returns
+	-------
+	chi : float
+		Susceptibility.
+	"""
+
+	c2Dgrid = CorGrid(c2D, 1)
+
+	c2D = c2Dgrid.display_grid[
+		np.sum(c2Dgrid.display_grid.get_grid_coordinates()**2, axis=-1) <= 1/2]	# keep only boxes within a half box size of the centre
+	return np.sum(c2D)/np.prod(c2D.shape)
+
 def c1Dtochi(c1D, box_size, r_min=None, r_max=None):
 	"""
 	For the cylindrically-averaged 1D correlation function c1D(r), this
