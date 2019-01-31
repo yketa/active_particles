@@ -347,10 +347,10 @@ def c2Dtochi(c2D, box_size, r_min=None, r_max=None):
 	c2Dr = np.sqrt(np.sum(
 		c2Dgrid.display_grid.get_grid_coordinates()**2,
 		axis=-1))
-		
-	c2D = c2Dgrid.display_grid[
+
+	c = c2Dgrid.display_grid[
 		(r_min == None or c2Dr >= r_min) & (c2Dr <= r_max)]
-	return np.sum(c2D)/np.prod(c2D.shape)
+	return np.sum(c)/np.prod(c2D.shape)
 
 def c1Dtochi(c1D, box_size, r_min=None, r_max=None):
 	"""
