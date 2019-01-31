@@ -4,6 +4,8 @@ Module maths provides useful mathematic tools.
 
 import numpy as np
 
+from math import atan2
+
 from operator import itemgetter
 
 from scipy import interpolate
@@ -311,13 +313,13 @@ class Grid:
 
     def get_grid_coordinates(self):
         """
-        Returns grid of self.grid coordinates and saves them in attributes
-        self.grid_coordinates.
+        Returns grid of self.grid cartesiancoordinates and saves them in
+        attributes self.grid_coordinates.
 
         Returns
         -------
         grid_coordinates : Numpy array
-            Grid of self.grid coordinates.
+            Grid of self.grid cartesian coordinates.
         """
 
         self.grid_coordinates = np.transpose(vector_vector_grid(
@@ -329,6 +331,31 @@ class Grid:
                     step=self.sep_boxes_y))[::-1]),
             (1, 0, 2))
         return self.grid_coordinates
+
+    def get_grid_coordinates_polar(self):
+        """
+        Returns grid of self.grid cartesiancoordinates and saves them in
+        attributes self.grid_coordinates.
+
+        Returns
+        -------
+        grid_coordinates_polar : Numpy array
+            Grid of self.grid cartesian coordinates.
+        """
+
+        self.get_grid_coordinates()
+
+        radii = np.sqrt(np.sum(self.grid_coordinates**2, axis=-1))
+        angles = np.reshape(list(map(lambda x, y: atan2(y, x),
+            *np.transpose(np.reshape(self.grid_coordinates,
+                (np.prod(self.grid_coordinates.shape[:2]), 2))))),
+            self.grid_coordinates.shape[:2])
+
+        self.grid_coordinates_polar = np.concatenate((
+            np.reshape(radii, (*radii.shape, 1)),
+            np.reshape(angles, (*angles.shape, 1))
+        ), axis=-1)
+        return self.grid_coordinates_polar
 
     def in_grid(self, x, y):
         """
