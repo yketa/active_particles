@@ -178,10 +178,8 @@ def mkdir(directory, replace=False):
         Name of directory.
     """
 
-    if pathexists(directory):
-        if not(replace): return
-        rmr(directory)
-    makedirs(directory)
+    if pathexists(directory) and replace: rmr(directory)
+    makedirs(directory, exist_ok=True)
 
 def slurm_output(output_dir, naming_standard, attributes):
     """
