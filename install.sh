@@ -18,13 +18,18 @@ active_particles package and set it up.
 
 # CREATE ACTIVE_PARTICLES CONDA ENVIRONMENT
 
-echo "Creating conda environment: active_particles_env"
+echo "Creating conda environment: active_particles_env."
 command -v conda >/dev/null 2>&1 || { echo >&2 "conda not installed. Please visit https://conda.io/miniconda.html. Aborting."; exit 0; }
 conda env create --force -f ${AP_DIR}/environment.yml
 
-# INSTALLING MEMORY PROFILING TOOL
+# INSTALL KDEpy
 
-echo "Installing memory profiling tool: memory_profiler" # https://github.com/pythonprofilers/memory_profiler
+echo "Installing kernel density estimators: KDEpy."
+(. activate active_particles_env; pip install KDEpy)
+
+# INSTALL MEMORY PROFILING TOOL
+
+echo "Installing memory profiling tool: memory_profiler." # https://github.com/pythonprofilers/memory_profiler
 (. activate active_particles_env; pip install -U memory_profiler)
 
 # SET UP ACTIVE_PARTICLES
@@ -38,12 +43,11 @@ printf "
 # set up for this session
 . ${AP_DIR}/setup.sh
 
-# CREATING SIMULATION DIRECTORY
+# CREATE SIMULATION DIRECTORY
 
 echo "Creating simulation directory in home directory."
 mkdir -p $(ap_python -c "from active_particles.naming import sim_directory; print(sim_directory)")
 
-# DONE
+# END
 
 echo "Installation complete."
-
