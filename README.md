@@ -58,3 +58,8 @@ and will make plotting windows appear.
 
 ![Example of Cuu plot](https://github.com/yketa/active_particles/raw/master/docs/screenshot_cuu.png)
 
+---
+
+### Associated publication
+
+"Cooperative motion and shear strain correlations in dense 2D systems of self-propelled soft disks", Yann-Edwin Keta and Jörg Rottler, _EPL_, __125__ (2019) 58004. ([doi: 10.1209/0295-5075/125/58004](https://doi.org/10.1209/0295-5075/125/58004))
