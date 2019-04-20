@@ -22,15 +22,15 @@ echo "Creating conda environment: active_particles_env."
 command -v conda >/dev/null 2>&1 || { echo >&2 "conda not installed. Please visit https://conda.io/miniconda.html. Aborting."; exit 0; }
 conda env create --force -f ${AP_DIR}/environment.yml
 
-# INSTALL KDEpy
+# INSTALL statsmodels
 
-echo "Installing kernel density estimators: KDEpy."
-(. activate active_particles_env; pip install KDEpy)
+echo "Installing statistics package: statsmodels."
+(. activate active_particles_env; pip install statsmodels)
 
-# INSTALL MEMORY PROFILING TOOL
+# INSTALL memory_profiler
 
 echo "Installing memory profiling tool: memory_profiler." # https://github.com/pythonprofilers/memory_profiler
-(. activate active_particles_env; pip install -U memory_profiler)
+(. activate active_particles_env; pip install memory_profiler)
 
 # SET UP ACTIVE_PARTICLES
 

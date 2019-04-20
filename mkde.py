@@ -16,7 +16,7 @@ import os
 
 import subprocess
 
-from KDEpy import FFTKDE
+from statsmodels.nonparametric.kernel_density import KDEMultivariate
 
 # C EXTENSION
 
@@ -187,10 +187,9 @@ class MKDE:
             self.data = np.reshape(self.data, (len(self.data), 1))
         self.points, self.d = self.data.shape   # size and dimension of sample data
 
-    def bw(self, n_max=1000, lower_bound=1e-10):
+    def sm_bw(self, n_max=None, method='cv_ml'):
         """
-        Compute optimal bandwidths from the minimisation of the asymptotic mean
-        integrated squared error (AMISE).
+        Compute optimal bandwidths with the statsmodels package.
 
         Parameters
         ----------
@@ -198,10 +197,12 @@ class MKDE:
             Maximum number of points considered in the computation of AMISE.
             NOTE: Computation time of AMISE and its derivatives is quadratic in
                   this number of points.
-            (default: 1000)
-        lower_bound : float
-            Lower bound for bandwidths.
-            (default: 1e-10)
+            NOTE: if n_max=None then n_max=self.points.
+            (default: None)
+        method : str
+            Type of solver. (see
+            https://www.statsmodels.org/stable/generated/statsmodels.nonparametric.kernel_density.KDEMultivariate.html)
+            (default: 'cv_ml')
 
         Returns
         -------
@@ -211,12 +212,52 @@ class MKDE:
 
         # RESTRICTION OF DATA
 
-        n_max = int(n_max)
-        if n_max >= self.points:
-            self.res_data = self.data
-        else:
-            self.res_data = self.data[random.sample(range(self.points), n_max)] # resticted data sample
-        self.res_points, _ = self.res_data.shape                                # size of restricted data sample
+        self._res_data(n_max)
+
+        # MINIMISAITON ALGORITHM
+
+        self.min_method = ('sm', method)
+        self.sm_minimisation_res = KDEMultivariate(self.res_data, 'c'*self.d,
+            bw=self.min_method[1])
+        self.h = self.sm_minimisation_res.bw    # optimised bandwidths
+
+        return self
+
+    def c_bw(self, n_max=None, method='trust-exact', callback=False):
+        """
+        Compute optimal bandwidths from the minimisation of the asymptotic mean
+        integrated squared error (AMISE) given by the C library.
+
+        Parameters
+        ----------
+        n_max : int
+            Maximum number of points considered in the computation of AMISE.
+            NOTE: Computation time of AMISE and its derivatives is quadratic in
+                  this number of points.
+            NOTE: if n_max=None then n_max=self.points.
+            (default: None)
+        method : str
+            Type of solver. (see
+            https://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html &
+            https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html)
+            NOTE: see 'trust-constr' for the constrained version of
+                  'trust-exact'.
+            NOTE: unconstrained methods (such as 'trust-exact') may result in
+                  negative bandwidths.
+            (default: 'trust-exact')
+        callback : bool
+            Print minimisation algorithm state at each iteration.
+            (default: False)
+
+        Returns
+        -------
+        self : active_particles.mkde.MKDE
+            MKDE object.
+        """
+
+        # RESTRICTION OF DATA
+
+        self._res_data(n_max)
 
         # C EXTENSION
 
@@ -224,16 +265,63 @@ class MKDE:
 
         # MINIMISAITON ALGORITHM
 
-        self.lower_bound = lower_bound
-        self.h0 = (((4/(self.res_points*(self.d + 2)))**(1/(self.d + 4)))
+        self.min_method = ('c', method)
+        self.c_h0 = (((4/(self.res_points*(self.d + 2)))**(1/(self.d + 4)))
             *np.array([np.std(self.res_data[:, i]) for i in range(self.d)]))    # initial guess for the bandwidths based on Silverman's rule of thumb
-        self.minimisation_res = scop.minimize(
-            self.cext.AMISE, self.h0, method='trust-constr',                    # minimise self._AMISE with respect to the bandwidths with the Trust-Region Constrained Algorithm
+        self.c_minimisation_res = scop.minimize(
+            self.cext.AMISE, self.c_h0, method=self.min_method[1],              # minimise self._AMISE with respect to the bandwidths
             jac=self.cext.gradAMISE, hess=self.cext.hessAMISE,
-            bounds=scop.Bounds([self.lower_bound]*self.d, [np.inf]*self.d)
-            , callback=lambda *x: x
-            , options={'verbose': 1}
+            bounds=scop.Bounds([0]*self.d, [np.inf]*self.d)
+            , callback=lambda *x: (print(x) if callback else None)
+            # , options={'verbose': 1}
             )
-        self.h = self.minimisation_res.x                                        # optimised bandwidths
+        self.h = self.c_minimisation_res.x                                      # optimised bandwidths
+
+        return self
+
+    def pdf(self, pdf_points, bw=None):
+        """
+        Compute probability density function at points pdf_points.
+
+        Parameters
+        ----------
+        pdf_points : 2D array-like
+            Points at which to compute the probability density function.
+        bw : 1D array-like
+            Bandwidths.
+            NOTE: if bw=None then bw=self.h.
+
+        Returns
+        -------
+        pdf : 1D array-like
+            Probability density function at points pdf_points.
+        """
+
+        if bw == None: bw = self.h
+        return KDEMultivariate(self.data, 'c'*self.d, bw=bw).pdf(pdf_points)
+
+    def _res_data(self, n_max):
+        """
+        Compute a randomly restricted data sample and store it in sef.res_data
+        and its length in self.res_points.
+
+        Parameters
+        ----------
+        n_max : int
+            Maximum number of points considered in the computation of AMISE.
+            NOTE: if n_max=None then n_max=self.points.
+
+        Returns
+        -------
+        self : active_particles.mkde.MKDE
+            MKDE object.
+        """
+
+        if n_max == None or int(n_max) >= self.points:
+            self.res_data = self.data
+        else:
+            n_max = int(n_max)
+            self.res_data = self.data[random.sample(range(self.points), n_max)] # resticted data sample
+        self.res_points, _ = self.res_data.shape                                # size of restricted data sample
 
         return self
