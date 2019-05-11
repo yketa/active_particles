@@ -1,0 +1,12 @@
+* text=off
+
+*.c text
+*.h text
+*.py text
+*.sh text
+*.yml text
+*.txt text
+
+*.png binary
+*.jpg binary
+
