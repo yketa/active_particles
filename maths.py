@@ -4,7 +4,7 @@ Module maths provides useful mathematic tools.
 
 import numpy as np
 
-from math import atan2
+import math
 
 from operator import itemgetter
 
@@ -277,7 +277,7 @@ class Grid:
             self.extent[1] - self.extent[0],
             self.extent[-1] - self.extent[-2]])
         self.sep_boxes = self.sep_boxes_x, self.sep_boxes_y =\
-            self.box_size/self.shape    # distance between consecutive boxes in each direction
+            self.box_size/self.shape[:2]    # distance between consecutive boxes in each direction
 
     def __getitem__(self, *key):
         """
@@ -346,7 +346,7 @@ class Grid:
         self.get_grid_coordinates()
 
         radii = np.sqrt(np.sum(self.grid_coordinates**2, axis=-1))
-        angles = np.reshape(list(map(lambda x, y: atan2(y, x),
+        angles = np.reshape(list(map(lambda x, y: math.atan2(y, x),
             *np.transpose(np.reshape(self.grid_coordinates,
                 (np.prod(self.grid_coordinates.shape[:2]), 2))))),
             self.grid_coordinates.shape[:2])
@@ -449,6 +449,52 @@ class Grid:
 
         return self.get_value_cartesian(x, y,
             linear_interpolation=linear_interpolation)
+
+class GridFFT(Grid):
+    """
+    Manipulate 2D grids, in which we consider the values to correspond to a
+    variable at uniformly distributed positions in space, and their fast Fourier
+    transforms.
+    """
+
+    def __init__(self, grid, d=1):
+        """
+        Sets the grid and its Fourier transform.
+
+        Parameters
+        ----------
+        grid : array-like
+            2D grid.
+        d : float
+            Sample spacing. (default: 1)
+        """
+
+        self.d = d
+        self.shape = np.array(grid).shape
+        super().__init__(grid, extent=
+            (-self.d*self.shape[0]/2, self.d*self.shape[0]/2,
+            -self.d*self.shape[1]/2, self.d*self.shape[1]/2))   # initialises superclass
+
+        self.gridFFT = np.fft.fft2(self.grid, axes=(0, 1))      # grid FFT
+        self.FFT2Dfilter = FFT2Dfilter(self.gridFFT, d=self.d)  # signal filter
+
+    def gaussian_filter(self, sigma):
+        """
+        Apply a Gaussian filter on the 2D grid.
+        (see active_particles.maths.FFT2Dfilter.gaussian_filter)
+
+        Parameters
+        ----------
+        sigma : float
+            Standard deviation \\sigma of the convoluting Gaussian function.
+
+        Returns
+        -------
+        filteredGrid : Numpy array
+            Filtered grid.
+        """
+
+        return self.FFT2Dfilter.gaussian_filter(sigma).get_signal()
 
 def vector_vector_grid(vector1, vector2, dtype=None):
     """
@@ -634,7 +680,7 @@ class FFT2Dfilter:
     Filter 2D signal from Fourier components obtained via fast Fourier
     transform.
 
-    /!\ WARNING /!\
+    /!\\ WARNING /!\\
     Using bandlimiting low-pass filters self.cut_high_wave_frequencies and
     self.cut_low_wave_lengths may cause ringing artifacts (see
     https://en.wikipedia.org/wiki/Ringing_artifacts).
@@ -781,7 +827,11 @@ class FFT2Dfilter:
 
         gaussian_coefficients = np.exp(
             -1/2*(sigma**2)*np.sum(self.wave_vectors**2, axis=-1))
-        filteredFFT.signalFFT *= gaussian_coefficients
+        try:
+            filteredFFT.signalFFT *= gaussian_coefficients
+        except ValueError:
+            filteredFFT.signalFFT *= np.reshape(gaussian_coefficients,
+                gaussian_coefficients.shape + (1,))
 
         return filteredFFT
 
@@ -1010,3 +1060,59 @@ class Histogram:
         if binned_values == 0: return self.hist # no binned value
         else: self.hist /= np.sum(self.hist)
         return self.hist
+
+def wrap(x, y, p, *X):
+    """
+    Wrap the function with values y at x so that it is p-periodic, and evaluates
+    it at X.
+
+    NOTE: Original function is linearly interpolated.
+
+    Parameters
+    ----------
+    x : array-like
+        Array of points at which the original function has been evaluated.
+    y : array-like
+        Values of the function at points x.
+    p : array-like
+        Period of the function in each direction.
+
+    Optional positional arguments
+    -----------------------------
+    X : array-like
+        Points at which to evaluate the wrapped function.
+
+    Returns
+    -------
+    Y : array-like
+        Wrapped function evaluated at X.
+    """
+
+    x = np.array(x)
+    try:
+        n, xdim = x.shape   # number of points and dimension of space
+    except ValueError:
+        x = np.reshape(x, (len(x), 1))
+        n, xdim = x.shape
+
+    y = np.array(y)
+    try:
+        _, ydim = y.shape   # dimension of values
+    except ValueError:
+        ydim = 1
+
+    xmin = np.min(x, axis=0)    # array of minimum positions by dimension
+    xmax = np.max(x, axis=0)    # array of maximum positions by dimension
+
+    Y = []
+    for point in X:
+        Y += [np.zeros((ydim,))]
+        point = np.array(point)
+        mmin = np.array(list(map(math.ceil, (xmin - point)/p)))
+        mmax = np.array(list(map(math.floor, (xmax - point)/p)))
+        for m in np.ndindex(tuple(mmax - mmin + 1)):
+            m = mmin + np.array(m)
+            Y[-1] += interpolate.griddata(x, y, point + p*m,
+                method='linear', fill_value=0)[0]
+
+    return np.array(Y)
