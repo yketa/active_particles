@@ -2,12 +2,14 @@ name: active_particles_env
 channels:
   - glotzer
   - conda-forge
+  - anaconda
 dependencies:
   - python=3.6
   - gsd=1.5.*
   - hoomd=2.2.*
   - matplotlib=2.1.*
   - numpy=1.14.*
-  - scipy=1.0*
+  - scipy=1.2*
   - ovito=2.9.*
   - pyqt=5.*
+  - cython

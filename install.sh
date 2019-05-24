@@ -22,15 +22,15 @@ echo "Creating conda environment: active_particles_env."
 command -v conda >/dev/null 2>&1 || { echo >&2 "conda not installed. Please visit https://conda.io/miniconda.html. Aborting."; exit 0; }
 conda env create --force -f ${AP_DIR}/environment.yml
 
-# INSTALL statsmodels
+# INSTALL PIP REQUIREMENTS
 
-echo "Installing statistics package: statsmodels."
-(. activate active_particles_env; pip install statsmodels)
-
-# INSTALL memory_profiler
-
-echo "Installing memory profiling tool: memory_profiler." # https://github.com/pythonprofilers/memory_profiler
-(. activate active_particles_env; pip install memory_profiler)
+echo "Installing pip requirements."
+(. activate active_particles_env; pip install -r ${AP_DIR}/pip_requirements.txt; . deactivate)
+# This command may fail and return an UnicodeDecodeError error when installing
+# fastKDE. This may be avoided by first running the following command:
+# export LC_ALL="en_US.UTF-8"
+# (see sherifzain's answer at
+# https://stackoverflow.com/questions/25036897/pip-install-unicodedecodeerror)
 
 # SET UP ACTIVE_PARTICLES
 
