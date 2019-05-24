@@ -12,6 +12,11 @@ from scipy import interpolate
 
 from copy import deepcopy
 
+from itertools import product
+from functools import partial
+
+from multiprocessing import Pool
+
 def relative_positions(positions, point, box_size):
     """
     Returns relative positions to point in box of extent
@@ -1061,58 +1066,120 @@ class Histogram:
         else: self.hist /= np.sum(self.hist)
         return self.hist
 
-def wrap(x, y, p, *X):
+class Wrap:
     """
-    Wrap the function with values y at x so that it is p-periodic, and evaluates
-    it at X.
-
-    NOTE: Original function is linearly interpolated.
-
-    Parameters
-    ----------
-    x : array-like
-        Array of points at which the original function has been evaluated.
-    y : array-like
-        Values of the function at points x.
-    p : array-like
-        Period of the function in each direction.
-
-    Optional positional arguments
-    -----------------------------
-    X : array-like
-        Points at which to evaluate the wrapped function.
-
-    Returns
-    -------
-    Y : array-like
-        Wrapped function evaluated at X.
+    Wrap functions.
     """
 
-    x = np.array(x)
-    try:
-        n, xdim = x.shape   # number of points and dimension of space
-    except ValueError:
-        x = np.reshape(x, (len(x), 1))
-        n, xdim = x.shape
+    def __init__(self, x, y, p):
+        """
+        Initialises class to wrap the function with values y at x so that it is
+        p-periodic.
 
-    y = np.array(y)
-    try:
-        _, ydim = y.shape   # dimension of values
-    except ValueError:
-        ydim = 1
+        Parameters
+        ----------
+        x : array-like
+            Array of points at which the original function has been evaluated.
+        y : array-like
+            Values of the function at points x.
+        p : array-like
+            Period of the function in each direction.
+        """
 
-    xmin = np.min(x, axis=0)    # array of minimum positions by dimension
-    xmax = np.max(x, axis=0)    # array of maximum positions by dimension
+        self.x = np.array(x)
+        try:
+            self.n, self.xdim = self.x.shape    # number of points and dimension of space
+        except ValueError:
+            self.x = np.reshape(self.x, (len(self.x), 1))
+            self.n, self.xdim = self.x.shape
 
-    Y = []
-    for point in X:
-        Y += [np.zeros((ydim,))]
-        point = np.array(point)
-        mmin = np.array(list(map(math.ceil, (xmin - point)/p)))
-        mmax = np.array(list(map(math.floor, (xmax - point)/p)))
+        self.y = np.array(y)
+        try:
+            _, self.ydim = y.shape  # dimension of values
+        except ValueError:
+            self.ydim = 1
+
+        self.xmin = np.min(self.x, axis=0)  # array of minimum positions by dimension
+        self.xmax = np.max(self.x, axis=0)  # array of maximum positions by dimension
+
+        self.p = p
+
+    def evaluate(self, *X, method='linear', fill_value=0, processes=None):
+        """
+        Evaluate wrapped function at points X.
+
+        NOTE: Original function is interpolated.
+
+        NOTE: As a matter of efficiency, wrapped function at points in X is
+              evaluated with a pool of worker processes. (see
+              multiprocessing.Pool and multiprocessing.Pool.starmap)
+
+        Parameters
+        ----------
+        method : string
+            Method of interpolation. (see scipy.interpolate.griddata)
+            DEFAULT: linear
+        fill_value : float
+            Value used to fill in for requested points outside of the convex
+            hull of the input points. (see scipy.interpolate.griddata)
+            DEFAULT: 0
+        processes : int
+            Number of worker processes to use. (see multiprocessing.Pool)
+            NOTE: If processes == None then processes = os.cpu_count().
+            DEFAULT: None
+
+        Positional arguments
+        --------------------
+        X : (self.xdim,) array-like
+            Points at which to evaluate the wrapped function.
+
+        Returns
+        -------
+        Y : (len(X), self.ydmin) array-like
+            Wrapped function evaluated at X.
+        """
+
+        with Pool(processes=processes) as pool: # pool of worker processes
+            Y = pool.starmap(
+                partial(self._evaluate, method=method, fill_value=fill_value),
+                product(X))
+        return np.array(Y)
+
+    def _evaluate(self, X, method='linear', fill_value=0):
+        """
+        Evaluate wrapped function at point X.
+
+        NOTE: Original function is interpolated.
+
+        NOTE: This function is to be called by
+              active_particles.maths.Wrap.evaluate.
+
+        Parameters
+        ----------
+        X : (self.xdim,) array-like
+            Point at which to evaluate the wrapped function.
+        method : string
+            Method of interpolation. (see scipy.interpolate.griddata)
+            DEFAULT: linear
+        fill_value : float
+            Value used to fill in for requested points outside of the convex
+            hull of the input points. (see scipy.interpolate.griddata)
+            DEFAULT: 0
+
+        Returns
+        -------
+        Y : (self.ydim,) Numpy array
+            Wrapped function evaluated at X.
+        """
+
+        X = np.array(X)
+        Y = np.zeros((self.ydim,))
+
+        mmin = np.array(list(map(math.ceil, (self.xmin - X)/self.p)))
+        mmax = np.array(list(map(math.floor, (self.xmax - X)/self.p)))
         for m in np.ndindex(tuple(mmax - mmin + 1)):
             m = mmin + np.array(m)
-            Y[-1] += interpolate.griddata(x, y, point + p*m,
-                method='linear', fill_value=0)[0]
+            Y += interpolate.griddata(self.x, self.y, X + self.p*m,
+                method=method, fill_value=fill_value)[0]
 
-    return np.array(Y)
+        return Y
