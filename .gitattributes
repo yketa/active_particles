@@ -1,4 +1,4 @@
-* text=off
+* text=auto
 
 *.c text
 *.h text
@@ -6,7 +6,12 @@
 *.sh text
 *.yml text
 *.txt text
+*.html text
 
 *.png binary
 *.jpg binary
+*.eps binary
+*.pdf binary
+*.mp4 binary
+*.mov binary
 
