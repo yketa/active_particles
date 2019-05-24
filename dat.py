@@ -7,7 +7,7 @@ import numpy as np
 import struct
 from operator import itemgetter
 
-from active_particles.maths import relative_positions
+from active_particles.maths import relative_positions, GridFFT
 
 from gsd.pygsd import GSDFile
 from gsd.hoomd import HOOMDTrajectory
@@ -442,9 +442,9 @@ class Gsd(HOOMDTrajectory):
 			Length of the sub-system to consider.
 			NOTE: if box_size==None, then box_size = self.box_size(time).
 			DEFAULT: None
-		centre : self.dimensions-dimensional array-like
+		centre : array-like
 			Coordinates of the centre of the sub-system.
-			NOTE: if centre==None, then centre = (0,)*self.dimensions
+			NOTE: if centre==None, then centre = (0,)*self.dimensions.
 
 		Returns
 		-------
@@ -483,6 +483,56 @@ class Gsd(HOOMDTrajectory):
 			(Ncases,)*self.dimensions + (1,)*len(array.shape[1:]))
 
 		return np.divide(grid, sumN, out=np.zeros(grid.shape), where=sumN!=0)
+
+	def to_2Dgrid_gaussian_filter(self, time, array, sigma,
+		Ncases=None, box_size=None, centre=None):
+		"""
+		This function maps the square sub-system of centre 'centre' and
+		length 'box_size' to a square grid with 'Ncases' boxes in every
+		direction, and associates to each box of this grid the averaged value
+		of the (self.N('time'), *)-array 'array' over the indexes corresponding
+		to particles within this box at time 'time'. An additional Gaussian
+		filter of standard deviation sigma is then applied on the grid.
+
+		NOTE: This function assumes the system box is a square (lenth equal in
+		      all directions).
+
+		Parameters
+		----------
+		time : int
+			Frame index.
+		array : (self.N(time), *) array-like
+			Array of values to be put on the grid.
+		sigma : float
+
+		Ncases : int
+			Number of grid boxes in each direction.
+			NOTE: if Ncases==None,
+			      then Ncases = int((self.N(time))**(1/self.dimensions)).
+			DEFAULT: None
+		box_size : float
+			Length of the sub-system to consider.
+			NOTE: if box_size==None, then box_size = self.box_size(time).
+			DEFAULT: None
+		centre : self.dimensions-dimensional array-like
+			Coordinates of the centre of the sub-system.
+			NOTE: if centre==None, then centre = (0,)*self.dimensions
+
+		Returns
+		-------
+		filteredGrid : (Ncases, Ncases) + (*) Numpy array
+			Averaged and filtered grid.
+			NOTE: This grid is complex-valued. Use filteredGrid.real for real
+			      values.
+		"""
+
+		if box_size == None: box_size = self.box_size(time)
+
+		grid = self.to_grid(time, array,
+			Ncases=Ncases, box_size=box_size, centre=centre)
+		gridFFT = GridFFT(grid, d=box_size/len(grid))
+
+		return gridFFT.gaussian_filter(sigma)
 
 	def d2min(self, time0, time1, *particle):
 		"""
